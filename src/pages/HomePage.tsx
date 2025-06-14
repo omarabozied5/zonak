@@ -17,27 +17,34 @@ const HomePage: React.FC = () => {
     <div className="bg-gray-50 min-h-screen">
       <HeroSection />
       
-      <div className="p-6" dir="rtl">
+      <div className="px-6 py-8 space-y-12" dir="rtl">
         {/* Categories Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">تصفح حسب الفئة</h2>
-          <div className="flex gap-4 overflow-x-auto pb-4">
+        <section>
+          <h2 className="text-3xl font-black text-gray-900 mb-8 text-center">تصفح حسب الفئة</h2>
+          <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide">
             {['🍕 بيتزا', '🍔 برجر', '🥤 مشروبات', '🍟 وجبات سريعة', '🍰 حلويات', '☕ قهوة', '🥗 صحي'].map((category, index) => (
-              <div key={index} className="bg-white rounded-full px-6 py-3 shadow-sm border hover:shadow-md transition-shadow cursor-pointer whitespace-nowrap">
-                <span className="text-sm font-medium text-gray-700">{category}</span>
+              <div 
+                key={index} 
+                className="bg-white rounded-2xl px-8 py-4 shadow-md border border-gray-100 hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer whitespace-nowrap group"
+              >
+                <span className="text-base font-bold text-gray-700 group-hover:text-orange-600 transition-colors duration-300">
+                  {category}
+                </span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
         {/* Featured Restaurants */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">المطاعم المميزة</h2>
-            <button className="text-yellow-600 hover:text-yellow-700 font-medium">عرض الكل</button>
+        <section>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-black text-gray-900">المطاعم المميزة</h2>
+            <button className="text-orange-600 hover:text-red-600 font-bold text-lg hover:scale-105 transition-all duration-300">
+              عرض الكل
+            </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {mockRestaurants.map(restaurant => (
               <RestaurantCard
                 key={restaurant.id}
@@ -46,49 +53,57 @@ const HomePage: React.FC = () => {
               />
             ))}
           </div>
-        </div>
+        </section>
 
         {/* Popular Dishes */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">الأطباق الشائعة</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section>
+          <h2 className="text-3xl font-black text-gray-900 mb-8 text-center">الأطباق الشائعة</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {mockMenuItems.slice(0, 4).map(item => (
-              <div key={item.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4">
-                <div className="text-3xl mb-2 text-center">{item.image}</div>
-                <h4 className="font-semibold text-gray-800 text-sm mb-1 text-center">{item.name}</h4>
-                <p className="text-yellow-600 font-bold text-center">{item.price.toFixed(2)} ر.س</p>
+              <div 
+                key={item.id} 
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer p-6 group border border-gray-100"
+              >
+                <div className="text-4xl mb-4 text-center group-hover:scale-110 transition-transform duration-300">
+                  {item.image}
+                </div>
+                <h4 className="font-bold text-gray-900 text-base mb-2 text-center group-hover:text-orange-600 transition-colors duration-300">
+                  {item.name}
+                </h4>
+                <div className="text-center">
+                  <span className="text-orange-600 font-black text-lg">{item.price.toFixed(2)}</span>
+                  <span className="text-gray-500 font-semibold text-sm mr-1">ر.س</span>
+                </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
         
         {/* How it Works */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">كيف يعمل التطبيق؟</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🔍</span>
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-2">اختر مطعمك</h3>
-              <p className="text-gray-600 text-sm">تصفح المطاعم واختر المفضل لديك</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🛒</span>
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-2">أضف للسلة</h3>
-              <p className="text-gray-600 text-sm">اختر أطباقك المفضلة وأضفها للسلة</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🚚</span>
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-2">استلم طلبك</h3>
-              <p className="text-gray-600 text-sm">استلم طلبك طازجاً في الوقت المحدد</p>
+        <section>
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-xl p-10 border border-gray-100">
+            <h2 className="text-3xl font-black text-gray-900 mb-12 text-center">كيف يعمل التطبيق؟</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+              {[
+                { icon: '🔍', title: 'اختر مطعمك', desc: 'تصفح المطاعم واختر المفضل لديك' },
+                { icon: '🛒', title: 'أضف للسلة', desc: 'اختر أطباقك المفضلة وأضفها للسلة' },
+                { icon: '🚚', title: 'استلم طلبك', desc: 'استلم طلبك طازجاً في الوقت المحدد' }
+              ].map((step, index) => (
+                <div key={index} className="text-center group">
+                  <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <span className="text-3xl">{step.icon}</span>
+                  </div>
+                  <h3 className="font-black text-gray-900 mb-3 text-xl group-hover:text-orange-600 transition-colors duration-300">
+                    {step.title}
+                  </h3>
+                  <p className="text-gray-600 text-base leading-relaxed font-medium">
+                    {step.desc}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

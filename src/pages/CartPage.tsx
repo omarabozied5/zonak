@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, ShoppingBag } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import CartItem from '../components/cart/CartItem';
 
@@ -27,14 +27,18 @@ const CartPage: React.FC = () => {
 
   if (cart.length === 0) {
     return (
-      <div className="p-4 pb-24" dir="rtl">
-        <div className="text-center py-12">
-          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">السلة فارغة</h3>
-          <p className="text-gray-500 mb-4">أضف بعض العناصر لتبدأ طلبك</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6" dir="rtl">
+        <div className="text-center max-w-md">
+          <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-8">
+            <ShoppingCart className="w-16 h-16 text-gray-400" />
+          </div>
+          <h3 className="text-2xl font-black text-gray-800 mb-4">السلة فارغة</h3>
+          <p className="text-gray-600 mb-8 text-lg font-medium leading-relaxed">
+            أضف بعض العناصر اللذيذة لتبدأ طلبك
+          </p>
           <button
             onClick={() => setCurrentPage('home')}
-            className="bg-yellow-400 text-black px-6 py-3 rounded-lg hover:bg-yellow-500 transition-colors"
+            className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-orange-500 hover:to-red-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
           >
             تصفح المطاعم
           </button>
@@ -44,32 +48,57 @@ const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 pb-24" dir="rtl">
-      <h2 className="text-xl font-bold text-gray-800 mb-6">سلة التسوق</h2>
-      
-      <div className="space-y-4 mb-6">
-        {cart.map(item => (
-          <CartItem
-            key={item.id}
-            item={item}
-            onUpdateQuantity={updateQuantity}
-          />
-        ))}
-      </div>
+    <div className="min-h-screen bg-gray-50 p-6 pb-32" dir="rtl">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-3xl font-black text-gray-900 mb-2">سلة التسوق</h2>
+          <p className="text-gray-600 font-medium">{cart.length} عنصر في السلة</p>
+        </div>
+        
+        {/* Cart Items */}
+        <div className="space-y-4">
+          {cart.map(item => (
+            <CartItem
+              key={item.id}
+              item={item}
+              onUpdateQuantity={updateQuantity}
+            />
+          ))}
+        </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-        <div className="flex justify-between items-center text-lg font-bold">
-          <span>المجموع الكلي:</span>
-          <span className="text-yellow-600">{calculateTotal().toFixed(2)} ر.س</span>
+        {/* Order Summary */}
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+          <h3 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
+            <ShoppingBag className="w-7 h-7 text-orange-500" />
+            ملخص الطلب
+          </h3>
+          
+          <div className="space-y-4 mb-6">
+            <div className="flex justify-between items-center text-lg">
+              <span className="font-semibold text-gray-700">المجموع الفرعي:</span>
+              <span className="font-bold text-gray-900">{calculateTotal().toFixed(2)} ر.س</span>
+            </div>
+            <div className="flex justify-between items-center text-lg">
+              <span className="font-semibold text-gray-700">رسوم الخدمة:</span>
+              <span className="font-bold text-gray-900">مجاناً</span>
+            </div>
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex justify-between items-center text-2xl">
+                <span className="font-black text-gray-900">المجموع الكلي:</span>
+                <span className="font-black text-orange-600">{calculateTotal().toFixed(2)} ر.س</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleCheckout}
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-emerald-600 hover:to-green-700 text-white py-5 rounded-2xl font-black text-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+          >
+            {user ? 'تأكيد الطلب' : 'سجل الدخول للمتابعة'}
+          </button>
         </div>
       </div>
-
-      <button
-        onClick={handleCheckout}
-        className="w-full bg-yellow-400 text-black py-4 rounded-lg font-semibold hover:bg-yellow-500 transition-colors"
-      >
-        {user ? 'تأكيد الطلب' : 'سجل الدخول للمتابعة'}
-      </button>
     </div>
   );
 };

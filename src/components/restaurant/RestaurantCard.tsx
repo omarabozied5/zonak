@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Star, Clock } from 'lucide-react';
+import { Star, Clock, MapPin } from 'lucide-react';
 import { Restaurant } from '../../store/useAppStore';
 
 interface RestaurantCardProps {
@@ -11,37 +11,50 @@ interface RestaurantCardProps {
 const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant, onClick }) => {
   return (
     <div 
-      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 overflow-hidden group"
+      className="bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:-translate-y-2 overflow-hidden group border border-gray-100"
       onClick={() => onClick(restaurant)}
     >
-      {/* Restaurant Image/Logo */}
-      <div className="relative h-48 bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-        <div className="text-6xl group-hover:scale-110 transition-transform duration-300">
+      {/* Restaurant Image/Logo with Gradient Overlay */}
+      <div className="relative h-56 bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 flex items-center justify-center overflow-hidden">
+        <div className="text-7xl group-hover:scale-125 transition-transform duration-500 z-10 drop-shadow-lg">
           {restaurant.logo}
         </div>
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          <span className="text-sm font-semibold">{restaurant.rating}</span>
+        
+        {/* Floating Rating Badge */}
+        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-2 flex items-center gap-2 shadow-lg">
+          <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+          <span className="text-sm font-bold text-gray-800">{restaurant.rating}</span>
         </div>
+        
+        {/* Overlay Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       </div>
       
       {/* Restaurant Info */}
-      <div className="p-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-600 transition-colors">
+      <div className="p-6 space-y-4">
+        <h3 className="text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors duration-300 line-clamp-1">
           {restaurant.name}
         </h3>
-        <p className="text-gray-600 mb-4">{restaurant.category}</p>
         
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2 text-gray-600">
+          <MapPin className="w-4 h-4 text-orange-500" />
+          <span className="text-sm font-medium">{restaurant.category}</span>
+        </div>
+        
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-600">
-            <Clock className="w-4 h-4" />
-            <span>{restaurant.deliveryTime}</span>
+            <Clock className="w-5 h-5 text-blue-500" />
+            <span className="text-sm font-medium">{restaurant.deliveryTime}</span>
           </div>
-          <div className="bg-yellow-400 text-black px-3 py-1 rounded-full font-medium">
+          
+          <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:from-orange-500 hover:to-red-500 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
             اطلب الآن
           </div>
         </div>
       </div>
+      
+      {/* Bottom Accent Line */}
+      <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
     </div>
   );
 };
