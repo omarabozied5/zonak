@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, ShoppingCart, User, ArrowRight } from 'lucide-react';
+import { Home, ShoppingCart, User, ArrowRight, Clock } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
 const Header: React.FC = () => {
@@ -24,6 +24,13 @@ const Header: React.FC = () => {
     }
   };
 
+  const navItems = [
+    { id: 'home', icon: Home, label: 'الرئيسية' },
+    { id: 'cart', icon: ShoppingCart, label: 'السلة', badge: cart.length },
+    { id: 'orders', icon: Clock, label: 'الطلبات' },
+    { id: 'profile', icon: User, label: 'الحساب' },
+  ];
+
   return (
     <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200 px-6 py-4 sticky top-0 z-40" dir="rtl">
       <div className="flex justify-between items-center max-w-7xl mx-auto">
@@ -42,40 +49,39 @@ const Header: React.FC = () => {
           </h1>
         </div>
         
-        {/* Right Section - Actions */}
+        {/* Center Section - Navigation Items */}
+        <div className="flex items-center gap-2">
+          {navItems.map(({ id, icon: Icon, label, badge }) => (
+            <button
+              key={id}
+              onClick={() => setCurrentPage(id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl transition-all duration-300 relative ${
+                currentPage === id 
+                  ? 'text-white bg-gradient-to-r from-orange-500 to-red-500 shadow-lg' 
+                  : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${currentPage === id ? 'drop-shadow-sm' : ''}`} />
+              {badge && badge > 0 && (
+                <div className={`absolute -top-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold ${
+                  currentPage === id 
+                    ? 'bg-white text-red-500' 
+                    : 'bg-red-500 text-white animate-pulse'
+                }`}>
+                  {badge}
+                </div>
+              )}
+              <span className={`text-sm font-semibold hidden md:block ${currentPage === id ? 'drop-shadow-sm' : ''}`}>
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+        
+        {/* Right Section - User Section */}
         <div className="flex items-center gap-3">
-          {/* Home Button */}
-          {currentPage !== 'home' && (
-            <button 
-              onClick={() => setCurrentPage('home')}
-              className="p-3 hover:bg-orange-50 rounded-2xl transition-all duration-200 hover:scale-105 group"
-            >
-              <Home className="w-6 h-6 text-gray-600 group-hover:text-orange-600" />
-            </button>
-          )}
-          
-          {/* Cart Button */}
-          {cart.length > 0 && currentPage !== 'cart' && (
-            <button 
-              onClick={() => setCurrentPage('cart')}
-              className="relative p-3 hover:bg-orange-50 rounded-2xl transition-all duration-200 hover:scale-105 group"
-            >
-              <ShoppingCart className="w-6 h-6 text-gray-600 group-hover:text-orange-600" />
-              <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg animate-pulse">
-                {cart.length}
-              </div>
-            </button>
-          )}
-          
-          {/* User Section */}
           {user ? (
             <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl px-4 py-2 border border-gray-200">
-              <button 
-                onClick={() => setCurrentPage('profile')}
-                className="p-2 hover:bg-white rounded-xl transition-all duration-200 hover:scale-105"
-              >
-                <User className="w-5 h-5 text-gray-600" />
-              </button>
               <span className="text-sm font-semibold text-gray-700 max-w-[120px] truncate">
                 {user.name}
               </span>

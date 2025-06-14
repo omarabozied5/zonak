@@ -1,7 +1,6 @@
 
 import React from 'react';
 import Header from '../components/layout/Header';
-import BottomNavigation from '../components/layout/BottomNavigation';
 import LoginModal from '../components/auth/LoginModal';
 import HomePage from './HomePage';
 import RestaurantPage from './RestaurantPage';
@@ -34,11 +33,10 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="pb-20">
+      <main>
         {renderCurrentPage()}
       </main>
       
-      <BottomNavigation />
       <LoginModal />
     </div>
   );
