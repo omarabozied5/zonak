@@ -2,28 +2,49 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
-import { usePreparedOrders } from "@/hooks/usePreparedOrders";
+import { useSearch } from "@/hooks/useSearch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, MapPin, Star, Clock, ChefHat, Zap } from "lucide-react";
+import {
+  Loader2,
+  MapPin,
+  Star,
+  Clock,
+  ChefHat,
+  Zap,
+  Search,
+} from "lucide-react";
 
 const Home = () => {
   const navigate = useNavigate();
-  const { orders, loading, error, fetchOrders } = usePreparedOrders();
+  const {
+    restaurants,
+    searchResults,
+    loading,
+    error,
+    fetchRestaurants,
+    isSearchActive,
+    searchQuery,
+    showResults,
+    handleSearchChange,
+    handleSearchSubmit,
+    handleCategoryClick,
+    handleResultClick,
+    clearSearch,
+    hideResults,
+  } = useSearch();
 
   console.log(
-    "Home component - orders:",
-    orders,
+    "Home component - restaurants:",
+    restaurants,
     "loading:",
     loading,
     "error:",
     error
   );
 
-  const safeOrders = Array.isArray(orders) ? orders : [];
-
   const handleRetry = () => {
-    fetchOrders();
+    fetchRestaurants();
   };
 
   const handleRestaurantClick = (user_id: number) => {
@@ -34,7 +55,18 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      <HeroSection />
+      <HeroSection
+        searchResults={searchResults}
+        loading={loading}
+        searchQuery={searchQuery}
+        showResults={showResults}
+        onSearchChange={handleSearchChange}
+        onSearchSubmit={handleSearchSubmit}
+        onCategoryClick={handleCategoryClick}
+        onResultClick={handleResultClick}
+        onClearSearch={clearSearch}
+        onHideResults={hideResults}
+      />
 
       {/* Featured Restaurants Section */}
       <section className="py-6 md:py-8 bg-white">
@@ -42,10 +74,14 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 md:mb-8 gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                <span className="text-[#FFAA01]">أفضل المطاعم</span>
+                <span className="text-[#FFAA01]">
+                  {isSearchActive ? "نتائج البحث" : "أفضل المطاعم"}
+                </span>
               </h2>
               <p className="text-sm sm:text-base text-gray-600">
-                اختر من مجموعة مميزة من أشهر المطاعم في المملكة
+                {isSearchActive
+                  ? `نتائج البحث عن: "${searchQuery}"`
+                  : "اختر من مجموعة مميزة من أشهر المطاعم في المملكة"}
               </p>
             </div>
 
@@ -53,10 +89,10 @@ const Home = () => {
             <div className="flex items-center justify-center sm:justify-end space-x-6 space-x-reverse">
               <div className="text-center">
                 <div className="text-xl sm:text-2xl font-bold text-[#FFAA01]">
-                  {safeOrders.length}+
+                  {restaurants.length}+
                 </div>
                 <div className="text-xs sm:text-sm text-gray-500">
-                  مطعم متاح
+                  {isSearchActive ? "نتيجة" : "مطعم متاح"}
                 </div>
               </div>
               <div className="text-center">
@@ -70,15 +106,46 @@ const Home = () => {
             </div>
           </div>
 
+          {/* Search Results Info */}
+          {isSearchActive && (
+            <div className="bg-gradient-to-r from-[#FFAA01]/10 to-yellow-100 border border-[#FFAA01]/20 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3 space-x-reverse">
+                  <div className="w-8 h-8 bg-[#FFAA01] rounded-full flex items-center justify-center">
+                    <Search className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      تم العثور على {restaurants.length} مطعم
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      نتائج البحث عن: "{searchQuery}"
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={clearSearch}
+                  variant="outline"
+                  size="sm"
+                  className="text-[#FFAA01] border-[#FFAA01] hover:bg-[#FFAA01] hover:text-white"
+                >
+                  مسح البحث
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
-          {loading && safeOrders.length === 0 && (
+          {loading && restaurants.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 md:py-16">
               <div className="relative">
                 <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-[#FFAA01]" />
                 <div className="absolute inset-0 bg-[#FFAA01]/20 rounded-full animate-ping"></div>
               </div>
               <p className="mt-4 text-sm md:text-base text-gray-600 font-medium">
-                جاري تحميل المطاعم المميزة...
+                {isSearchActive
+                  ? "جاري البحث..."
+                  : "جاري تحميل المطاعم المميزة..."}
               </p>
             </div>
           )}
@@ -103,13 +170,17 @@ const Home = () => {
           )}
 
           {/* Restaurants Grid */}
-          {(!loading || safeOrders.length > 0) && safeOrders.length > 0 && (
+          {(!loading || restaurants.length > 0) && restaurants.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-              {safeOrders.map((restaurant) => (
+              {restaurants.map((restaurant) => (
                 <Card
                   key={restaurant.id}
                   className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 bg-white rounded-2xl cursor-pointer transform hover:-translate-y-1"
-                  onClick={() => handleRestaurantClick(restaurant.place?.id)}
+                  onClick={() =>
+                    handleRestaurantClick(
+                      restaurant.place?.id || restaurant.user_id
+                    )
+                  }
                 >
                   <div className="relative">
                     <div className="aspect-video overflow-hidden">
@@ -126,20 +197,14 @@ const Home = () => {
 
                     {/* Status Badges - Top Right */}
                     <div className="absolute top-2 md:top-3 right-2 md:right-3 flex flex-col gap-1 md:gap-2">
-                      {restaurant.place?.review_average && (
+                      {restaurant.review_average > 0 && (
                         <div className="bg-white/95 backdrop-blur-sm rounded-full px-2 md:px-3 py-1 flex items-center space-x-1 space-x-reverse shadow-sm">
                           <Star className="h-3 w-3 text-yellow-500 fill-current" />
                           <span className="text-xs font-bold text-gray-800">
-                            {restaurant.place.review_average}
+                            {restaurant.review_average.toFixed(1)}
                           </span>
                         </div>
                       )}
-
-                      {/* {restaurant.user?.is_exclusive_partner === 1 && (
-                        <div className="bg-gradient-to-r from-[#FFAA01] to-yellow-500 text-white rounded-full px-2 md:px-3 py-1 shadow-sm">
-                          <span className="text-xs font-bold">شريك حصري</span>
-                        </div>
-                      )} */}
                     </div>
 
                     {/* Status Badges - Top Left */}
@@ -155,16 +220,10 @@ const Home = () => {
                           {restaurant.is_busy ? "مشغول" : "متاح"}
                         </span>
                       </div>
-
-                      {/* {restaurant.enable_delivery && (
-                        <div className="bg-[#053468] text-white rounded-full px-2 md:px-3 py-1 shadow-sm">
-                          <span className="text-xs font-bold">توصيل متاح</span>
-                        </div>
-                      )} */}
                     </div>
 
                     {/* Favorite Badge - Bottom Right */}
-                    {restaurant.place?.is_favor && (
+                    {restaurant.is_favor && (
                       <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3">
                         <div className="bg-red-500 text-white rounded-full p-2 shadow-lg">
                           <Star className="h-3 w-3 fill-current" />
@@ -180,30 +239,27 @@ const Home = () => {
                         <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-1">
                           {restaurant.merchant_name}
                         </h3>
-                        {restaurant.place?.taddress && (
+                        {restaurant.category_name && (
                           <p className="text-[#FFAA01] font-medium text-sm">
-                            {restaurant.place.taddress}
+                            {restaurant.category_name}
                           </p>
                         )}
                       </div>
 
                       {/* Restaurant Details */}
                       <div className="space-y-2">
-                        {restaurant.place?.taddress && (
-                          <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                            <MapPin className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
-                            <span className="text-sm line-clamp-1">
-                              {restaurant.place.taddress}
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
+                          <MapPin className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
+                          <span className="text-sm line-clamp-1">
+                            {restaurant.taddress}
+                          </span>
+                        </div>
 
-                        {restaurant.place?.distance && (
+                        {restaurant.distance > 0 && (
                           <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
                             <Clock className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
                             <span className="text-sm">
-                              {restaurant.place.distance.toFixed(1)} كم • 20-30
-                              دقيقة
+                              {restaurant.distance.toFixed(1)} كم • 20-30 دقيقة
                             </span>
                           </div>
                         )}
@@ -220,7 +276,9 @@ const Home = () => {
                           className="w-full bg-gradient-to-r from-[#FFAA01] to-yellow-500 hover:from-[#FFAA01]/90 hover:to-yellow-500/90 text-white font-bold py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRestaurantClick(restaurant.place?.id);
+                            handleRestaurantClick(
+                              restaurant.place?.id || restaurant.user_id
+                            );
                           }}
                         >
                           عرض المنيو
@@ -233,23 +291,48 @@ const Home = () => {
             </div>
           )}
 
-          {/* Empty State */}
-          {!loading && safeOrders.length === 0 && !error && (
+          {/* No Results State */}
+          {!loading && restaurants.length === 0 && !error && isSearchActive && (
             <div className="text-center py-12 md:py-16">
               <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <ChefHat className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+                <Search className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
               </div>
               <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
-                لا توجد مطاعم متاحة حالياً
+                لم يتم العثور على نتائج
               </h3>
-              <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto px-4">
-                نعمل على إضافة المزيد من المطاعم المميزة. تحقق مرة أخرى قريباً!
+              <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto px-4 mb-4">
+                لم نتمكن من العثور على مطاعم تطابق بحثك عن "{searchQuery}"
               </p>
+              <Button
+                onClick={clearSearch}
+                className="bg-[#FFAA01] hover:bg-[#FFAA01]/90 text-white"
+              >
+                مسح البحث وعرض جميع المطاعم
+              </Button>
             </div>
           )}
 
+          {/* Empty State */}
+          {!loading &&
+            restaurants.length === 0 &&
+            !error &&
+            !isSearchActive && (
+              <div className="text-center py-12 md:py-16">
+                <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <ChefHat className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+                  لا توجد مطاعم متاحة حالياً
+                </h3>
+                <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto px-4">
+                  نعمل على إضافة المزيد من المطاعم المميزة. تحقق مرة أخرى
+                  قريباً!
+                </p>
+              </div>
+            )}
+
           {/* Loading More Indicator */}
-          {loading && safeOrders.length > 0 && (
+          {loading && restaurants.length > 0 && (
             <div className="flex items-center justify-center mt-6 md:mt-8 py-4">
               <Loader2 className="h-5 w-5 animate-spin text-[#FFAA01] ml-2" />
               <span className="text-sm md:text-base text-gray-600">
