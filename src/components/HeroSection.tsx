@@ -33,12 +33,7 @@ const HeroSection = () => {
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-1 font-['Bahij_TheSansArabic']">
                 أهلاً بك في
                 <span className="block text-white/90">
-                  <img
-                    src="./public/logo.png"
-                    width="150"
-                    height="auto"
-                    alt="Logo"
-                  />
+                  <img src="/logo.png" width="150" height="auto" alt="Logo" />
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-white/90 mb-1">

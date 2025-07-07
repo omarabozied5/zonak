@@ -94,7 +94,7 @@ const Navigation = () => {
               >
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-2xl flex items-center justify-center">
                   <img
-                    src="/public/zonak.png"
+                    src="/zonak.png"
                     alt="Zonak Icon"
                     className="w-full h-full object-contain"
                     onError={(e) => {

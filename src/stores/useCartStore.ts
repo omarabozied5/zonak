@@ -33,6 +33,7 @@ interface CartState {
   setEditingItem: (itemId: string | null) => void;
   updateItem: (itemId: string, updatedItem: CartItem) => void;
   setCurrentUser: (userId: string | null) => void;
+  migrateGuestCart: (guestItems: CartItem[]) => void;
 
   // Getters
   getTotalItems: () => number;
@@ -95,6 +96,17 @@ const createCartStore = (userId: string | null) => {
 
         setCurrentUser: (newUserId: string | null) => {
           set({ currentUserId: newUserId });
+        },
+
+        migrateGuestCart: (guestItems: CartItem[]) => {
+          const { items } = get();
+          if (items.length === 0 && guestItems.length > 0) {
+            const totalPrice = calculateTotalPrice(guestItems);
+            set({ items: guestItems, totalPrice });
+            console.log(
+              `Migrated ${guestItems.length} items from guest cart to user cart`
+            );
+          }
         },
 
         hasCustomizations: (item: CartItem) => {
@@ -342,6 +354,35 @@ if (typeof window !== "undefined") {
     }
   });
 
+  // Listen for auth login events to migrate guest cart
+  window.addEventListener("auth-login", (event: CustomEvent) => {
+    const { userId } = event.detail;
+    console.log(`User logged in: ${userId}, attempting cart migration`);
+
+    // Get guest cart items
+    const guestInstance = cartStoreInstances.get("guest");
+    if (guestInstance) {
+      const guestItems = guestInstance.store.getState().items;
+
+      if (guestItems.length > 0) {
+        // Get or create user cart
+        const userStoreKey = userId;
+        if (!cartStoreInstances.has(userStoreKey)) {
+          cartStoreInstances.set(userStoreKey, {
+            store: createCartStore(userId),
+            lastAccessed: Date.now(),
+          });
+        }
+
+        const userInstance = cartStoreInstances.get(userStoreKey)!;
+        userInstance.store.getState().migrateGuestCart(guestItems);
+
+        // Clear guest cart
+        guestInstance.store.getState().clearCart();
+      }
+    }
+  });
+
   window.addEventListener("user-data-cleanup", (event: CustomEvent) => {
     const { userId } = event.detail;
     console.log(`Additional cart cleanup for user: ${userId || "guest"}`);
@@ -374,10 +415,19 @@ export const useCartStore = (userId: string | null = null) => {
   return instance.store();
 };
 
-// Helper function to switch between user carts
+// Helper function to switch between user carts and migrate guest cart
 export const switchUserCart = (newUserId: string | null) => {
   const newStoreKey = newUserId || "guest";
+  const oldStoreKey = "guest";
 
+  // Get guest cart items before switching
+  let guestItems: CartItem[] = [];
+  if (newUserId && cartStoreInstances.has(oldStoreKey)) {
+    const guestInstance = cartStoreInstances.get(oldStoreKey)!;
+    guestItems = guestInstance.store.getState().items;
+  }
+
+  // Create or get user cart
   if (!cartStoreInstances.has(newStoreKey)) {
     cartStoreInstances.set(newStoreKey, {
       store: createCartStore(newUserId),
@@ -387,6 +437,16 @@ export const switchUserCart = (newUserId: string | null) => {
 
   const instance = cartStoreInstances.get(newStoreKey)!;
   instance.lastAccessed = Date.now();
+
+  // Migrate guest cart items if switching to user cart
+  if (newUserId && guestItems.length > 0) {
+    instance.store.getState().migrateGuestCart(guestItems);
+
+    // Clear guest cart after migration
+    if (cartStoreInstances.has(oldStoreKey)) {
+      cartStoreInstances.get(oldStoreKey)!.store.getState().clearCart();
+    }
+  }
 
   return instance.store;
 };

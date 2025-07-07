@@ -1,17 +1,18 @@
 import React from "react";
 import { useCartStore } from "@/stores/useCartStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 
-interface FloatingCartProps {
-  userId?: string | null;
-}
-
-const FloatingCart: React.FC<FloatingCartProps> = ({ userId = null }) => {
-  const { getTotalItems, totalPrice } = useCartStore(userId);
+const FloatingCart: React.FC = () => {
+  const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+
+  // Use the correct user ID based on authentication status
+  const userId = isAuthenticated && user?.id ? user.id : null;
+  const { getTotalItems, totalPrice } = useCartStore(userId);
 
   const totalItems = getTotalItems();
 
@@ -21,6 +22,12 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ userId = null }) => {
   }
 
   const handleViewCart = () => {
+    if (!isAuthenticated) {
+      // Redirect to login if not authenticated
+      navigate("/login");
+      return;
+    }
+
     console.log("FloatingCart: Navigating to cart");
     navigate("/cart");
   };
@@ -49,7 +56,7 @@ const FloatingCart: React.FC<FloatingCartProps> = ({ userId = null }) => {
                 className="bg-white text-[#053468] hover:bg-gray-100 hover:text-[#053468] font-semibold text-sm md:text-base px-3 md:px-4 py-2 flex-shrink-0 transition-colors duration-200"
                 onClick={handleViewCart}
               >
-                عرض السلة
+                {isAuthenticated ? "عرض السلة" : "تسجيل الدخول"}
               </Button>
             </div>
           </CardContent>
