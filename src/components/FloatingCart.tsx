@@ -1,14 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
+import LoginModal from "./LoginModal";
 
 const FloatingCart: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Use the correct user ID based on authentication status
   const userId = isAuthenticated && user?.id ? user.id : null;
@@ -23,13 +25,22 @@ const FloatingCart: React.FC = () => {
 
   const handleViewCart = () => {
     if (!isAuthenticated) {
-      // Redirect to login if not authenticated
-      navigate("/login");
+      // Open login modal instead of navigating
+      setShowLoginModal(true);
       return;
     }
 
     console.log("FloatingCart: Navigating to cart");
     navigate("/cart");
+  };
+
+  const handleLoginSuccess = () => {
+    // After successful login, navigate to cart
+    navigate("/cart");
+  };
+
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
   };
 
   return (
@@ -62,6 +73,13 @@ const FloatingCart: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={handleCloseLoginModal}
+        onSuccess={handleLoginSuccess}
+      />
     </>
   );
 };

@@ -63,7 +63,12 @@ export const useMostOrderedItems = (userId: string, placeId: string) => {
 
       // Ensure we're getting the items array and it's valid
       const items = response?.items || response?.data?.items || [];
-      setMostOrderedItems(Array.isArray(items) ? items : []);
+      const validItems = Array.isArray(items) ? items : [];
+
+      // Limit to only the first 5 most ordered items
+      const limitedItems = validItems.slice(0, 5);
+
+      setMostOrderedItems(limitedItems);
     } catch (err) {
       console.error("Error fetching most ordered items:", err);
       setError("فشل في تحميل الأصناف الأكثر طلباً");

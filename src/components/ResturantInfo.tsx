@@ -143,21 +143,14 @@ const BranchesDisplay: React.FC<{ branches: BranchData[] | null }> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-gray-500">
-              <div className="flex items-center gap-2 flex-1">
-                <MapPin className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate text-sm">
+            <div className="flex items-start justify-between text-gray-500">
+              <div className="flex items-start gap-2 flex-1 min-w-0">
+                <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                <span className="text-sm break-words sm:truncate">
                   {branch.addressAr || branch.address}
                 </span>
               </div>
-              {/* {branch.phone && (
-                <a
-                  href={`tel:${branch.phone}`}
-                  className="text-[#FFAA01] hover:text-[#053468] text-sm font-medium"
-                >
-                  اتصل
-                </a>
-              )} */}
+              {/* Phone link */}
             </div>
           </div>
         ))}

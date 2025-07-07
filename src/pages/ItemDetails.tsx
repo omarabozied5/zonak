@@ -234,6 +234,7 @@ const ItemDetails = () => {
     } else {
       addItem(cartItem);
       toast.success(`تم إضافة ${itemDetails.name} إلى السلة`);
+      navigate(-1); // Go back to restaurant details page
     }
   };
 
