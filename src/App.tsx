@@ -21,7 +21,19 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
+        <Sonner
+          position="bottom-right"
+          dir="rtl"
+          toastOptions={{
+            style: {
+              textAlign: "right",
+              direction: "rtl",
+            },
+            className:
+              "sm:min-w-[300px] min-w-[280px] max-w-[350px] sm:max-w-[400px]",
+          }}
+          className="sm:right-4 right-2 sm:bottom-4 bottom-2"
+        />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />

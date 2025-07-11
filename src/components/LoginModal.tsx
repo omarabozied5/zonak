@@ -58,15 +58,27 @@ const mockAuthFunctions = {
           )} ${localNumber.substring(2, 5)} ${localNumber.substring(5)}`,
         };
       }
-    } else if (cleanPhone.startsWith("05") && cleanPhone.length === 10) {
+    }
+    // Handle Saudi numbers - normalize by removing leading 0 if present
+    else if (
+      (cleanPhone.startsWith("05") && cleanPhone.length === 10) ||
+      (cleanPhone.startsWith("5") && cleanPhone.length === 9)
+    ) {
+      // Remove leading 0 if present to normalize the number
+      const normalizedNumber = cleanPhone.startsWith("05")
+        ? cleanPhone.substring(1)
+        : cleanPhone;
+
       return {
         isValid: true,
         message: "",
         countryCode: "+966",
-        formattedPhone: `+966 ${cleanPhone.substring(
-          1,
-          3
-        )} ${cleanPhone.substring(3, 6)} ${cleanPhone.substring(6)}`,
+        formattedPhone: `+966 ${normalizedNumber.substring(
+          0,
+          2
+        )} ${normalizedNumber.substring(2, 5)} ${normalizedNumber.substring(
+          5
+        )}`,
       };
     }
 
@@ -658,7 +670,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder="محمد أحمد"
+                    placeholder="أدخل اسمك كامل"
                     value={name}
                     onChange={handleNameChange}
                     autoComplete="name"

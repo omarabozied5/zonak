@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Trash2 } from "lucide-react";
 import LoginModal from "./LoginModal";
 
 const FloatingCart: React.FC = () => {
@@ -14,7 +14,7 @@ const FloatingCart: React.FC = () => {
 
   // Use the correct user ID based on authentication status
   const userId = isAuthenticated && user?.id ? user.id : null;
-  const { getTotalItems, totalPrice } = useCartStore(userId);
+  const { getTotalItems, totalPrice, clearCart } = useCartStore(userId);
 
   const totalItems = getTotalItems();
 
@@ -32,6 +32,12 @@ const FloatingCart: React.FC = () => {
 
     console.log("FloatingCart: Navigating to cart");
     navigate("/cart");
+  };
+
+  const handleClearCart = () => {
+    if (userId) {
+      clearCart();
+    }
   };
 
   const handleLoginSuccess = () => {
@@ -62,13 +68,27 @@ const FloatingCart: React.FC = () => {
                   {totalPrice.toFixed(2)} ر.س
                 </span>
               </div>
-              <Button
-                variant="secondary"
-                className="bg-white text-[#053468] hover:bg-gray-100 hover:text-[#053468] font-semibold text-sm md:text-base px-3 md:px-4 py-2 flex-shrink-0 transition-colors duration-200"
-                onClick={handleViewCart}
-              >
-                {isAuthenticated ? "عرض السلة" : "تسجيل الدخول"}
-              </Button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="secondary"
+                  className="bg-white text-[#053468] hover:bg-gray-100 hover:text-[#053468] font-semibold text-sm md:text-base px-3 md:px-4 py-2 transition-colors duration-200"
+                  onClick={handleViewCart}
+                >
+                  {isAuthenticated ? "عرض السلة" : "تسجيل الدخول"}
+                </Button>
+                {/* Delete button - only show if authenticated */}
+                {isAuthenticated && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-red-500 text-white hover:bg-red-600 hover:text-white p-2 transition-colors duration-200"
+                    onClick={handleClearCart}
+                    title="حذف جميع المنتجات"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
