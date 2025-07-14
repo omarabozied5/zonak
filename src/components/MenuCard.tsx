@@ -62,7 +62,10 @@ const MenuCard = ({
     const cartItem = {
       id: uniqueId,
       name: item.name,
-      price: item.price,
+      price:
+        item.new_price && typeof item.new_price === "number"
+          ? item.new_price
+          : item.price,
       quantity: 1,
       image: item.images?.[0]?.image_url || "/api/placeholder/400/300",
       restaurantId: item.menu_id?.toString() || "",
@@ -75,7 +78,25 @@ const MenuCard = ({
 
   const handleViewDetails = () => navigate(`/item/${item.id}`);
 
-  const formatPrice = (price: number) => `${price.toFixed(2)} ر.س`;
+  const formatPrice = (price: number, newPrice?: number | boolean) => {
+    if (newPrice && typeof newPrice === "number" && newPrice < price) {
+      return (
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          <span className="text-sm sm:text-base font-bold text-[#FFAA01]">
+            {newPrice} ريال
+          </span>
+          <span className="text-xs text-gray-400 line-through">
+            {price} ريال
+          </span>
+        </div>
+      );
+    }
+    return (
+      <span className="text-sm sm:text-base font-bold text-[#FFAA01]">
+        {price} ريال
+      </span>
+    );
+  };
 
   const QuantityBadge = () => {
     if (itemQuantity === 0) return null;
@@ -129,9 +150,9 @@ const MenuCard = ({
           )}
 
           <div className="flex items-center justify-between pt-2">
-            <span className="font-bold text-sm sm:text-base text-[#053468]">
-              {formatPrice(item.price)}
-            </span>
+            <div className="flex-1">
+              {formatPrice(item.price, item.new_price)}
+            </div>
 
             <div className="flex gap-1">
               <Button
@@ -203,9 +224,9 @@ const MenuCard = ({
               </div>
 
               <div className="flex items-center justify-between sm:flex-col sm:items-end sm:justify-start gap-2">
-                <span className="font-bold text-sm sm:text-base lg:text-lg text-[#FFAA01] whitespace-nowrap">
-                  {formatPrice(item.price)}
-                </span>
+                <div className="whitespace-nowrap">
+                  {formatPrice(item.price, item.new_price)}
+                </div>
 
                 <div className="flex gap-1 sm:gap-2">
                   <Button
@@ -222,7 +243,7 @@ const MenuCard = ({
                       onClick={handleAddToCart}
                       disabled={!isAvailable}
                       size="sm"
-                      className={`h-7 px-2 sm:h-8 sm:px-3 text-xs sm:text-sm transition-all duration-300 bg-[#EFF2F3] hover:bg-[#E0E3E4] text-black disabled:bg-gray-300`}
+                      className={`h-7 px-2 sm:h-8 sm:px-3 text-xs sm:text-sm transition-all duration-300 bg-[#EFF2F3] hover:bg-[#E0E3E4] text-[#053468] disabled:bg-gray-300`}
                     >
                       <Plus className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                       أضف

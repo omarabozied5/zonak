@@ -2,24 +2,90 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Clock, Heart } from "lucide-react";
+import { Star, Clock, Heart, Plus, Eye } from "lucide-react";
 import { MostOrderedItem } from "@/hooks/useMostOrderedItems";
+import { useCartStore } from "@/stores/useCartStore";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface MostOrderedItemCardProps {
   item: MostOrderedItem;
   index: number;
+  restaurantName: string;
   onAddToCart?: (item: MostOrderedItem) => void;
 }
 
 const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
   item,
   index,
+  restaurantName,
   onAddToCart,
 }) => {
+  const navigate = useNavigate();
+
+  // Get current user ID from auth store
+  const currentUserId = useAuthStore((state) => state.getUserId());
+
+  // Get cart store instance for current user
+  const cartStore = useCartStore(currentUserId);
+  const { addItem, items } = cartStore;
+
+  const hasOptions = item.options && item.options.length > 0;
+  const isAvailable = item.is_available === 1;
+
+  // Calculate total quantity for this specific menu item across all cart items
+  const itemQuantity = React.useMemo(() => {
+    return items
+      .filter((cartItem) => {
+        // Extract base item ID from cart item (remove timestamp suffix)
+        const baseItemId = cartItem.id.split("-")[0];
+        return baseItemId === item.id.toString();
+      })
+      .reduce((total, cartItem) => total + cartItem.quantity, 0);
+  }, [items, item.id]);
+
+  const handleAddToCart = () => {
+    if (!isAvailable) {
+      toast.error("هذا العنصر غير متوفر حالياً");
+      return;
+    }
+
+    if (hasOptions) {
+      navigate(`/item/${item.id}`);
+      return;
+    }
+
+    // Generate unique ID for cart item
+    const uniqueId = `${item.id}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    const cartItem = {
+      id: uniqueId,
+      name: item.name,
+      price: item.new_price || item.price,
+      quantity: 1,
+      image: getItemImage(item) || "/api/placeholder/400/300",
+      restaurantId: item.menu_id?.toString() || "",
+      restaurantName: restaurantName,
+    };
+
+    addItem(cartItem);
+    toast.success(`تم إضافة ${item.name} إلى السلة`);
+
+    // Call the optional callback
+    if (onAddToCart) {
+      onAddToCart(item);
+    }
+  };
+
+  const handleViewDetails = () => navigate(`/item/${item.id}`);
+
   const formatPrice = (price: number, newPrice?: number) => {
     if (newPrice && newPrice < price) {
       return (
-        <div className="flex items-center justify-center gap-1 sm:gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           <span className="text-sm sm:text-base font-bold text-[#FFAA01]">
             {newPrice} ريال
           </span>
@@ -43,10 +109,25 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
     return null;
   };
 
+  const QuantityBadge = () => {
+    if (itemQuantity === 0) return null;
+
+    return (
+      <div className="absolute -top-2 -right-4 z-20">
+        <div className="relative">
+          <Badge className="bg-white hover:bg-[#053468] text-black font-bold min-w-[20px] h-6 flex items-center justify-center px-1.5 rounded-full border-2 border-white shadow-lg transform transition-all duration-200">
+            <span className="text-xs font-extrabold">x{itemQuantity}</span>
+          </Badge>
+          <div className="absolute inset-0 bg-[#053468] rounded-full animate-ping opacity-20"></div>
+        </div>
+      </div>
+    );
+  };
+
   const isUnavailable = item.is_available !== 1;
 
   return (
-    <Card className="group hover:shadow-2xl transition-all duration-500 border-0 shadow-lg hover:shadow-[#FFAA01]/20 hover:-translate-y-1 sm:hover:-translate-y-2 relative overflow-hidden bg-white rounded-xl sm:rounded-2xl w-full max-w-[280px] sm:max-w-[260px] lg:max-w-[280px] xl:max-w-[300px] mx-auto h-[320px] sm:h-[360px] lg:h-[380px] flex flex-col mb-3">
+    <Card className="group hover:shadow-2xl transition-all duration-500 border-0 shadow-lg hover:shadow-[#FFAA01]/20 hover:-translate-y-1 sm:hover:-translate-y-2 relative overflow-hidden bg-white rounded-xl sm:rounded-2xl w-full max-w-[280px] sm:max-w-[260px] lg:max-w-[280px] xl:max-w-[300px] mx-auto h-[370px] sm:h-[410px] lg:h-[430px] flex flex-col mb-3">
       {/* Popularity Badge */}
       <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20">
         <Badge className="bg-gradient-to-r from-[#FFAA01] to-[#ff8c00] text-white text-xs px-2 sm:px-3 py-1 sm:py-1.5 shadow-lg rounded-full font-semibold border-2 border-white/20">
@@ -146,10 +227,39 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
             )}
           </div>
 
-          {/* Price */}
+          {/* Price and Actions */}
           <div className="pt-2 sm:pt-3 border-t border-gray-100 mt-auto">
-            <div className="text-center">
-              {formatPrice(item.price, item.new_price)}
+            {/* Price and Buttons in same line */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Price */}
+              <div className="flex-shrink-0">
+                {formatPrice(item.price, item.new_price)}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleViewDetails}
+                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-gray-100 rounded-full flex-shrink-0"
+                >
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                </Button>
+
+                <div className="relative">
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={!isAvailable}
+                    size="sm"
+                    className="h-8 px-3 sm:h-9 sm:px-4 text-xs sm:text-sm transition-all duration-300 bg-[#EFF2F3] hover:bg-[#E0E3E4] text-[#053468] disabled:bg-gray-300 rounded-full flex-shrink-0"
+                  >
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                    أضف
+                  </Button>
+                  <QuantityBadge />
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -4,7 +4,11 @@
   padding: 2rem;
   text-align: center;
 }
-
+.arabic-text {
+  font-family: "Noto Sans Arabic", "Arial Unicode MS", Arial, sans-serif;
+  direction: rtl;
+  text-align: right;
+}
 .logo {
   height: 6em;
   padding: 1.5em;

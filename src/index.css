@@ -1,5 +1,4 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Bahij+TheSansArabic:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Bahij+TheSansArabic:wght@300;400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -84,20 +83,56 @@
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground;
+  html {
+    font-family: "Bahij TheSansArabic", "Noto Sans Arabic", "Arial Unicode MS",
+      Arial, Tahoma, sans-serif !important;
     direction: rtl;
-    font-family: 'Bahij TheSansArabic', 'Arial', 'Tahoma', sans-serif;
   }
 
-  [dir="ltr"] {
-    direction: ltr;
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Bahij TheSansArabic", "Noto Sans Arabic", "Arial Unicode MS",
+      Arial, Tahoma, sans-serif !important;
+    direction: rtl;
+  }
+
+  /* Force Bahij TheSansArabic on all elements */
+  * {
+    font-family: "Bahij TheSansArabic", "Noto Sans Arabic", "Arial Unicode MS",
+      Arial, Tahoma, sans-serif !important;
+  }
+
+  /* Specific overrides for common elements */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Bahij TheSansArabic", "Noto Sans Arabic", "Arial Unicode MS",
+      Arial, Tahoma, sans-serif !important;
+  }
+
+  p,
+  div,
+  span,
+  a,
+  button,
+  input,
+  textarea,
+  label {
+    font-family: "Bahij TheSansArabic", "Noto Sans Arabic", "Arial Unicode MS",
+      Arial, Tahoma, sans-serif !important;
+  }
+
+  [dir="rtl"] {
+    direction: rtl;
   }
 }
 
 @layer components {
   .orange-gradient {
-    background: #FFAA01;
+    background: #ffaa01;
   }
 
   .blue-gradient {
@@ -105,7 +140,7 @@
   }
 
   .orange-text {
-    color: #FFAA01;
+    color: #ffaa01;
   }
 
   .blue-text {
@@ -117,6 +152,22 @@
   }
 
   .floating-card {
-    box-shadow: 0 10px 25px -5px rgba(255, 170, 1, 0.1), 0 10px 10px -5px rgba(255, 170, 1, 0.04);
+    box-shadow: 0 10px 25px -5px rgba(255, 170, 1, 0.1),
+      0 10px 10px -5px rgba(255, 170, 1, 0.04);
+  }
+
+  /* Arabic text helper class */
+  .arabic-text {
+    font-family: "Bahij TheSansArabic", "Noto Sans Arabic", "Arial Unicode MS",
+      Arial, sans-serif !important;
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* Force Arabic font on all text elements */
+  .force-arabic-font {
+    font-family: "Bahij TheSansArabic", "Noto Sans Arabic", "Arial Unicode MS",
+      Arial, Tahoma, sans-serif !important;
+    direction: rtl;
   }
 }
