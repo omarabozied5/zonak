@@ -145,7 +145,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
       )}
 
       {/* Favorite Button */}
-      <div className="absolute top-3 sm:top-4 left-1/4 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300">
+      {/* <div className="absolute top-3 sm:top-4 left-1/4 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300">
         <Button
           size="sm"
           variant="ghost"
@@ -153,7 +153,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
         >
           <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600 hover:text-red-500 transition-colors duration-300" />
         </Button>
-      </div>
+      </div> */}
 
       {/* Unavailable Overlay */}
       {isUnavailable && (

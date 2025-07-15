@@ -149,8 +149,11 @@ export const OTPStep: React.FC<OTPStepProps> = ({
         />
       </FormField>
 
-      {/* Help text for accessibility */}
-      <div id="otp-help" className="sr-only">
+      {/* Help text - responsive and visible */}
+      <div
+        id="otp-help"
+        className="text-xs sm:text-sm text-gray-500 text-center px-2 leading-relaxed"
+      >
         أدخل رمز التحقق المكون من 4 أرقام المرسل إلى هاتفك
       </div>
 
