@@ -14,7 +14,7 @@ import { StepIndicator } from "./LoginModal/StepIndicator";
 import { PhoneStep } from "./LoginModal/PhoneStep";
 import { PasswordStep } from "./LoginModal/PasswordStep";
 import { UserDetailsStep } from "./LoginModal/UserDetailsStep";
-import { OTPStep } from "./LoginModal/OtpStep";
+import { OTPStep } from "./LoginModal/OTPStep";
 
 interface LoginModalProps {
   isOpen: boolean;
