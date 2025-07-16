@@ -138,8 +138,8 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({
   const getCategoryName = () => {
     // Try multiple sources for category name
     const categoryName =
-      // restaurant.category_name ||
-      // restaurant.place_category?.name ||
+      restaurant.category_name ||
+      restaurant.place_category?.name ||
       "وجبات سريعه";
 
     // Ensure it's properly decoded and displayed
