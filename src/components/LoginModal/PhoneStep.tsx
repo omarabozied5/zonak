@@ -45,7 +45,7 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
             onPhoneChange(value);
           }}
           onBlur={onPhoneBlur}
-          placeholder="5xxxxxxxx أو +966 5xxxxxxxx"
+          // placeholder="أدخل رقم الجوال"
           className={cn(
             "text-right",
             validationState.phone.touched && !validationState.phone.isValid

@@ -215,14 +215,13 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({
               disabled={!restaurant.website}
             />
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Bottom Section - Status Badge and Working Hours */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <WorkingHoursDisplay restaurant={restaurant} />
-              {/* <Clock className="h-4 w-4 text-yellow-500" /> */}
-            </div>
-          </div>
+      {/* Working Hours - Separate Card Below */}
+      <Card className="shadow-lg border-0 rounded-xl overflow-hidden mt-4">
+        <CardContent className="p-0">
+          <WorkingHoursDisplay restaurant={restaurant} />
         </CardContent>
       </Card>
     </div>

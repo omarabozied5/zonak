@@ -1,8 +1,7 @@
-
-import React from 'react';
-import { Phone, Globe, MessageCircle } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React from "react";
+import { Phone, Globe, MessageCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface RestaurantInfoCardsProps {
   restaurant: any;
@@ -47,8 +46,16 @@ const RestaurantInfoCards = ({ restaurant }: RestaurantInfoCardsProps) => {
               {restaurant.working_hours.slice(0, 3).map((hours: any) => (
                 <div key={hours.id} className="flex justify-between text-sm">
                   <span>يوم {hours.day}</span>
-                  <span className={hours.is_closed ? 'text-red-500' : 'text-green-500'}>
-                    {hours.is_closed ? 'مغلق' : hours.is_24h ? '24 ساعة' : `${hours.open_time} - ${hours.close_time}`}
+                  <span
+                    className={
+                      hours.is_closed ? "text-red-500" : "text-green-500"
+                    }
+                  >
+                    {hours.is_closed
+                      ? "مغلق"
+                      : hours.is_24h
+                      ? "24 ساعة"
+                      : `${hours.open_time} - ${hours.close_time}`}
                   </span>
                 </div>
               ))}

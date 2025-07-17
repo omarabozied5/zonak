@@ -128,7 +128,7 @@ export const OTPStep: React.FC<OTPStepProps> = ({
           onBlur={onOTPBlur}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder="ادخل رمز التحقق المكون من 4 أرقام"
+          placeholder="- - - -"
           className={cn(
             "text-center text-lg tracking-[0.5em] font-mono",
             "direction-ltr",
