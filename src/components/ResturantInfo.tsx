@@ -196,13 +196,13 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({
           {/* Action Buttons Row */}
           <div className="flex gap-2">
             <ActionButton
-              icon={<img src="/public/dir.png" className="h-3 w-3" />}
+              icon={<img src="/dir.png" className="h-3 w-3" />}
               label="الاتجاهات"
               onClick={handleDirections}
             />
 
             <ActionButton
-              icon={<img src="/public/call.png" className="h-3 w-3" />}
+              icon={<img src="/call.png" className="h-3 w-3" />}
               label="الاتصال"
               onClick={handleCall}
               disabled={!restaurant.phone}

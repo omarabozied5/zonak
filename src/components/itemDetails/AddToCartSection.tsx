@@ -1,0 +1,70 @@
+// components/ItemDetails/AddToCartSection.tsx
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { QuantitySelector } from "./QuantityCartSection";
+
+interface AddToCartSectionProps {
+  quantity: number;
+  totalPrice: number;
+  isEditMode: boolean;
+  canAddToCart: boolean;
+  isItemActive: boolean;
+  onQuantityChange: (quantity: number) => void;
+  onAddToCart: () => void;
+}
+
+export const AddToCartSection: React.FC<AddToCartSectionProps> = ({
+  quantity,
+  totalPrice,
+  isEditMode,
+  canAddToCart,
+  isItemActive,
+  onQuantityChange,
+  onAddToCart,
+}) => {
+  const canAddToCartFinal = isItemActive && canAddToCart;
+
+  return (
+    <Card className="shadow-lg border-0 bg-gradient-to-br from-[#FFAA01]/5 to-[#053468]/5 sticky bottom-4 sm:static">
+      <CardContent className="p-4 sm:p-6 space-y-4">
+        {/* Quantity Selector */}
+        <QuantitySelector
+          quantity={quantity}
+          onQuantityChange={onQuantityChange}
+        />
+
+        {/* Total Price */}
+        <div className="flex items-center justify-between py-2 border-t border-gray-200">
+          <span className="text-base sm:text-lg font-semibold text-[#053468]">
+            المجموع
+          </span>
+          <span className="text-xl sm:text-2xl font-bold text-[#FFAA01]">
+            {totalPrice.toFixed(2)} ر.س
+          </span>
+        </div>
+
+        {/* Add to Cart / Update Button */}
+        <Button
+          onClick={onAddToCart}
+          disabled={!canAddToCartFinal}
+          className="w-full bg-[#FFAA01] hover:bg-yellow-500 text-[#053468] font-bold py-2.5 sm:py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm sm:text-base"
+        >
+          {isEditMode ? "تحديث العنصر" : "إضافة إلى السلة"}
+        </Button>
+
+        {/* Error Messages */}
+        {!isItemActive && (
+          <p className="text-red-500 text-center text-xs sm:text-sm">
+            هذا العنصر غير متوفر حالياً
+          </p>
+        )}
+        {!canAddToCart && isItemActive && (
+          <p className="text-red-500 text-center text-xs sm:text-sm">
+            يجب اختيار جميع الخيارات المطلوبة
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};

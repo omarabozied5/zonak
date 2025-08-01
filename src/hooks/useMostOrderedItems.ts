@@ -44,7 +44,10 @@ export interface MostOrderedItem {
   }[];
 }
 
-export const useMostOrderedItems = (userId: string, placeId: string) => {
+export const useMostOrderedItems = (
+  userId: string,
+  placeId: string | number
+) => {
   const [mostOrderedItems, setMostOrderedItems] = useState<MostOrderedItem[]>(
     []
   );

@@ -49,6 +49,9 @@ const FloatingCart: React.FC = () => {
     setShowLoginModal(false);
   };
 
+  // Ensure totalPrice is a valid number before calling toFixed
+  const displayPrice = totalPrice != null ? totalPrice.toFixed(2) : "0.00";
+
   return (
     <>
       {/* Spacer div to prevent content from being hidden behind floating cart */}
@@ -65,7 +68,7 @@ const FloatingCart: React.FC = () => {
                 </span>
                 <span className="mx-1 md:mx-2 text-sm md:text-base">•</span>
                 <span className="font-bold text-sm md:text-base truncate">
-                  {totalPrice.toFixed(2)} ر.س
+                  {displayPrice} ر.س
                 </span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">

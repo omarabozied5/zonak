@@ -124,8 +124,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({
               {/* Logo with responsive alignment */}
               <div className="flex justify-center lg:justify-start mb-3 sm:mb-4">
                 <img
-                  src="/logo.png"
-                  width="120"
+                  src="/zonak-logo.png"
+                  width="150"
                   height="auto"
                   alt="Logo"
                   className="sm:w-[150px] max-w-full h-auto"

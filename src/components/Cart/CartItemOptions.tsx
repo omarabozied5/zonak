@@ -1,22 +1,6 @@
 import React from "react";
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  restaurantId: string;
-  restaurantName: string;
-  selectedOptions?: {
-    size?: string;
-    requiredOptions?: Record<string, any>;
-    requiredOptionNames?: Record<string, string>;
-    optionalOptions?: string[];
-    optionalOptionNames?: string[];
-    notes?: string;
-  };
-}
+import { CartItem } from "../../types/types";
 
 interface CartItemOptionsProps {
   item: CartItem;

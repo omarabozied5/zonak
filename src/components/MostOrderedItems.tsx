@@ -10,7 +10,7 @@ import MostOrderedItemCard from "./MostOrderedItemCard";
 
 interface MostOrderedItemsProps {
   userId: string;
-  placeId: string;
+  placeId: string | number; // Use string or number based on your API
   onAddToCart?: (item: MostOrderedItem) => void;
 }
 
@@ -143,6 +143,9 @@ const MostOrderedItems: React.FC<MostOrderedItemsProps> = ({
               item={item}
               index={index}
               restaurantName={item.restaurant_name || ""}
+              placeId={placeId}
+              merchantId={userId} // Using userId as merchantId since that's the pattern in your app
+              categoryId={item.categories?.[0]?.id || 0}
               onAddToCart={onAddToCart}
             />
           ))}

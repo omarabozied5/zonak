@@ -13,7 +13,7 @@ import { Restaurant, CartItem } from "../types/types";
 import { ErrorState, LoadingState } from "../components/ErrorLoadingStates";
 import ImageSlider from "../components/ImageSlider";
 import RestaurantInfo from "../components/ResturantInfo";
-
+import { MenuItem } from "../hooks/useMenuItems";
 // Interface for comprehensive restaurant data
 interface RestaurantData {
   restaurant: Restaurant;
@@ -47,6 +47,7 @@ const RestaurantDetails: React.FC = () => {
   const navigate = useNavigate();
 
   // State for all restaurant-related data
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [restaurantData, setRestaurantData] = useState<RestaurantData | null>(
     null
   );
@@ -126,21 +127,21 @@ const RestaurantDetails: React.FC = () => {
     fetchRestaurantData();
   }, [fetchRestaurantData]);
 
-  const handleAddToCart = useCallback(
-    (item: CartItem) => {
-      if (!restaurantData?.restaurant) return;
-      addItem({
-        id: item.id,
-        name: item.name,
-        price: item.new_price || item.price,
-        image: item.images?.[0]?.image_url || "",
-        restaurantId: restaurantData.restaurant.user_id.toString(),
-        restaurantName: restaurantData.restaurant.merchant_name,
-        quantity: 1,
-      });
-    },
-    [restaurantData, addItem]
-  );
+  // const handleAddToCart = useCallback(
+  //   (item: CartItem) => {
+  //     if (!restaurantData?.restaurant) return;
+  //     addItem({
+  //       id: item.id,
+  //       name: item.name,
+  //       price: item.new_price || item.price,
+  //       image: item.images?.[0]?.image_url || "",
+  //       restaurantId: restaurantData.restaurant.user_id.toString(),
+  //       restaurantName: restaurantData.restaurant.merchant_name,
+  //       quantity: 1,
+  //     });
+  //   },
+  //   [restaurantData, addItem]
+  // );
 
   const handleRetry = useCallback(() => {
     fetchRestaurantData();
@@ -217,8 +218,11 @@ const RestaurantDetails: React.FC = () => {
       {/* Menu */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
         <Menu
-          restaurantId={restaurant.user_id.toString()}
+          userId={restaurant.user_id.toString()}
+          merchantId={restaurant.user_id}
           restaurantName={restaurant.merchant_name}
+          placeId={id}
+          categoryId={menuItems[0]?.categories?.[0]?.id || 0}
         />
       </div>
 

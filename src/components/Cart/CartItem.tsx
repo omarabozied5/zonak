@@ -4,24 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import QuantityControls from "./QuntityControls";
 import CartItemOptions from "./CartItemOptions";
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  restaurantId: string;
-  restaurantName: string;
-  selectedOptions?: {
-    size?: string;
-    requiredOptions?: Record<string, any>;
-    requiredOptionNames?: Record<string, string>;
-    optionalOptions?: string[];
-    optionalOptionNames?: string[];
-    notes?: string;
-  };
-}
+import { CartItem } from "../../types/types";
 
 interface CartItemProps {
   item: CartItem;
@@ -85,9 +68,26 @@ const CartItemComponent: React.FC<CartItemProps> = ({
               <p className="text-sm text-[#FFAA01] mb-1 truncate font-medium">
                 {item.restaurantName}
               </p>
-              <p className="text-sm text-gray-500 mb-2">
-                {item.price.toFixed(2)} ر.س × {item.quantity}
-              </p>
+              {(item.discountAmount || 0) > 0 ? (
+                <div className="text-sm mb-2 space-y-1">
+                  <p className="text-gray-400 line-through">
+                    {(item.originalPrice || item.price).toFixed(2)} ر.س ×{" "}
+                    {item.quantity}
+                  </p>
+                  <p className="text-green-600">
+                    {item.price.toFixed(2)} ر.س × {item.quantity}
+                  </p>
+                  <p className="text-xs text-green-600">
+                    وفرت{" "}
+                    {((item.discountAmount || 0) * item.quantity).toFixed(2)}{" "}
+                    ر.س
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mb-2">
+                  {item.price.toFixed(2)} ر.س × {item.quantity}
+                </p>
+              )}
 
               {/* Selected Options */}
               <CartItemOptions item={item} />

@@ -8,35 +8,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Eye } from "lucide-react";
+import { createCartItem } from "@/lib/cartUtils";
 
 interface MenuCardProps {
   item: MenuItem;
   restaurantName: string;
   viewMode?: "list" | "grid";
+  placeId?: string | number; // Add placeId prop
+  merchantId?: string | number; // Add merchantId prop
+  categoryId: number;
 }
 
 const MenuCard = ({
   item,
   restaurantName,
   viewMode = "list",
+  placeId,
+  merchantId,
+  categoryId,
 }: MenuCardProps) => {
   const navigate = useNavigate();
-
-  // Get current user ID from auth store
   const currentUserId = useAuthStore((state) => state.getUserId());
-
-  // Get cart store instance for current user
   const cartStore = useCartStore(currentUserId);
   const { addItem, items } = cartStore;
 
   const hasOptions = item.options && item.options.length > 0;
   const isAvailable = item.is_available === 1;
+  React.useEffect(() => {
+    console.log("MenuCard props:", {
+      itemId: item.id,
+      placeId,
+      merchantId,
+      restaurantName,
+      categoryId,
+    });
+  }, [item.id, placeId, merchantId, restaurantName, categoryId]);
 
-  // Calculate total quantity for this specific menu item across all cart items
+  // Calculate total quantity for this menu item
   const itemQuantity = React.useMemo(() => {
     return items
       .filter((cartItem) => {
-        // Extract base item ID from cart item (remove timestamp suffix)
         const baseItemId = cartItem.id.split("-")[0];
         return baseItemId === item.id.toString();
       })
@@ -50,33 +61,40 @@ const MenuCard = ({
     }
 
     if (hasOptions) {
-      navigate(`/item/${item.id}`);
+      const searchParams = new URLSearchParams({
+        placeId: placeId?.toString() || "",
+        merchantId: merchantId?.toString() || "",
+        restaurantName: restaurantName,
+      });
+      navigate(`/item/${item.id}?${searchParams}`);
       return;
     }
 
-    // Generate unique ID for cart item
-    const uniqueId = `${item.id}-${Date.now()}-${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
-
-    const cartItem = {
-      id: uniqueId,
-      name: item.name,
-      price:
-        item.new_price && typeof item.new_price === "number"
-          ? item.new_price
-          : item.price,
+    console.log("MenuCard createCartItem params:", {
+      restaurantName,
+      placeId,
+      merchantId,
+    });
+    const cartItem = createCartItem({
+      item,
+      restaurantName,
+      placeId: placeId || "0", // Use placeId from props (this is place_id from URL)
+      merchantId: merchantId,
       quantity: 1,
-      image: item.images?.[0]?.image_url || "/api/placeholder/400/300",
-      restaurantId: item.menu_id?.toString() || "",
-      restaurantName: restaurantName,
-    };
+    });
 
     addItem(cartItem);
     toast.success(`تم إضافة ${item.name} إلى السلة`);
   };
 
-  const handleViewDetails = () => navigate(`/item/${item.id}`);
+  const handleViewDetails = () => {
+    const searchParams = new URLSearchParams({
+      placeId: placeId?.toString() || "",
+      merchantId: merchantId?.toString() || "",
+      restaurantName: restaurantName,
+    });
+    navigate(`/item/${item.id}?${searchParams}`);
+  };
 
   const formatPrice = (price: number, newPrice?: number | boolean) => {
     if (newPrice && typeof newPrice === "number" && newPrice < price) {

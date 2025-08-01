@@ -8,10 +8,14 @@ import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { createCartItem } from "@/lib/cartUtils";
 
 interface MostOrderedItemCardProps {
   item: MostOrderedItem;
   index: number;
+  placeId?: string | number; // Add placeId prop
+  merchantId?: string | number; // Add merchantId prop
+  categoryId: number;
   restaurantName: string;
   onAddToCart?: (item: MostOrderedItem) => void;
 }
@@ -20,6 +24,9 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
   item,
   index,
   restaurantName,
+  placeId,
+  merchantId,
+  categoryId,
   onAddToCart,
 }) => {
   const navigate = useNavigate();
@@ -56,20 +63,18 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
       return;
     }
 
-    // Generate unique ID for cart item
-    const uniqueId = `${item.id}-${Date.now()}-${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
+    // // Generate unique ID for cart item
+    // const uniqueId = `${item.id}-${Date.now()}-${Math.random()
+    //   .toString(36)
+    //   .substr(2, 9)}`;
 
-    const cartItem = {
-      id: uniqueId,
-      name: item.name,
-      price: item.new_price || item.price,
+    const cartItem = createCartItem({
+      item,
+      restaurantName,
+      placeId: placeId || "0", // Use placeId from props (this is place_id from URL)
+      merchantId: merchantId,
       quantity: 1,
-      image: getItemImage(item) || "/api/placeholder/400/300",
-      restaurantId: item.menu_id?.toString() || "",
-      restaurantName: restaurantName,
-    };
+    });
 
     addItem(cartItem);
     toast.success(`تم إضافة ${item.name} إلى السلة`);

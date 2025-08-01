@@ -9,12 +9,21 @@ import { useMenuItems } from "@/hooks/useMenuItems";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface MenuProps {
-  restaurantId: string;
+  userId: string | number;
   restaurantName: string;
+  placeId?: string | number;
+  merchantId?: string | number;
+  categoryId: number;
 }
 
-const Menu = ({ restaurantId, restaurantName }: MenuProps) => {
-  const { menuItems, loading, error } = useMenuItems(restaurantId);
+const Menu = ({
+  userId,
+  restaurantName,
+  placeId,
+  merchantId,
+  categoryId,
+}: MenuProps) => {
+  const { menuItems, loading, error } = useMenuItems(userId);
   const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -104,7 +113,13 @@ const Menu = ({ restaurantId, restaurantName }: MenuProps) => {
       </CardContent>
     </Card>
   );
-
+  React.useEffect(() => {
+    console.log("Menu component props:", {
+      userId,
+      restaurantName,
+      placeId,
+    });
+  }, [userId, restaurantName, placeId]);
   if (loading) return <LoadingState />;
   if (error) return <ErrorState />;
   if (menuItems.length === 0) return <EmptyState isFiltered={false} />;
@@ -213,6 +228,9 @@ const Menu = ({ restaurantId, restaurantName }: MenuProps) => {
                 item={item}
                 restaurantName={restaurantName}
                 viewMode={viewMode}
+                placeId={placeId}
+                merchantId={merchantId || userId}
+                categoryId={item.categories?.[0].id}
               />
             ))}
           </div>

@@ -8,6 +8,8 @@ interface OrderSummaryProps {
   totalPrice: number;
   restaurantCount: number;
   hasMultipleRestaurants: boolean;
+  totalItemDiscounts?: number;
+  originalTotalPrice?: number;
   onProceedToCheckout: () => void;
   isCheckoutDisabled: boolean;
   isEmpty?: boolean;
@@ -17,6 +19,8 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   totalItems,
   totalPrice,
   restaurantCount,
+  totalItemDiscounts = 0,
+  originalTotalPrice = 0,
   hasMultipleRestaurants,
   onProceedToCheckout,
   isCheckoutDisabled,
@@ -41,6 +45,18 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             <span>المطاعم</span>
             <span className="font-semibold">{restaurantCount}</span>
           </div>
+          {totalItemDiscounts > 0 && (
+            <>
+              <div className="flex justify-between text-gray-500">
+                <span>السعر الأصلي</span>
+                <span>{originalTotalPrice.toFixed(2)} ر.س</span>
+              </div>
+              <div className="flex justify-between text-green-600">
+                <span>إجمالي الخصومات</span>
+                <span>-{totalItemDiscounts.toFixed(2)} ر.س</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Warning for multiple restaurants */}

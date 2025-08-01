@@ -1,23 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  restaurantId: string;
-  restaurantName: string;
-  selectedOptions?: {
-    size?: string;
-    requiredOptions?: Record<string, number>;
-    requiredOptionNames?: Record<string, string>;
-    optionalOptions?: number[];
-    optionalOptionNames?: string[];
-    notes?: string;
-  };
-}
+import { CartItem } from "../types/types";
 
 interface CartState {
   items: CartItem[];
@@ -25,48 +8,38 @@ interface CartState {
   editingItemId: string | null;
   currentUserId: string | null;
 
-  // Actions
+  // Core actions
   addItem: (item: CartItem) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
   setEditingItem: (itemId: string | null) => void;
   updateItem: (itemId: string, updatedItem: CartItem) => void;
+
+  // User management
   setCurrentUser: (userId: string | null) => void;
   migrateGuestCart: (guestItems: CartItem[]) => void;
 
-  // Getters
+  // Utility functions
   getTotalItems: () => number;
   hasCustomizations: (item: CartItem) => boolean;
-  getItemQuantity: (itemId: string, restaurantId: string) => number;
   getMenuItemQuantity: (menuItemId: string, restaurantId?: string) => number;
-  getMenuItemQuantityByRestaurant: (
-    menuItemId: string
-  ) => Record<string, number>;
   getRestaurantItemCount: (restaurantId: string) => number;
-  getItemVariants: (menuItemId: string, restaurantId?: string) => CartItem[];
-  canAddMoreItems: (
-    menuItemId: string,
-    restaurantId: string,
-    maxQuantity?: number
-  ) => boolean;
-  getQuantityBreakdown: () => {
-    totalItems: number;
-    byRestaurant: Record<string, number>;
-    byMenuItem: Record<string, number>;
-  };
 }
 
 // Helper functions
-const getBaseItemId = (itemId: string): string => {
-  return itemId.split("-")[0];
-};
+const getBaseItemId = (itemId: string): string => itemId.split("-")[0];
 
 const createItemKey = (item: CartItem) => {
   const baseId = getBaseItemId(item.id);
-  const itemSignature = {
+
+  // FIX: Use a more robust restaurant identification
+  // Prioritize placeId, then restaurantId, then merchantId for consistency
+  const restaurantIdentifier = item.placeId || item.restaurantId || "";
+
+  return JSON.stringify({
     baseId,
-    restaurantId: item.restaurantId,
+    restaurant: restaurantIdentifier, // Simplified to one restaurant field
     unitPrice: item.price,
     selectedOptions: {
       size: item.selectedOptions?.size || null,
@@ -74,18 +47,20 @@ const createItemKey = (item: CartItem) => {
       optionalOptions: (item.selectedOptions?.optionalOptions || []).sort(),
       notes: item.selectedOptions?.notes?.trim() || null,
     },
-  };
-  return JSON.stringify(itemSignature);
+  });
 };
 
-const calculateTotalPrice = (items: CartItem[]): number => {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-};
+const calculateTotalPrice = (items: CartItem[]): number =>
+  items.reduce(
+    (sum, item) => sum + item.totalPriceWithModifiers * item.quantity,
+    0
+  );
+
+const getStorageKey = (userId: string | null): string =>
+  userId ? `cart-storage-${userId}` : "cart-storage-guest";
 
 // Create cart store factory
 const createCartStore = (userId: string | null) => {
-  const storageKey = userId ? `cart-storage-${userId}` : "cart-storage-guest";
-
   return create<CartState>()(
     persist(
       (set, get) => ({
@@ -103,9 +78,6 @@ const createCartStore = (userId: string | null) => {
           if (items.length === 0 && guestItems.length > 0) {
             const totalPrice = calculateTotalPrice(guestItems);
             set({ items: guestItems, totalPrice });
-            console.log(
-              `Migrated ${guestItems.length} items from guest cart to user cart`
-            );
           }
         },
 
@@ -122,91 +94,28 @@ const createCartStore = (userId: string | null) => {
           );
         },
 
-        getItemQuantity: (itemId: string, restaurantId: string) => {
-          const { items } = get();
-          return items
-            .filter((item) => {
-              const baseId = getBaseItemId(item.id);
-              return baseId === itemId && item.restaurantId === restaurantId;
-            })
-            .reduce((total, item) => total + item.quantity, 0);
-        },
-
         getMenuItemQuantity: (menuItemId: string, restaurantId?: string) => {
           const { items } = get();
           return items
             .filter((item) => {
               const baseId = getBaseItemId(item.id);
-              const matchesItem = baseId === menuItemId;
-              const matchesRestaurant =
-                !restaurantId || item.restaurantId === restaurantId;
-              return matchesItem && matchesRestaurant;
+              const itemRestaurantId = item.placeId || item.restaurantId || "";
+              return (
+                baseId === menuItemId &&
+                (!restaurantId || itemRestaurantId === restaurantId)
+              );
             })
             .reduce((total, item) => total + item.quantity, 0);
-        },
-
-        getMenuItemQuantityByRestaurant: (menuItemId: string) => {
-          const { items } = get();
-          const breakdown: Record<string, number> = {};
-
-          items
-            .filter((item) => getBaseItemId(item.id) === menuItemId)
-            .forEach((item) => {
-              breakdown[item.restaurantId] =
-                (breakdown[item.restaurantId] || 0) + item.quantity;
-            });
-
-          return breakdown;
         },
 
         getRestaurantItemCount: (restaurantId: string) => {
           const { items } = get();
           return items
-            .filter((item) => item.restaurantId === restaurantId)
+            .filter((item) => {
+              const itemRestaurantId = item.placeId || item.restaurantId || "";
+              return itemRestaurantId === restaurantId;
+            })
             .reduce((total, item) => total + item.quantity, 0);
-        },
-
-        getItemVariants: (menuItemId: string, restaurantId?: string) => {
-          const { items } = get();
-          return items.filter((item) => {
-            const baseId = getBaseItemId(item.id);
-            const matchesItem = baseId === menuItemId;
-            const matchesRestaurant =
-              !restaurantId || item.restaurantId === restaurantId;
-            return matchesItem && matchesRestaurant;
-          });
-        },
-
-        canAddMoreItems: (
-          menuItemId: string,
-          restaurantId: string,
-          maxQuantity = 50
-        ) => {
-          const currentQuantity = get().getMenuItemQuantity(
-            menuItemId,
-            restaurantId
-          );
-          return currentQuantity < maxQuantity;
-        },
-
-        getQuantityBreakdown: () => {
-          const { items } = get();
-          const breakdown = {
-            totalItems: 0,
-            byRestaurant: {} as Record<string, number>,
-            byMenuItem: {} as Record<string, number>,
-          };
-
-          items.forEach((item) => {
-            const baseId = getBaseItemId(item.id);
-            breakdown.totalItems += item.quantity;
-            breakdown.byRestaurant[item.restaurantId] =
-              (breakdown.byRestaurant[item.restaurantId] || 0) + item.quantity;
-            breakdown.byMenuItem[baseId] =
-              (breakdown.byMenuItem[baseId] || 0) + item.quantity;
-          });
-
-          return breakdown;
         },
 
         setEditingItem: (itemId) => {
@@ -238,26 +147,17 @@ const createCartStore = (userId: string | null) => {
           let updatedItems;
 
           if (existingItemIndex >= 0) {
+            // Merge quantities for identical items
             updatedItems = [...items];
             const existingItem = updatedItems[existingItemIndex];
             updatedItems[existingItemIndex] = {
               ...existingItem,
               quantity: existingItem.quantity + item.quantity,
-              selectedOptions: {
-                ...existingItem.selectedOptions,
-                ...item.selectedOptions,
-                requiredOptionNames: {
-                  ...existingItem.selectedOptions?.requiredOptionNames,
-                  ...item.selectedOptions?.requiredOptionNames,
-                },
-                optionalOptionNames: [
-                  ...(existingItem.selectedOptions?.optionalOptionNames || []),
-                  ...(item.selectedOptions?.optionalOptionNames || []),
-                ].filter((name, index, arr) => arr.indexOf(name) === index),
-              },
+              lastModified: new Date(),
             };
           } else {
-            updatedItems = [...items, item];
+            // Add new item
+            updatedItems = [...items, { ...item, addedAt: new Date() }];
           }
 
           const totalPrice = calculateTotalPrice(updatedItems);
@@ -272,14 +172,16 @@ const createCartStore = (userId: string | null) => {
         },
 
         updateQuantity: (itemId, quantity) => {
-          const { items } = get();
           if (quantity <= 0) {
             get().removeItem(itemId);
             return;
           }
 
+          const { items } = get();
           const updatedItems = items.map((item) =>
-            item.id === itemId ? { ...item, quantity } : item
+            item.id === itemId
+              ? { ...item, quantity, lastModified: new Date() }
+              : item
           );
           const totalPrice = calculateTotalPrice(updatedItems);
           set({ items: updatedItems, totalPrice });
@@ -295,26 +197,19 @@ const createCartStore = (userId: string | null) => {
         },
       }),
       {
-        name: storageKey,
+        name: getStorageKey(userId),
         version: 1,
         partialize: (state) => ({
           items: state.items,
           totalPrice: state.totalPrice,
           editingItemId: state.editingItemId,
         }),
-        onRehydrateStorage: () => (state) => {
-          if (state) {
-            console.log(
-              `Cart rehydrated for user: ${state.currentUserId || "guest"}`
-            );
-          }
-        },
       }
     )
   );
 };
 
-// Store instances cache
+// Store instances management
 const cartStoreInstances = new Map<
   string,
   {
@@ -323,202 +218,94 @@ const cartStoreInstances = new Map<
   }
 >();
 
-// Cleanup old instances (performance optimization)
-const cleanupOldInstances = () => {
-  const now = Date.now();
-  const maxAge = 30 * 60 * 1000; // 30 minutes
+const getStoreKey = (userId: string | null): string => userId || "guest";
 
-  for (const [key, value] of cartStoreInstances.entries()) {
-    if (now - value.lastAccessed > maxAge) {
-      cartStoreInstances.delete(key);
-    }
+const getOrCreateStoreInstance = (userId: string | null) => {
+  const storeKey = getStoreKey(userId);
+
+  if (!cartStoreInstances.has(storeKey)) {
+    cartStoreInstances.set(storeKey, {
+      store: createCartStore(userId),
+      lastAccessed: Date.now(),
+    });
   }
+
+  const instance = cartStoreInstances.get(storeKey)!;
+  instance.lastAccessed = Date.now();
+  return instance;
 };
 
-// Listen for auth logout events to clean up cart data
-if (typeof window !== "undefined") {
-  window.addEventListener("auth-logout", (event: CustomEvent) => {
-    const { userId } = event.detail;
-    console.log(`Cleaning up cart data for user: ${userId || "guest"}`);
+// Main hook
+export const useCartStore = (userId: string | null = null) => {
+  const instance = getOrCreateStoreInstance(userId);
+  return instance.store();
+};
 
-    // Clear specific user's cart from memory
-    const storeKey = userId || "guest";
-    cartStoreInstances.delete(storeKey);
+// Helper functions for cart management
+export const switchUserCart = (newUserId: string | null) => {
+  let guestItems: CartItem[] = [];
 
-    // Clear from localStorage
-    const storageKey = userId ? `cart-storage-${userId}` : "cart-storage-guest";
+  if (newUserId && cartStoreInstances.has("guest")) {
+    const guestInstance = cartStoreInstances.get("guest")!;
+    guestItems = guestInstance.store.getState().items;
+  }
+
+  const instance = getOrCreateStoreInstance(newUserId);
+
+  if (newUserId && guestItems.length > 0) {
+    instance.store.getState().migrateGuestCart(guestItems);
+    const guestInstance = cartStoreInstances.get("guest");
+    if (guestInstance) {
+      guestInstance.store.getState().clearCart();
+    }
+  }
+
+  return instance.store;
+};
+
+export const clearUserCart = (userId: string | null) => {
+  const storeKey = getStoreKey(userId);
+  const storageKey = getStorageKey(userId);
+
+  cartStoreInstances.delete(storeKey);
+
+  if (typeof window !== "undefined") {
     try {
       localStorage.removeItem(storageKey);
     } catch (error) {
       console.error("Error clearing cart localStorage:", error);
     }
-  });
-
-  // Listen for auth login events to migrate guest cart
-  window.addEventListener("auth-login", (event: CustomEvent) => {
-    const { userId } = event.detail;
-    console.log(`User logged in: ${userId}, attempting cart migration`);
-
-    // Get guest cart items
-    const guestInstance = cartStoreInstances.get("guest");
-    if (guestInstance) {
-      const guestItems = guestInstance.store.getState().items;
-
-      if (guestItems.length > 0) {
-        // Get or create user cart
-        const userStoreKey = userId;
-        if (!cartStoreInstances.has(userStoreKey)) {
-          cartStoreInstances.set(userStoreKey, {
-            store: createCartStore(userId),
-            lastAccessed: Date.now(),
-          });
-        }
-
-        const userInstance = cartStoreInstances.get(userStoreKey)!;
-        userInstance.store.getState().migrateGuestCart(guestItems);
-
-        // Clear guest cart
-        guestInstance.store.getState().clearCart();
-      }
-    }
-  });
-
-  window.addEventListener("user-data-cleanup", (event: CustomEvent) => {
-    const { userId } = event.detail;
-    console.log(`Additional cart cleanup for user: ${userId || "guest"}`);
-
-    // Additional cleanup if needed
-    cleanupOldInstances();
-  });
-}
-
-// Main hook
-export const useCartStore = (userId: string | null = null) => {
-  const storeKey = userId || "guest";
-
-  if (!cartStoreInstances.has(storeKey)) {
-    cartStoreInstances.set(storeKey, {
-      store: createCartStore(userId),
-      lastAccessed: Date.now(),
-    });
-  }
-
-  // Update last accessed time
-  const instance = cartStoreInstances.get(storeKey)!;
-  instance.lastAccessed = Date.now();
-
-  // Occasionally cleanup old instances
-  if (Math.random() < 0.01) {
-    cleanupOldInstances();
-  }
-
-  return instance.store();
-};
-
-// Helper function to switch between user carts and migrate guest cart
-export const switchUserCart = (newUserId: string | null) => {
-  const newStoreKey = newUserId || "guest";
-  const oldStoreKey = "guest";
-
-  // Get guest cart items before switching
-  let guestItems: CartItem[] = [];
-  if (newUserId && cartStoreInstances.has(oldStoreKey)) {
-    const guestInstance = cartStoreInstances.get(oldStoreKey)!;
-    guestItems = guestInstance.store.getState().items;
-  }
-
-  // Create or get user cart
-  if (!cartStoreInstances.has(newStoreKey)) {
-    cartStoreInstances.set(newStoreKey, {
-      store: createCartStore(newUserId),
-      lastAccessed: Date.now(),
-    });
-  }
-
-  const instance = cartStoreInstances.get(newStoreKey)!;
-  instance.lastAccessed = Date.now();
-
-  // Migrate guest cart items if switching to user cart
-  if (newUserId && guestItems.length > 0) {
-    instance.store.getState().migrateGuestCart(guestItems);
-
-    // Clear guest cart after migration
-    if (cartStoreInstances.has(oldStoreKey)) {
-      cartStoreInstances.get(oldStoreKey)!.store.getState().clearCart();
-    }
-  }
-
-  return instance.store;
-};
-
-// Helper function to clear a specific user's cart
-export const clearUserCart = (userId: string | null) => {
-  const storeKey = userId || "guest";
-  const storageKey = userId ? `cart-storage-${userId}` : "cart-storage-guest";
-
-  try {
-    // Clear from localStorage
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(storageKey);
-    }
-
-    // Clear from memory cache
-    cartStoreInstances.delete(storeKey);
-
-    console.log(`Cleared cart for user: ${userId || "guest"}`);
-  } catch (error) {
-    console.error("Error clearing user cart:", error);
   }
 };
 
-// Helper function to get cart instance without hook (for cleanup operations)
-export const getCartStoreInstance = (userId: string | null) => {
-  const storeKey = userId || "guest";
-  const instance = cartStoreInstances.get(storeKey);
-
-  if (!instance) {
-    return createCartStore(userId);
-  }
-
-  return instance.store;
-};
-
-// Helper function to force cleanup all cart instances
-export const forceCleanupAllCartInstances = () => {
-  console.log("Force cleaning up all cart instances");
-  cartStoreInstances.clear();
-};
-
-// Helper function to get current cart items count (useful for navigation)
 export const getCurrentCartItemsCount = (userId: string | null): number => {
   try {
-    const storeKey = userId || "guest";
+    const storeKey = getStoreKey(userId);
     const instance = cartStoreInstances.get(storeKey);
-
-    if (!instance) {
-      return 0;
-    }
-
-    return instance.store.getState().getTotalItems();
+    return instance ? instance.store.getState().getTotalItems() : 0;
   } catch (error) {
-    console.error("Error getting cart items count:", error);
     return 0;
   }
 };
 
-// Helper function to ensure cart is properly initialized for user
-export const ensureCartForUser = (userId: string | null) => {
-  const storeKey = userId || "guest";
+// Event listeners for auth state changes
+if (typeof window !== "undefined") {
+  window.addEventListener("auth-logout", (event: CustomEvent) => {
+    const { userId } = event.detail;
+    clearUserCart(userId);
+  });
 
-  if (!cartStoreInstances.has(storeKey)) {
-    cartStoreInstances.set(storeKey, {
-      store: createCartStore(userId),
-      lastAccessed: Date.now(),
-    });
-  }
+  window.addEventListener("auth-login", (event: CustomEvent) => {
+    const { userId } = event.detail;
+    const guestInstance = cartStoreInstances.get("guest");
 
-  const instance = cartStoreInstances.get(storeKey)!;
-  instance.lastAccessed = Date.now();
-
-  return instance.store;
-};
+    if (guestInstance) {
+      const guestItems = guestInstance.store.getState().items;
+      if (guestItems.length > 0) {
+        const userInstance = getOrCreateStoreInstance(userId);
+        userInstance.store.getState().migrateGuestCart(guestItems);
+        guestInstance.store.getState().clearCart();
+      }
+    }
+  });
+}

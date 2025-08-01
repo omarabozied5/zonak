@@ -4,15 +4,15 @@ import Navigation from "@/components/Navigation";
 import { useCartStore, CartItem as StoreCartItem } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useCartValidation } from "@/hooks/useCartValidation";
-import { useCartSummary } from "@/hooks/useCartSummary";
+import { useCartSummary } from "@/hooks/useCartSummary"; // Now returns EnhancedCartSummary
 import { toast } from "sonner";
 
 // Import refactored components
-import CartHeader from "@/components/Cart/CartHeader";
+import CartHeader from "@/components/Cart/CartHeader"; // Enhanced version
 import CartItemComponent from "@/components/Cart/CartItem";
 import OrderSummary from "@/components/Cart/OrderSummury";
 import EmptyCartState from "@/components/Cart/EmptyCartState";
-import { CartItem } from "@/components/Cart/types";
+import { CartItem } from "../types/types";
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ const Cart = () => {
       : undefined,
   }));
 
-  // Get cart summary and validation
+  // Get cart summary and validation (now includes primaryRestaurant)
   const cartSummary = useCartSummary(convertedItems);
   const cartValidation = useCartValidation(convertedItems);
 
@@ -76,6 +76,15 @@ const Cart = () => {
       toast.error("حدث خطأ أثناء تعديل الصنف");
     }
   };
+  const totalItemDiscounts = convertedItems.reduce((total, item) => {
+    return total + (item.discountAmount || 0) * item.quantity;
+  }, 0);
+
+  // Calculate original total price (before item discounts)
+  const originalTotalPrice = convertedItems.reduce((total, item) => {
+    const originalPrice = item.originalPrice || item.price;
+    return total + originalPrice * item.quantity;
+  }, 0);
 
   const handleQuantityUpdate = (itemId: string, newQuantity: number): void => {
     try {
@@ -127,8 +136,12 @@ const Cart = () => {
       <Navigation />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Header */}
-        <CartHeader userName={user.name} onGoBack={handleGoBack} />
+        {/* Enhanced Header with Restaurant Info */}
+        <CartHeader
+          userName={user.name}
+          onGoBack={handleGoBack}
+          primaryRestaurant={cartSummary.primaryRestaurant}
+        />
 
         {/* Cart Content */}
         {cartSummary.isEmpty ? (
@@ -154,6 +167,8 @@ const Cart = () => {
               <OrderSummary
                 totalItems={cartSummary.totalItems}
                 totalPrice={cartSummary.totalPrice}
+                totalItemDiscounts={totalItemDiscounts}
+                originalTotalPrice={originalTotalPrice}
                 restaurantCount={cartSummary.restaurantCount}
                 hasMultipleRestaurants={cartSummary.hasMultipleRestaurants}
                 onProceedToCheckout={handleProceedToCheckout}

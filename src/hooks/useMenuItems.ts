@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { apiService } from "@/services/apiService";
 
@@ -40,7 +39,7 @@ export interface MenuItem {
   }[];
 }
 
-export const useMenuItems = (userId: string) => {
+export const useMenuItems = (userId: string | number) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
