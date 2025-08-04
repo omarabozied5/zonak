@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, Star, Truck, Clock, X, Loader2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "../stores/useAuthStore";
 
 interface SearchResult {
   id: number;
@@ -71,7 +71,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   onClearSearch,
   onHideResults,
 }) => {
-  const { isLoggedIn, getDisplayName } = useAuth();
+  // Use the new auth store
+  const { isUserLoggedIn, getUserDisplayName } = useAuthStore();
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Close search results when clicking outside
@@ -136,9 +137,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                 اكتشف أجمل المأكولات العربية الأصيلة
               </p>
 
-              {isLoggedIn() && (
+              {isUserLoggedIn() && (
                 <p className="text-sm sm:text-base text-white/80">
-                  مرحباً، {getDisplayName()}
+                  مرحباً، {getUserDisplayName()}
                 </p>
               )}
             </div>

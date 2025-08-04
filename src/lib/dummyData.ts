@@ -14,7 +14,7 @@ export const dummyUsers: User[] = [
     id: "dummy_1",
     name: "أحمد محمد",
     phone: "0512345678",
-    password: "123456",
+    password: "12345678",
     createdAt: "2024-01-15T10:30:00.000Z",
     lastLogin: "2024-01-20T14:22:00.000Z",
   },

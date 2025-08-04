@@ -1,12 +1,23 @@
+// useOrderStore.ts - Fixed hook call issue and improved refresh logic
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CartItem } from "../types/types";
 
-export interface CustomerInfo {
-  name: string;
-  phone: string;
-  address?: string;
-  notes?: string;
+// Export OrderInput for backward compatibility (though it's not used anymore)
+export interface OrderInput {
+  items: any[];
+  customerInfo: {
+    name: string;
+    phone: string;
+    address?: string;
+    notes?: string;
+  };
+  orderType: "pickup" | "delivery";
+  paymentMethod: string;
+  totalPrice: number;
+  tax: number;
+  deliveryFee: number;
+  total: number;
 }
 
 // Backend order structure to match API response
@@ -90,75 +101,43 @@ export interface Order {
   orderitems: OrderItem[];
 }
 
-export interface OrderInput {
-  items: CartItem[];
-  customerInfo: CustomerInfo;
-  orderType: "pickup" | "delivery";
-  paymentMethod: string;
-  totalPrice: number;
-  tax: number;
-  deliveryFee: number;
-  total: number;
-}
-
 interface OrderState {
+  // State
   orders: Order[];
   currentUserId: string | null;
   loading: boolean;
   error: string | null;
-  addOrder: (order: OrderInput) => Promise<void>;
-  updateOrderStatus: (
-    orderId: number,
-    status: Order["status"]
-  ) => Promise<void>;
+  lastFetchTime: number | null;
+
+  // Core actions
+  fetchCurrentOrders: () => Promise<void>;
+  refreshOrders: () => Promise<void>;
+  setCurrentUser: (userId: string | null) => void;
+  clearOrders: () => void;
+
+  // Getters
   getActiveOrders: () => Order[];
   getUserOrders: () => Order[];
   getOrderById: (orderId: number) => Order | null;
-  removeOrder: (orderId: number) => Promise<void>;
-  setCurrentUser: (userId: string | null) => void;
-  clearUserOrders: () => void;
-  cancelOrder: (orderId: number) => Promise<void>;
   getOrdersByStatus: (status: Order["status"]) => Order[];
+
+  // Statistics
   getOrdersCount: () => number;
+  getActiveOrdersCount: () => number;
   getTotalSpent: () => number;
-  fetchCurrentOrders: () => Promise<void>;
+
+  // Internal state management
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setOrders: (orders: Order[]) => void;
-  // ✅ NEW: Enhanced method for submitting order and refreshing
-  submitOrderAndRefresh: (
-    orderData: OrderInput
-  ) => Promise<{ success: boolean; orderId?: number; message?: string }>;
 }
 
 // Helper functions
-const generateOrderId = (): number => {
-  return Date.now() + Math.floor(Math.random() * 1000);
+const requireAuth = (userId: string | null): void => {
+  if (!userId) {
+    throw new Error("User must be logged in to perform this action");
+  }
 };
-
-const calculateEstimatedTime = (orderType: "pickup" | "delivery"): string => {
-  const now = new Date();
-  const minutes = orderType === "pickup" ? 18 : 35;
-  now.setMinutes(now.getMinutes() + minutes);
-  return now.toLocaleTimeString("ar-SA", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const isOrderCancellable = (order: Order): boolean => {
-  const cancelableStatuses: Order["status"][] = [
-    "pending",
-    "confirmed",
-    "preparing",
-  ];
-  return cancelableStatuses.includes(order.status);
-};
-
-const getStoreKey = (userId: string | null): string => userId || "guest";
-
-const getStorageKey = (userId: string | null): string =>
-  userId ? `orders-storage-${userId}` : "orders-storage-guest";
 
 const sortOrdersByDate = (orders: Order[]): Order[] =>
   orders.sort(
@@ -169,39 +148,36 @@ const sortOrdersByDate = (orders: Order[]): Order[] =>
 const filterUserOrders = (orders: Order[], userId: string | null): Order[] =>
   userId ? orders.filter((order) => order.user_id.toString() === userId) : [];
 
-const requireAuth = (userId: string | null): void => {
-  if (!userId) {
-    throw new Error("User must be logged in to perform this action");
-  }
-};
-
-// Import API service function
-// Replace the fetchCurrentOrdersFromAPI function in useOrderStore.ts with this debug version
-
+// API integration - FIXED: No longer uses hooks inside
 const fetchCurrentOrdersFromAPI = async (): Promise<Order[]> => {
-  console.log("🔥 DEBUG: fetchCurrentOrdersFromAPI called");
-
   try {
-    console.log("🔥 DEBUG: Importing apiService");
+    // Import apiService dynamically to avoid hooks issue
     const { apiService } = await import("../services/apiService");
-
-    console.log("🔥 DEBUG: Calling apiService.fetchCurrentOrders()");
     const response = await apiService.fetchCurrentOrders();
 
-    console.log("🔥 DEBUG: API service response:", response);
-    console.log("🔥 DEBUG: Response success:", response.success);
-    console.log("🔥 DEBUG: Response data:", response.data);
+    console.log("🔍 Raw API response:", response);
 
-    if (response.success && response.data) {
-      console.log("🔥 DEBUG: Found", response.data.length, "orders");
-      console.log("🔥 DEBUG: Returning orders:", response.data);
+    if (response.message === "Success" && response.data) {
+      console.log("✅ Orders fetched successfully:", response.data.length);
+
+      // Log first order for debugging
+      if (response.data.length > 0) {
+        console.log("📋 Sample order:", {
+          id: response.data[0].id,
+          status: response.data[0].status,
+          user_id: response.data[0].user_id,
+          total_price: response.data[0].total_price,
+          place: response.data[0].place?.title,
+        });
+      }
+
       return response.data;
     } else {
-      console.log("🔥 DEBUG: No orders found or unsuccessful response");
+      console.log("ℹ️ No orders found or unsuccessful response");
       return [];
     }
   } catch (error) {
-    console.error("❌ DEBUG: fetchCurrentOrdersFromAPI error:", error);
+    console.error("❌ Failed to fetch orders from API:", error);
     throw error;
   }
 };
@@ -214,7 +190,9 @@ const createOrderStore = (userId: string | null) => {
         currentUserId: userId,
         loading: false,
         error: null,
+        lastFetchTime: null,
 
+        // Internal state management
         setLoading: (loading: boolean) => {
           set({ loading });
         },
@@ -224,241 +202,95 @@ const createOrderStore = (userId: string | null) => {
         },
 
         setOrders: (orders: Order[]) => {
-          set({ orders });
+          set({
+            orders,
+            lastFetchTime: Date.now(),
+            error: null,
+          });
         },
 
         setCurrentUser: (newUserId: string | null) => {
           set({ currentUserId: newUserId });
         },
 
-        clearUserOrders: () => {
-          set({ orders: [] });
+        clearOrders: () => {
+          set({
+            orders: [],
+            error: null,
+            lastFetchTime: null,
+          });
         },
 
+        // Main fetch function with improved error handling
         fetchCurrentOrders: async (): Promise<void> => {
           const { currentUserId } = get();
 
-          console.log("🔥 DEBUG: fetchCurrentOrders called");
-          console.log("🔥 DEBUG: currentUserId:", currentUserId);
+          console.log("🔍 fetchCurrentOrders called for user:", currentUserId);
 
           if (!currentUserId) {
-            console.log("❌ DEBUG: No currentUserId - setting error");
-            set({ error: "User not authenticated" });
+            console.log("❌ No user ID - cannot fetch orders");
+            set({ error: "User not authenticated", loading: false });
             return;
           }
 
-          console.log("🔥 DEBUG: Setting loading to true");
           set({ loading: true, error: null });
 
           try {
-            console.log("🔥 DEBUG: About to call fetchCurrentOrdersFromAPI");
             const orders = await fetchCurrentOrdersFromAPI();
-            console.log("🔥 DEBUG: API response received:", orders);
-            console.log("🔥 DEBUG: Orders length:", orders?.length || 0);
+            console.log("📦 Orders received:", orders.length);
 
-            if (orders && orders.length > 0) {
-              console.log("🔥 DEBUG: First order:", orders[0]);
-            }
+            // Filter orders for current user (extra safety)
+            const userOrders = orders.filter(
+              (order) => order.user_id.toString() === currentUserId
+            );
 
-            console.log("🔥 DEBUG: Setting orders in store");
-            set({ orders, loading: false });
-            console.log("🔥 DEBUG: Orders set successfully");
-          } catch (error) {
-            console.error("❌ DEBUG: fetchCurrentOrders error:", error);
-            const errorMessage =
-              error instanceof Error ? error.message : "Failed to fetch orders";
-            console.log("❌ DEBUG: Setting error:", errorMessage);
-            set({ error: errorMessage, loading: false });
-          }
-        },
+            console.log("👤 User orders filtered:", userOrders.length);
 
-        // ✅ NEW: Enhanced method that submits order and immediately refreshes
-        submitOrderAndRefresh: async (
-          orderData: OrderInput
-        ): Promise<{
-          success: boolean;
-          orderId?: number;
-          message?: string;
-        }> => {
-          const { currentUserId } = get();
-          requireAuth(currentUserId);
-
-          set({ loading: true, error: null });
-
-          try {
-            // First, add the order locally (for immediate feedback)
-            await get().addOrder(orderData);
-
-            // Then, wait a moment and refresh from server to get the real order
-            setTimeout(async () => {
-              try {
-                await get().fetchCurrentOrders();
-              } catch (error) {
-                console.error(
-                  "Failed to refresh orders after submission:",
-                  error
-                );
-              }
-            }, 1500); // Wait 1.5 seconds for backend to process
-
-            set({ loading: false });
-
-            return {
-              success: true,
-              message: "تم إنشاء الطلب بنجاح",
-            };
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : "فشل في إنشاء الطلب";
-            set({ error: errorMessage, loading: false });
-
-            return {
-              success: false,
-              message: errorMessage,
-            };
-          }
-        },
-
-        addOrder: async (orderData: OrderInput): Promise<void> => {
-          const { currentUserId } = get();
-          requireAuth(currentUserId);
-
-          try {
-            // This would typically submit to backend first, then add to local state
-            // For now, creating a mock order structure
-            const newOrder: Order = {
-              id: generateOrderId(),
-              user_id: parseInt(currentUserId!),
-              total_price: orderData.total,
-              cart_price: orderData.totalPrice,
-              note: orderData.customerInfo.notes || null,
-              merchant_id: 0, // Would come from context
-              place_id: 0, // Would come from context
-              status: "pending",
-              cancelled_at: null,
-              confirmed_at: null,
-              max_delivery_time: null,
-              rejected_at: null,
-              preparing_at: null,
-              ready_at: null,
-              delivered_at: null,
-              rejection_type: null,
-              discount: 0,
-              total_vat: orderData.tax,
-              remaining_time: 30,
-              zonak_discount: 0,
-              delivery_cost: orderData.deliveryFee,
-              location: null,
-              long: null,
-              lat: null,
-              address: orderData.customerInfo.address || null,
-              discount_from_coupons: 0,
-              cashback_from_coupons: 0,
-              title: orderData.customerInfo.name,
-              phone: orderData.customerInfo.phone,
-              is_car_delivery: null,
-              car_delivery_cost: 0,
-              is_zonak_account_used: 0,
-              remaining_amount: 0,
-              time_to_ready: calculateEstimatedTime(orderData.orderType),
-              firebase_uuid: `uuid-${Date.now()}`,
-              created_at: new Date().toISOString(),
-              type_payment: orderData.paymentMethod === "cash" ? 1 : 2,
-              is_waiting_car: 0,
-              is_new: 1,
-              is_accepted: 0,
-              is_delivery: orderData.orderType === "delivery" ? 1 : 0,
-              status_payment:
-                orderData.paymentMethod === "cash"
-                  ? "cash_on_delivery"
-                  : "paid_with_card",
-              provider: null,
-              place: {
-                id: 0,
-                title: "مطعم تجريبي",
-                merchant_name: "مطعم تجريبي",
-                logo: "",
-                longitude: "0",
-                latitude: "0",
-                phone: "",
-                reviews_average: 0,
-              },
-              orderitems: orderData.items.map((item) => ({
-                item_name: item.name,
-                quantity: item.quantity,
-                options: [],
-              })),
-            };
-
-            set({ orders: [...get().orders, newOrder] });
-          } catch (error) {
-            console.error("Error adding order:", error);
-            throw new Error("Failed to add order");
-          }
-        },
-
-        updateOrderStatus: async (
-          orderId: number,
-          status: Order["status"]
-        ): Promise<void> => {
-          const { currentUserId } = get();
-          requireAuth(currentUserId);
-
-          try {
             set({
-              orders: get().orders.map((order) =>
-                order.id === orderId &&
-                order.user_id.toString() === currentUserId
-                  ? {
-                      ...order,
-                      status,
-                      [`${status}_at`]: new Date().toISOString(),
-                    }
-                  : order
-              ),
+              orders: userOrders,
+              loading: false,
+              lastFetchTime: Date.now(),
+              error: null,
             });
           } catch (error) {
-            console.error("Error updating order status:", error);
-            throw new Error("Failed to update order status");
+            const errorMessage =
+              error instanceof Error ? error.message : "Failed to fetch orders";
+
+            console.error("❌ fetchCurrentOrders error:", errorMessage);
+            set({
+              error: errorMessage,
+              loading: false,
+            });
           }
         },
 
-        cancelOrder: async (orderId: number): Promise<void> => {
-          const { currentUserId } = get();
-          requireAuth(currentUserId);
+        // Refresh function with retry logic
+        refreshOrders: async (): Promise<void> => {
+          console.log("🔄 Refreshing orders...");
+          const maxRetries = 3;
+          let attempt = 1;
 
-          const order = get().orders.find(
-            (o) => o.id === orderId && o.user_id.toString() === currentUserId
-          );
-          if (!order) {
-            throw new Error("Order not found");
-          }
-
-          if (!isOrderCancellable(order)) {
-            throw new Error("Order cannot be cancelled at this stage");
-          }
-
-          try {
-            await get().updateOrderStatus(orderId, "rejected");
-          } catch (error) {
-            console.error("Error cancelling order:", error);
-            throw new Error("Failed to cancel order");
+          while (attempt <= maxRetries) {
+            try {
+              await get().fetchCurrentOrders();
+              console.log(`✅ Orders refresh successful on attempt ${attempt}`);
+              return;
+            } catch (error) {
+              console.warn(`⚠️ Refresh attempt ${attempt} failed:`, error);
+              if (attempt === maxRetries) {
+                console.error("❌ All refresh attempts failed");
+                throw error;
+              }
+              // Wait before retry (exponential backoff)
+              await new Promise((resolve) =>
+                setTimeout(resolve, attempt * 1000)
+              );
+              attempt++;
+            }
           }
         },
 
-        getOrderById: (orderId: number): Order | null => {
-          const { currentUserId } = get();
-          if (!currentUserId) return null;
-
-          return (
-            get().orders.find(
-              (order) =>
-                order.id === orderId &&
-                order.user_id.toString() === currentUserId
-            ) || null
-          );
-        },
-
+        // Getters
         getUserOrders: (): Order[] => {
           const { currentUserId, orders } = get();
           return sortOrdersByDate(filterUserOrders(orders, currentUserId));
@@ -474,6 +306,19 @@ const createOrderStore = (userId: string | null) => {
           return sortOrdersByDate(activeOrders);
         },
 
+        getOrderById: (orderId: number): Order | null => {
+          const { currentUserId, orders } = get();
+          if (!currentUserId) return null;
+
+          return (
+            orders.find(
+              (order) =>
+                order.id === orderId &&
+                order.user_id.toString() === currentUserId
+            ) || null
+          );
+        },
+
         getOrdersByStatus: (status: Order["status"]): Order[] => {
           const { currentUserId, orders } = get();
           const userOrders = filterUserOrders(orders, currentUserId);
@@ -483,9 +328,14 @@ const createOrderStore = (userId: string | null) => {
           return sortOrdersByDate(filteredOrders);
         },
 
+        // Statistics
         getOrdersCount: (): number => {
           const { currentUserId, orders } = get();
           return filterUserOrders(orders, currentUserId).length;
+        },
+
+        getActiveOrdersCount: (): number => {
+          return get().getActiveOrders().length;
         },
 
         getTotalSpent: (): number => {
@@ -494,38 +344,20 @@ const createOrderStore = (userId: string | null) => {
             .filter((order) => order.status === "delivered")
             .reduce((total, order) => total + order.total_price, 0);
         },
-
-        removeOrder: async (orderId: number): Promise<void> => {
-          const { currentUserId } = get();
-          requireAuth(currentUserId);
-
-          try {
-            set({
-              orders: get().orders.filter(
-                (order) =>
-                  !(
-                    order.id === orderId &&
-                    order.user_id.toString() === currentUserId
-                  )
-              ),
-            });
-          } catch (error) {
-            console.error("Error removing order:", error);
-            throw new Error("Failed to remove order");
-          }
-        },
       }),
       {
-        name: getStorageKey(userId),
+        name: `orders-storage-${userId || "guest"}`,
         version: 1,
         partialize: (state) => ({
           orders: state.orders,
+          lastFetchTime: state.lastFetchTime,
         }),
         onRehydrateStorage: () => (state) => {
           if (state) {
             console.log(
-              `Orders rehydrated for user: ${state.currentUserId || "guest"}`
+              `📱 Orders rehydrated for user: ${state.currentUserId || "guest"}`
             );
+            console.log(`📦 Rehydrated ${state.orders.length} orders`);
           }
         },
       }
@@ -542,7 +374,7 @@ const orderStoreInstances = new Map<
   }
 >();
 
-// Cleanup old instances
+// Cleanup old instances periodically
 const cleanupOldInstances = () => {
   const now = Date.now();
   const maxAge = 30 * 60 * 1000; // 30 minutes
@@ -554,9 +386,9 @@ const cleanupOldInstances = () => {
   }
 };
 
-// Centralized store instance management
+// Get or create store instance
 const getOrCreateStoreInstance = (userId: string | null) => {
-  const storeKey = getStoreKey(userId);
+  const storeKey = userId || "guest";
 
   if (!orderStoreInstances.has(storeKey)) {
     orderStoreInstances.set(storeKey, {
@@ -576,75 +408,188 @@ const getOrCreateStoreInstance = (userId: string | null) => {
   return instance;
 };
 
-// Cleanup order data helper
-const cleanupOrderData = (userId: string | null) => {
-  const storeKey = getStoreKey(userId);
-  const storageKey = getStorageKey(userId);
-
-  // Clear from memory
-  orderStoreInstances.delete(storeKey);
-
-  // Clear from localStorage
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (error) {
-      console.error("Error clearing orders localStorage:", error);
-    }
-  }
-};
-
 // Main hook
 export const useOrderStore = (userId: string | null = null) => {
   const instance = getOrCreateStoreInstance(userId);
   return instance.store();
 };
 
-// ✅ NEW: Helper function for checkout to submit order and refresh
-export const submitOrderAndRefresh = async (
+// FIXED: Utility functions for external use - No longer use hooks
+
+// Force refresh orders after order submission - FIXED
+export const refreshOrdersAfterSubmission = async (
   userId: string | null,
-  orderData: OrderInput
-): Promise<{ success: boolean; orderId?: number; message?: string }> => {
+  options: {
+    maxRetries?: number;
+    retryDelay?: number;
+    expectedOrderId?: number;
+  } = {}
+): Promise<void> => {
+  if (!userId) {
+    console.warn("⚠️ Cannot refresh orders - no user ID provided");
+    return;
+  }
+
+  const { maxRetries = 5, retryDelay = 3000, expectedOrderId } = options;
+
+  console.log("🚀 Enhanced refresh after order submission:", {
+    userId,
+    maxRetries,
+    retryDelay,
+    expectedOrderId,
+  });
+
   const instance = getOrCreateStoreInstance(userId);
-  const store = instance.store();
+  const store = instance.store.getState();
 
-  return await store.submitOrderAndRefresh(orderData);
+  let attempt = 0;
+  let orderFound = false;
+
+  while (attempt < maxRetries && !orderFound) {
+    attempt++;
+
+    try {
+      // Add progressive delay: 3s, 5s, 7s, 10s, 15s
+      const delay = retryDelay + (attempt - 1) * 2000;
+      console.log(
+        `⏳ Attempt ${attempt}/${maxRetries} - waiting ${delay}ms...`
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      console.log(`🔄 Refreshing orders - attempt ${attempt}...`);
+      await store.refreshOrders();
+
+      // Get the current orders after refresh
+      const currentOrders = store.getUserOrders();
+      console.log(`📦 Found ${currentOrders.length} orders after refresh`);
+
+      // If we have an expected order ID, check for it specifically
+      if (expectedOrderId) {
+        orderFound = currentOrders.some(
+          (order) => order.id === expectedOrderId
+        );
+        console.log(
+          `🔍 Looking for order ${expectedOrderId}: ${
+            orderFound ? "FOUND" : "NOT FOUND"
+          }`
+        );
+      } else {
+        // Otherwise, just check if we have any orders
+        orderFound = currentOrders.length > 0;
+      }
+
+      if (orderFound) {
+        console.log(`✅ Order refresh successful on attempt ${attempt}`);
+        return;
+      } else {
+        console.log(`⚠️ Order not found yet on attempt ${attempt}`);
+      }
+    } catch (error) {
+      console.error(`❌ Refresh attempt ${attempt} failed:`, error);
+
+      // If it's the last attempt, throw the error
+      if (attempt === maxRetries) {
+        console.error("❌ All refresh attempts failed");
+        throw error;
+      }
+    }
+  }
+
+  if (!orderFound) {
+    console.warn(`⚠️ Order not found after ${maxRetries} attempts`);
+    // Don't throw error - the order was still submitted successfully
+    // Just log a warning for debugging
+  }
 };
 
-// Helper function to switch between user orders
-export const switchUserOrders = (newUserId: string | null) => {
-  const instance = getOrCreateStoreInstance(newUserId);
-  return instance.store();
+export const fetchOrdersWithRetry = async (
+  userId: string | null,
+  options: {
+    maxRetries?: number;
+    retryDelay?: number;
+    backoffMultiplier?: number;
+  } = {}
+): Promise<void> => {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  const { maxRetries = 3, retryDelay = 1000, backoffMultiplier = 2 } = options;
+
+  console.log("🔄 Starting fetch with retry logic:", {
+    userId,
+    maxRetries,
+    retryDelay,
+    backoffMultiplier,
+  });
+
+  const instance = getOrCreateStoreInstance(userId);
+  const store = instance.store.getState();
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📡 Fetch attempt ${attempt}/${maxRetries}...`);
+
+      await store.fetchCurrentOrders();
+
+      const orders = store.getUserOrders();
+      console.log(`✅ Fetch successful: ${orders.length} orders found`);
+
+      return; // Success!
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      console.error(`❌ Fetch attempt ${attempt} failed:`, lastError.message);
+
+      // If this isn't the last attempt, wait before retrying
+      if (attempt < maxRetries) {
+        const delay = retryDelay * Math.pow(backoffMultiplier, attempt - 1);
+        console.log(`⏳ Waiting ${delay}ms before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  // If we get here, all attempts failed
+  console.error(`❌ All ${maxRetries} fetch attempts failed`);
+  throw (
+    lastError || new Error("Failed to fetch orders after multiple attempts")
+  );
+};
+// Check if orders are stale and need refresh
+export const shouldRefreshOrders = (userId: string | null): boolean => {
+  if (!userId) return false;
+
+  const instance = getOrCreateStoreInstance(userId);
+  const state = instance.store.getState();
+
+  if (!state.lastFetchTime) return true;
+
+  const now = Date.now();
+  const staleThreshold = 2 * 60 * 1000; // 2 minutes
+
+  return now - state.lastFetchTime > staleThreshold;
 };
 
-// Helper function to clear a specific user's orders
+// Clear user orders (for logout)
 export const clearUserOrders = (userId: string | null) => {
-  try {
-    cleanupOrderData(userId);
-    console.log(`Cleared orders for user: ${userId || "guest"}`);
-  } catch (error) {
-    console.error("Error clearing user orders:", error);
+  const storeKey = userId || "guest";
+  orderStoreInstances.delete(storeKey);
+
+  // Clear from localStorage
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem(`orders-storage-${userId || "guest"}`);
+    } catch (error) {
+      console.error("Error clearing orders localStorage:", error);
+    }
   }
 };
 
-// Helper function to get orders for a specific user (useful for admin views)
-export const getUserOrdersById = (userId: string): Order[] => {
-  try {
-    const instance = getOrCreateStoreInstance(userId);
-    const orderStore = instance.store.getState();
-    return orderStore.getUserOrders();
-  } catch (error) {
-    console.error("Error getting user orders:", error);
-    return [];
-  }
-};
-
-// Helper function to check if an order can be cancelled
-export const canCancelOrder = (order: Order): boolean => {
-  return isOrderCancellable(order);
-};
-
-// Helper function to get order status display text (Arabic)
+// Helper functions for UI
 export const getOrderStatusText = (status: Order["status"]): string => {
   const statusMap: Record<Order["status"], string> = {
     pending: "في الانتظار",
@@ -660,28 +605,14 @@ export const getOrderStatusText = (status: Order["status"]): string => {
   return statusMap[status] || status;
 };
 
-// Helper function to get order type display text (Arabic)
-export const getOrderTypeText = (orderType: "pickup" | "delivery"): string => {
-  return orderType === "pickup" ? "استلام" : "توصيل";
+export const getOrderTypeText = (isDelivery: number): string => {
+  return isDelivery === 1 ? "توصيل" : "استلام";
 };
 
-// Helper to validate order data before adding
-export const validateOrderData = (orderData: OrderInput): boolean => {
-  if (!orderData.items || orderData.items.length === 0) {
-    return false;
-  }
+export const isOrderActive = (order: Order): boolean => {
+  return !["delivered", "rejected", "timeout"].includes(order.status);
+};
 
-  if (!orderData.customerInfo.name || !orderData.customerInfo.phone) {
-    return false;
-  }
-
-  if (orderData.orderType === "delivery" && !orderData.customerInfo.address) {
-    return false;
-  }
-
-  if (orderData.total <= 0) {
-    return false;
-  }
-
-  return true;
+export const canCancelOrder = (order: Order): boolean => {
+  return ["pending", "confirmed", "preparing"].includes(order.status);
 };

@@ -1,4 +1,4 @@
-// apiService.ts - Improved with better type safety
+// apiService.ts - Fixed with correct API response handling
 
 import axios from "axios";
 import { useState } from "react";
@@ -25,12 +25,10 @@ import {
 import { useAuthStore } from "../stores/useAuthStore";
 
 const BASE_URL = "https://dev-backend.zonak.net/api";
-const token =
-  "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Rldi1iYWNrZW5kLnpvbmFrLm5ldC9hcGkvYXV0aC9sb2dpbiIsImlhdCI6MTc1Mzk2NjkxMSwiZXhwIjoxNzg1MDcwOTExLCJuYmYiOjE3NTM5NjY5MTEsImp0aSI6IjZwMDFqWkJENEhKWXA5SEsiLCJzdWIiOiI3Njk1IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.Cc_0uRS4b5pxAgXGaPjVH8jE-kYEFK7Y1rJimrmuf0w";
+
 // ===== Axios Configuration =====
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-
   withCredentials: false,
   timeout: 30000,
 });
@@ -41,7 +39,6 @@ const getAuthToken = (): string | null => {
 };
 
 const getBaseItemId = (cartItemId: string): number => {
-  // Handle different ID formats
   let baseId: string;
 
   if (cartItemId.includes("-")) {
@@ -60,9 +57,16 @@ const getBaseItemId = (cartItemId: string): number => {
   return numericId;
 };
 
+// ===== API Response Interfaces =====
+interface CurrentOrdersApiResponse {
+  message: string;
+  data: BackendOrder[];
+}
+
 // ===== API Service =====
 export const apiService = {
-  // Prepared Orders
+  // PUBLIC ENDPOINTS - No authentication required
+
   fetchPreparedOrders: async (
     longitude = 31.2357,
     latitude = 30.0444,
@@ -74,7 +78,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Restaurant Details
   fetchRestaurantDetails: async (
     user_id: string | number,
     latitude = 30.0444,
@@ -91,7 +94,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Menu Items
   fetchMenuItems: async (
     userId: string | number,
     placeId?: string | number
@@ -149,66 +151,6 @@ export const apiService = {
     }
   },
 
-  // Replace your existing fetchCurrentOrders method in apiService.ts with this debug version
-
-  fetchCurrentOrders: async (): Promise<ApiResponse<BackendOrder[]>> => {
-    console.log("🚀 DEBUG: fetchCurrentOrders API called");
-    console.log("🚀 DEBUG: Using token:", token ? "Token exists" : "No token");
-
-    try {
-      if (!token) {
-        console.error("❌ DEBUG: No authentication token found");
-        throw new Error("Authentication token not found");
-      }
-
-      console.log("🚀 DEBUG: Making API request to /get/current/orders");
-      console.log("🚀 DEBUG: Headers will be:", {
-        "x-auth-token": token,
-        "Content-Type": "application/json",
-      });
-
-      const response = await axiosInstance.get("/get/current/orders", {
-        headers: {
-          "x-auth-token": token,
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("🚀 DEBUG: API response status:", response.status);
-      console.log("🚀 DEBUG: API response data:", response.data);
-      console.log("🚀 DEBUG: Response data type:", typeof response.data);
-
-      if (response.data && response.data.data) {
-        console.log(
-          "🚀 DEBUG: Orders array length:",
-          response.data.data.length
-        );
-        if (response.data.data.length > 0) {
-          console.log("🚀 DEBUG: First order:", response.data.data[0]);
-        }
-      }
-
-      console.log("🚀 DEBUG: Returning response.data");
-      return response.data;
-    } catch (error) {
-      console.error("❌ DEBUG: fetchCurrentOrders error:", error);
-
-      if (axios.isAxiosError(error)) {
-        console.error("❌ DEBUG: Axios error details:", {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          headers: error.response?.headers,
-        });
-
-        const errorData = error.response?.data;
-        throw new Error(errorData?.message || "Failed to fetch current orders");
-      }
-
-      throw error;
-    }
-  },
-  // Most Ordered Items
   fetchMostOrderedItems: async (
     userId: string | number,
     placeId: string | number
@@ -219,31 +161,139 @@ export const apiService = {
     return response.data;
   },
 
-  // Order Submission
-  submitOrder: async (
-    orderData: BackendOrderPayload
-  ): Promise<OrderResponse> => {
+  fetchPlaceRating: async (placeId: number): Promise<RatingResponse> => {
+    const response = await axiosInstance.get(`/places/rating/${placeId}`);
+    return response.data;
+  },
+
+  fetchPlaceBranches: async (
+    placeId: number,
+    latitude = 30.0444,
+    longitude = 31.2357
+  ): Promise<BranchesResponse> => {
+    const response = await axiosInstance.get(`/places/branches/${placeId}`, {
+      params: { lat: latitude, lang: longitude },
+    });
+    return response.data;
+  },
+
+  // AUTHENTICATED ENDPOINTS - Require token
+
+  // Enhanced fetchCurrentOrders function for apiService.ts
+
+  fetchCurrentOrders: async (): Promise<CurrentOrdersApiResponse> => {
+    const token = getAuthToken();
+
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
+
     try {
-      const token =
-        "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Rldi1iYWNrZW5kLnpvbmFrLm5ldC9hcGkvYXV0aC9sb2dpbiIsImlhdCI6MTc1Mzk2NjkxMSwiZXhwIjoxNzg1MDcwOTExLCJuYmYiOjE3NTM5NjY5MTEsImp0aSI6IjZwMDFqWkJENEhKWXA5SEsiLCJzdWIiOiI3Njk1IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.Cc_0uRS4b5pxAgXGaPjVH8jE-kYEFK7Y1rJimrmuf0w";
+      console.log("🔍 Fetching current orders...", {
+        timestamp: new Date().toISOString(),
+        tokenExists: !!token,
+        tokenLength: token.length,
+        tokenStart: token.substring(0, 20) + "...",
+      });
 
-      if (!token) {
-        return {
-          success: false,
-          message: "لم يتم العثور على رمز المصادقة. يرجى تسجيل الدخول مرة أخرى",
-        };
-      }
-
-      // console.log("Submitting order with payload:", JSON.stringify(orderData, null, 2)); // ❌ REMOVE THIS
-
-      const response = await axiosInstance.post("/order/store", orderData, {
+      const response = await axiosInstance.get("/get/current/orders", {
         headers: {
-          "x-auth-token": `${token}`,
+          "x-auth-token": token,
           "Content-Type": "application/json",
         },
       });
 
-      // console.log("Order submission successful:", response.data); // ❌ REMOVE THIS
+      console.log("📡 API Response Details:", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+        data: response.data,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Enhanced logging for response structure
+      if (response.data) {
+        console.log("📊 Response Analysis:", {
+          message: response.data.message,
+          hasData: !!response.data.data,
+          dataType: Array.isArray(response.data.data)
+            ? "array"
+            : typeof response.data.data,
+          dataLength: Array.isArray(response.data.data)
+            ? response.data.data.length
+            : "N/A",
+          dataKeys:
+            response.data.data && typeof response.data.data === "object"
+              ? Object.keys(response.data.data)
+              : "N/A",
+        });
+
+        // If we have orders, log the first one in detail
+        if (
+          Array.isArray(response.data.data) &&
+          response.data.data.length > 0
+        ) {
+          const firstOrder = response.data.data[0];
+          console.log("📋 First Order Details:", {
+            id: firstOrder.id,
+            user_id: firstOrder.user_id,
+            status: firstOrder.status,
+            total_price: firstOrder.total_price,
+            created_at: firstOrder.created_at,
+            place_title: firstOrder.place?.title,
+            merchant_id: firstOrder.merchant_id,
+            place_id: firstOrder.place_id,
+            orderitemsCount: firstOrder.orderitems?.length || 0,
+          });
+        }
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error("❌ fetchCurrentOrders error:", error);
+
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data;
+        console.error("🚨 Detailed API Error:", {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: errorData,
+          message: errorData?.message,
+          headers: error.response?.headers,
+          config: {
+            url: error.config?.url,
+            method: error.config?.method,
+            headers: error.config?.headers,
+          },
+          timestamp: new Date().toISOString(),
+        });
+
+        throw new Error(errorData?.message || "Failed to fetch current orders");
+      }
+
+      throw error;
+    }
+  },
+
+  submitOrder: async (
+    orderData: BackendOrderPayload
+  ): Promise<OrderResponse> => {
+    const token = getAuthToken();
+
+    if (!token) {
+      return {
+        success: false,
+        message: "لم يتم العثور على رمز المصادقة. يرجى تسجيل الدخول مرة أخرى",
+      };
+    }
+
+    try {
+      const response = await axiosInstance.post("/order/store", orderData, {
+        headers: {
+          "x-auth-token": token,
+          "Content-Type": "application/json",
+        },
+      });
 
       return {
         success: true,
@@ -256,14 +306,12 @@ export const apiService = {
 
       if (axios.isAxiosError(error)) {
         const errorData = error.response?.data;
-        console.error("Error response:", errorData);
         return {
           success: false,
           message: errorData?.message || "فشل في إنشاء الطلب",
           data: errorData,
         };
       } else if (error instanceof Error) {
-        console.error("Unknown error:", error.message);
         return {
           success: false,
           message: "حدث خطأ غير متوقع",
@@ -276,24 +324,6 @@ export const apiService = {
       }
     }
   },
-
-  // Rating
-  fetchPlaceRating: async (placeId: number): Promise<RatingResponse> => {
-    const response = await axiosInstance.get(`/places/rating/${placeId}`);
-    return response.data;
-  },
-
-  // Branches
-  fetchPlaceBranches: async (
-    placeId: number,
-    latitude = 30.0444,
-    longitude = 31.2357
-  ): Promise<BranchesResponse> => {
-    const response = await axiosInstance.get(`/places/branches/${placeId}`, {
-      params: { lat: latitude, lang: longitude },
-    });
-    return response.data;
-  },
 };
 
 // ===== Transform Functions =====
@@ -301,7 +331,6 @@ export const transformCartItemsToBackend = (
   cartItems: CartItem[]
 ): BackendOrderItem[] => {
   return cartItems.map((item, index) => {
-    // Validate item data before processing
     if (!item.id) {
       throw new Error(`Item at index ${index} has no ID`);
     }
@@ -341,7 +370,6 @@ export const transformCartItemsToBackend = (
 
     const options: BackendOptionItem[] = [];
 
-    // Add required options with full details
     if (item.selectedOptions?.requiredOptions) {
       Object.values(item.selectedOptions.requiredOptions).forEach(
         (optionId) => {
@@ -352,26 +380,25 @@ export const transformCartItemsToBackend = (
           ) {
             options.push({
               option_id: optionId,
-              price_option: 0, // We'll need to get this from somewhere
+              price_option: 0,
               quantity_option: 1,
               subitem_id: -1,
-              type_option_id: 1, // We'll need to get this from somewhere
+              type_option_id: 1,
             });
           }
         }
       );
     }
 
-    // Add optional options with full details
     if (item.selectedOptions?.optionalOptions) {
       item.selectedOptions.optionalOptions.forEach((optionId) => {
         if (typeof optionId === "number" && !isNaN(optionId) && optionId > 0) {
           options.push({
             option_id: optionId,
-            price_option: 0, // We'll need to get this from somewhere
+            price_option: 0,
             quantity_option: 1,
             subitem_id: -1,
-            type_option_id: 5, // Default for optional options
+            type_option_id: 5,
           });
         }
       });
@@ -382,7 +409,7 @@ export const transformCartItemsToBackend = (
     return {
       id: baseItemId,
       options,
-      price: Math.round(item.price * 100) / 100, // Ensure 2 decimal places
+      price: Math.round(item.price * 100) / 100,
       quantity: item.quantity,
       note: item.selectedOptions?.notes?.trim() || null,
       category_id: item.categoryId,
@@ -394,7 +421,6 @@ export const transformCartItemsToBackend = (
 
 export const buildOrderPayload = (
   cartItems: CartItem[],
-
   placeId: number,
   merchantId: number,
   totalPrice: number,
@@ -423,13 +449,11 @@ export const buildOrderPayload = (
     const cashbackRate = 0.07;
     const cashbackValue = Math.round(totalPrice * cashbackRate * 100) / 100;
 
-    // Remove global category_id - it's already in each item
     const payload: BackendOrderPayload = {
       cart_price: Math.round(cartPrice * 100) / 100,
       discount:
         discountAmount > 0 ? -Math.round(discountAmount * 100) / 100 : 0,
       is_zonak_account_used: false,
-      // category_id: categoryId, // ❌ REMOVE THIS LINE
       items_id: backendItems,
       merchant_id: merchantId,
       place_id: placeId,
@@ -445,33 +469,6 @@ export const buildOrderPayload = (
       is_delivery_zonak: 0,
     };
 
-    console.log("Built order payload:", payload);
-    // Add this debug code before the return statement:
-    console.log("=== PAYLOAD DEBUG ===");
-    console.log("Items validation:");
-    backendItems.forEach((item, index) => {
-      console.log(`Item ${index}:`, {
-        id: item.id,
-        category_id: item.category_id,
-        price: item.price,
-        price_with_option: item.price_with_option,
-        quantity: item.quantity,
-        options: item.options,
-      });
-
-      if (!item.id || item.id <= 0) {
-        console.error(`❌ Invalid ID for item ${index}:`, item.id);
-      }
-      if (!item.category_id || item.category_id <= 0) {
-        console.error(
-          `❌ Invalid category_id for item ${index}:`,
-          item.category_id
-        );
-      }
-    });
-    console.log("Final payload:", payload);
-    console.log("=== END PAYLOAD DEBUG ===");
-
     return payload;
   } catch (error) {
     console.error("Error building order payload:", error);
@@ -480,6 +477,45 @@ export const buildOrderPayload = (
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
+  }
+};
+
+// ===== API Integration Helper =====
+const fetchCurrentOrdersFromAPI = async (): Promise<BackendOrder[]> => {
+  try {
+    const response = await apiService.fetchCurrentOrders();
+
+    console.log("🔍 API Response structure:", {
+      message: response.message,
+      hasData: !!response.data,
+      dataLength: response.data?.length || 0,
+    });
+
+    if (response.message === "Success" && response.data) {
+      console.log("✅ Orders fetched successfully:", response.data.length);
+
+      // Log first order for debugging
+      if (response.data.length > 0) {
+        console.log("📋 Sample order:", {
+          id: response.data[0].id,
+          status: response.data[0].status,
+          user_id: response.data[0].user_id,
+          total_price: response.data[0].total_price,
+          place: response.data[0].place?.title,
+        });
+      }
+
+      return response.data;
+    } else {
+      console.log(
+        "ℹ️ No orders found or unsuccessful response. Message:",
+        response.message
+      );
+      return [];
+    }
+  } catch (error) {
+    console.error("❌ Failed to fetch orders from API:", error);
+    throw error;
   }
 };
 
@@ -661,3 +697,6 @@ export const dataHelpers = {
     }));
   },
 };
+
+// Export the fixed API integration helper
+export { fetchCurrentOrdersFromAPI };

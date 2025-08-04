@@ -1,6 +1,6 @@
-// StepIndicator.tsx
+// StepIndicator.tsx - Updated for simplified flow
 import React from "react";
-import { Phone, Lock, User, Shield } from "lucide-react";
+import { Phone, User, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoginStep } from "./types";
 
@@ -11,21 +11,17 @@ interface StepIndicatorProps {
 export const StepIndicator: React.FC<StepIndicatorProps> = ({
   currentStep,
 }) => {
+  // Only show steps for registration flow (phone step doesn't need indicator)
   const steps = [
     { key: "phone", label: "رقم الجوال", icon: <Phone className="w-4 h-4" /> },
     {
-      key: "existing-user-password",
-      label: "كلمة المرور",
-      icon: <Lock className="w-4 h-4" />,
-    },
-    {
       key: "new-user-details",
-      label: "البيانات",
+      label: "البيانات الشخصية",
       icon: <User className="w-4 h-4" />,
     },
     {
       key: "new-user-otp",
-      label: "التحقق",
+      label: "تأكيد الرقم",
       icon: <Shield className="w-4 h-4" />,
     },
   ];
@@ -42,16 +38,16 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
           <div
             key={step.key}
             className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all",
+              "flex items-center gap-1 px-3 py-2 rounded-full text-xs transition-all",
               isCurrent
-                ? "bg-[#FFAA01] text-white"
+                ? "bg-[#FFAA01] text-white shadow-md"
                 : isActive
                 ? "bg-[#053468] text-white"
                 : "bg-gray-100 text-gray-400"
             )}
           >
             {step.icon}
-            <span>{step.label}</span>
+            <span className="hidden sm:inline">{step.label}</span>
           </div>
         );
       })}

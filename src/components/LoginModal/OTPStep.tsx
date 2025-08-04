@@ -1,6 +1,6 @@
-// OTPStep.tsx
-import React, { useRef, useEffect, useCallback } from "react";
-import { Shield } from "lucide-react";
+// OTPStep.tsx - Updated with resend functionality
+import React, { useRef, useEffect, useCallback, useState } from "react";
+import { Shield, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ interface OTPStepProps {
   onOTPBlur: () => void;
   onSubmit: () => void;
   onBack: () => void;
+  onResend?: () => void; // Optional resend handler
 }
 
 export const OTPStep: React.FC<OTPStepProps> = ({
@@ -28,8 +29,10 @@ export const OTPStep: React.FC<OTPStepProps> = ({
   onOTPBlur,
   onSubmit,
   onBack,
+  onResend,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Focus input when component mounts
   useEffect(() => {
@@ -37,6 +40,16 @@ export const OTPStep: React.FC<OTPStepProps> = ({
       inputRef.current.focus();
     }
   }, []);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   const handleOTPInput = useCallback(
     (value: string) => {
@@ -86,11 +99,18 @@ export const OTPStep: React.FC<OTPStepProps> = ({
     [onOTPChange]
   );
 
+  const handleResendClick = useCallback(() => {
+    if (onResend && resendCooldown === 0) {
+      onResend();
+      setResendCooldown(60); // Start 60-second cooldown
+    }
+  }, [onResend, resendCooldown]);
+
   const isSubmitDisabled =
     isLoading || !validationState.otp.isValid || otp.length !== 4;
 
   // Get formatted phone number for display
-  const formattedPhone = authService.validatePhone(phone).formattedPhone;
+  const formattedPhone = authService.formatPhoneNumber(phone);
 
   return (
     <div className="space-y-4">
@@ -141,30 +161,47 @@ export const OTPStep: React.FC<OTPStepProps> = ({
           disabled={isLoading}
           autoComplete="one-time-code"
           aria-label="رمز التحقق المكون من 4 أرقام"
-          aria-describedby={
-            validationState.otp.touched && !validationState.otp.isValid
-              ? "otp-error"
-              : "otp-help"
-          }
         />
       </FormField>
 
-      {/* Help text - responsive and visible */}
-      <div
-        id="otp-help"
-        className="text-xs sm:text-sm text-gray-500 text-center px-2 leading-relaxed"
-      >
+      {/* Help text */}
+      <div className="text-xs text-gray-500 text-center px-2 leading-relaxed">
         أدخل رمز التحقق المكون من 4 أرقام المرسل إلى هاتفك
       </div>
+
+      {/* Resend OTP section */}
+      {onResend && (
+        <div className="text-center">
+          {resendCooldown > 0 ? (
+            <p className="text-sm text-gray-500">
+              يمكنك طلب رمز جديد خلال{" "}
+              <span className="font-mono text-[#053468] font-medium">
+                {resendCooldown}
+              </span>{" "}
+              ثانية
+            </p>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={handleResendClick}
+              disabled={isLoading}
+              className="text-sm text-[#053468] hover:text-[#FFAA01] hover:bg-transparent p-0 h-auto font-normal"
+            >
+              <RotateCcw className="w-4 h-4 ml-1" />
+              إرسال رمز التحقق مرة أخرى
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-2">
         <Button
           onClick={onSubmit}
           disabled={isSubmitDisabled}
           className="flex-1 bg-[#FFAA01] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="تأكيد رمز التحقق وإنشاء الحساب"
+          aria-label="تأكيد رمز التحقق"
         >
-          {isLoading ? "جاري التحقق..." : "تأكيد وإنشاء الحساب"}
+          {isLoading ? "جاري التحقق..." : "تأكيد"}
         </Button>
         <Button
           variant="outline"
@@ -176,22 +213,6 @@ export const OTPStep: React.FC<OTPStepProps> = ({
           رجوع
         </Button>
       </div>
-
-      {/* Development hint */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="text-center">
-          <p className="text-xs text-gray-500 bg-gray-50 rounded p-2">
-            💡 للتطوير: استخدم الرمز{" "}
-            <code
-              className="bg-gray-200 px-1 rounded"
-              dir="ltr"
-              style={{ direction: "ltr" }}
-            >
-              1234
-            </code>
-          </p>
-        </div>
-      )}
     </div>
   );
 };

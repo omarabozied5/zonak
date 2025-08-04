@@ -16,6 +16,7 @@ import { useCoupon, useFormValidation } from "../hooks/useCheckout";
 import { calculateDiscountAmount } from "../lib/couponUtils";
 import { apiService, buildOrderPayload } from "../services/apiService";
 import { OrderResponse, CartItem } from "../types/types";
+import { refreshOrdersAfterSubmission } from "../hooks/useOrderStore";
 
 interface OrderValidation {
   isValid: boolean;
@@ -30,6 +31,7 @@ const calculateTotalItemDiscounts = (items: CartItem[]): number => {
     return total + itemDiscount;
   }, 0);
 };
+
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
@@ -184,7 +186,6 @@ const Checkout: React.FC = () => {
 
     return { isValid: true, placeId, merchantId };
   };
-
   const handleSubmitOrder = async (): Promise<void> => {
     if (!validateForm(user, items, total)) return;
 
@@ -225,16 +226,41 @@ const Checkout: React.FC = () => {
       if (response.success) {
         console.log("Order submitted successfully:", response);
 
+        // Extract order ID from response
+        const orderId =
+          response.order_id || response.data?.order_id || response.data?.id;
+        console.log("📝 Order ID from response:", orderId);
+
         // Clear cart on successful order
         clearCart();
 
         toast.success(response.message || "تم تأكيد طلبك بنجاح!");
 
-        // Navigate to orders page
+        // ✅ ENHANCED: Use improved refresh with expected order ID
+        console.log("🔄 Starting enhanced order refresh...");
+
+        // Start the refresh process in background (don't await to avoid blocking navigation)
+        refreshOrdersAfterSubmission(user?.id?.toString() || null, {
+          maxRetries: 6, // Increased retries
+          retryDelay: 2000, // Start with 2 seconds
+          expectedOrderId: orderId ? parseInt(orderId.toString()) : undefined,
+        }).catch((error) => {
+          console.error("⚠️ Background order refresh failed:", error);
+          // Don't show error to user since the order was successful
+        });
+
+        // Navigate with more detailed state
         navigate("/current-orders", {
           state: {
-            orderId: response.order_id,
+            orderId: orderId,
             message: "تم إرسال طلبك بنجاح",
+            justSubmitted: true,
+            timestamp: Date.now(), // Add timestamp to force re-render
+            orderDetails: {
+              total: total,
+              itemsCount: items.length,
+              restaurantName: items[0]?.restaurantName || "المطعم",
+            },
           },
         });
       } else {
@@ -248,6 +274,83 @@ const Checkout: React.FC = () => {
       setIsProcessing(false);
     }
   };
+  // const handleSubmitOrder = async (): Promise<void> => {
+  //   if (!validateForm(user, items, total)) return;
+
+  //   const validation = validateOrderData();
+  //   if (!validation.isValid) return;
+
+  //   const { placeId, merchantId } = validation;
+
+  //   setIsProcessing(true);
+  //   try {
+  //     console.log("Building order payload with:", {
+  //       itemsCount: items.length,
+  //       placeId,
+  //       merchantId,
+  //       totalPrice: total,
+  //       discountAmount,
+  //     });
+
+  //     // Build the order payload
+  //     const orderPayload = buildOrderPayload(
+  //       items,
+  //       placeId!,
+  //       merchantId!,
+  //       total,
+  //       discountAmount
+  //     );
+
+  //     console.log(
+  //       "Final order payload:",
+  //       JSON.stringify(orderPayload, null, 2)
+  //     );
+
+  //     // Submit order to backend
+  //     const response: OrderResponse = await apiService.submitOrder(
+  //       orderPayload
+  //     );
+
+  //     if (response.success) {
+  //       console.log("Order submitted successfully:", response);
+
+  //       // Clear cart on successful order
+  //       clearCart();
+
+  //       toast.success(response.message || "تم تأكيد طلبك بنجاح!");
+
+  //       // ✅ FIXED: Use async refresh without hooks
+  //       console.log(
+  //         "🔄 Scheduling order refresh after successful submission..."
+  //       );
+
+  //       // Don't await this - let it run in background to avoid blocking navigation
+  //       refreshOrdersAfterSubmission(user?.id?.toString() || null).catch(
+  //         (error) => {
+  //           console.error("⚠️ Background order refresh failed:", error);
+  //           // Don't show error to user since the order was successful
+  //         }
+  //       );
+
+  //       // Navigate immediately
+  //       navigate("/current-orders", {
+  //         state: {
+  //           orderId: response.order_id,
+  //           message: "تم إرسال طلبك بنجاح",
+  //           justSubmitted: true, // Flag to indicate fresh submission
+  //         },
+  //       });
+  //     } else {
+  //       console.error("Order submission failed:", response);
+  //       toast.error(response.message || "فشل في إرسال الطلب");
+  //     }
+  //   } catch (error) {
+  //     console.error("Order submission error:", error);
+  //     toast.error("حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى");
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFAA01]/5 to-white">

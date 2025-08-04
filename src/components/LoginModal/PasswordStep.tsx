@@ -1,15 +1,15 @@
-// PasswordStep.tsx
+// PasswordStep.tsx - Clean version
 import React from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FormField } from "./FormField";
-import { ExistingUser, ValidationState } from "./types";
+import { ExistingUser, ValidationState, combineName } from "./types";
 import { authService } from "./authService";
 
 interface PasswordStepProps {
-  existingUser: ExistingUser;
+  existingUser: ExistingUser | null;
   password: string;
   showPassword: boolean;
   validationState: ValidationState;
@@ -33,13 +33,27 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
   onSubmit,
   onBack,
 }) => {
+  if (!existingUser) {
+    return <div>خطأ: لم يتم العثور على بيانات المستخدم</div>;
+  }
+
+  const displayName = combineName(
+    existingUser.first_name,
+    existingUser.last_name
+  );
+  const formattedPhone = authService.formatPhoneNumber(existingUser.phone);
+
   return (
     <div className="space-y-4">
       <div className="bg-gray-50 rounded-lg p-4 text-center">
         <User className="w-12 h-12 mx-auto mb-2 text-[#053468]" />
-        <h3 className="font-medium text-[#053468]">{existingUser.name}</h3>
-        <p className="text-sm text-gray-600">
-          {authService.validatePhone(existingUser.phone).formattedPhone}
+        <h3 className="font-medium text-[#053468]">{displayName}</h3>
+        <p
+          className="text-sm text-gray-600"
+          dir="ltr"
+          style={{ direction: "ltr" }}
+        >
+          {formattedPhone}
         </p>
       </div>
 
@@ -67,11 +81,17 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
                 : "border-gray-300 focus:border-[#FFAA01]"
             )}
             disabled={isLoading}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && validationState.password.isValid) {
+                onSubmit();
+              }
+            }}
           />
           <button
             type="button"
             onClick={onTogglePassword}
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#053468]"
+            disabled={isLoading}
           >
             {showPassword ? (
               <EyeOff className="w-4 h-4" />
@@ -86,7 +106,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
         <Button
           onClick={onSubmit}
           disabled={isLoading || !validationState.password.isValid}
-          className="flex-1 bg-[#FFAA01] hover:bg-[#e69900] text-white"
+          className="flex-1 bg-[#FFAA01] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
         </Button>
@@ -94,7 +114,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           variant="outline"
           onClick={onBack}
           disabled={isLoading}
-          className="border-[#053468] text-[#053468] hover:bg-[#053468] hover:text-white"
+          className="border-[#053468] text-[#053468] hover:bg-[#053468] hover:text-white disabled:opacity-50"
         >
           رجوع
         </Button>

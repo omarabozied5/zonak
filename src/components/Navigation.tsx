@@ -183,7 +183,10 @@ const Navigation = () => {
                       <User className="h-3 w-3 lg:h-4 lg:w-4 text-white" />
                     </div>
                     <span className="text-sm font-medium text-gray-700 max-w-24 lg:max-w-none truncate">
-                      مرحباً {user?.name}
+                      مرحباً{" "}
+                      {user
+                        ? `${user.first_name} ${user.last_name}`.trim()
+                        : ""}
                     </span>
                   </div>
                   <Button
@@ -246,7 +249,10 @@ const Navigation = () => {
                         <User className="h-4 w-4 text-white" />
                       </div>
                       <span className="text-sm font-medium text-gray-700 truncate">
-                        مرحباً {user?.name}
+                        مرحباً{" "}
+                        {user
+                          ? `${user.first_name} ${user.last_name}`.trim()
+                          : ""}
                       </span>
                     </div>
                     <Button

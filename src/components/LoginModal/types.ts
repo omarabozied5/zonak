@@ -1,15 +1,92 @@
-// types.ts
+// types.ts - Updated to include name field in login response
 export type LoginStep =
   | "phone"
-  | "existing-user-password"
   | "new-user-details"
-  | "new-user-otp";
+  | "new-user-otp"
+  | "existing-user-otp"; // Added existing-user-otp
 
+// Backend interfaces - Updated to match actual API responses
+export interface BackendUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  createdAt?: string;
+  lastLogin?: string;
+  isNewUser?: boolean;
+}
+
+export interface LoginOtpRequest {
+  phone: string;
+  device_token: null;
+  device_type: string;
+  uuid: string;
+  os_version: string;
+  device_name: string;
+  model_name: string;
+  build_version_number: string;
+}
+
+export interface LoginOtpResponse {
+  message: string;
+  data: string; // JWT token
+  code: string;
+  name?: string; // User's full name from backend (e.g., "حمزة احمد")
+  is_otp_verified: number | null; // 1 = verified user, null = new user, 0 = unverified user
+}
+
+export interface RegisterRequest {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  password: string;
+  latitude: string;
+  longitude: string;
+  device_token: null;
+  device_type: string;
+  uuid: string;
+  os_version: string;
+  device_name: string;
+  model_name: string;
+  build_version_number: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  data: string; // JWT token
+  code: string;
+  is_otp_verified: null;
+}
+
+// Updated to match actual API responses
+export interface SendOtpRequest {
+  phone: string;
+  lang: string; // "Ar" or "En"
+}
+
+export interface SendOtpResponse {
+  message: string;
+  id: string; // Session ID for verification
+  phone: string;
+}
+
+export interface VerifyOtpRequest {
+  id: string; // Session ID from send_otp
+  code: string; // OTP code
+  lang: string; // "Ar" or "En"
+  phone: string;
+}
+
+export interface VerifyOtpResponse {
+  message: string; // "تم بنجاح" on success
+}
+
+// Frontend interfaces
 export interface ExistingUser {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   phone: string;
-  countryCode: string;
   createdAt?: string;
   lastLogin?: string;
   isNewUser?: boolean;
@@ -41,8 +118,8 @@ export interface ValidationState {
 export interface PhoneValidationResult {
   isValid: boolean;
   message: string;
-  countryCode: string;
   formattedPhone: string;
+  countryCode?: string; // Made optional since it's not always used
 }
 
 export interface LoginModalProps {
@@ -59,4 +136,28 @@ export interface AuthResult {
 export interface UserCheckResult {
   exists: boolean;
   user: ExistingUser | null;
+  token?: string; // Include JWT token for existing users
+  needsVerification?: boolean; // Add this field for unverified users
 }
+
+// Additional types for name handling
+export interface NameParts {
+  firstName: string;
+  lastName: string;
+}
+
+// Helper function to split name into parts
+export const splitName = (fullName: string): NameParts => {
+  const trimmed = fullName.trim();
+  const parts = trimmed.split(" ");
+
+  return {
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" ") || "",
+  };
+};
+
+// Helper function to combine name parts
+export const combineName = (firstName: string, lastName: string): string => {
+  return `${firstName} ${lastName}`.trim();
+};

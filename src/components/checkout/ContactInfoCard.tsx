@@ -29,7 +29,11 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = React.memo(
             </Label>
             <Input
               id="display-name"
-              value={user?.name || ""}
+              value={
+                user
+                  ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                  : ""
+              }
               readOnly
               className="mt-1 bg-gray-50 cursor-not-allowed"
             />

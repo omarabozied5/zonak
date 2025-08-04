@@ -1,4 +1,4 @@
-// PhoneStep.tsx
+// PhoneStep.tsx - Clean version
 import React from "react";
 import { Phone, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ interface PhoneStepProps {
   onPhoneChange: (value: string) => void;
   onPhoneBlur: () => void;
   onSubmit: () => void;
-  onShowTestInfo: () => void;
 }
 
 export const PhoneStep: React.FC<PhoneStepProps> = ({
@@ -24,7 +23,6 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
   onPhoneChange,
   onPhoneBlur,
   onSubmit,
-  onShowTestInfo,
 }) => {
   return (
     <div className="space-y-4">
@@ -45,7 +43,6 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
             onPhoneChange(value);
           }}
           onBlur={onPhoneBlur}
-          // placeholder="أدخل رقم الجوال"
           className={cn(
             "text-right",
             validationState.phone.touched && !validationState.phone.isValid
@@ -53,25 +50,31 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
               : "border-gray-300 focus:border-[#FFAA01]"
           )}
           disabled={isLoading}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && validationState.phone.isValid) {
+              onSubmit();
+            }
+          }}
         />
       </FormField>
 
       <Button
         onClick={onSubmit}
         disabled={isLoading || !validationState.phone.isValid}
-        className="w-full bg-[#FFAA01] hover:bg-[#e69900] text-white"
+        className="w-full bg-[#FFAA01] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-label="التحقق من رقم الجوال وتسجيل الدخول أو إنشاء حساب"
       >
         {isLoading ? "جاري التحقق..." : "متابعة"}
         <ArrowRight className="w-4 h-4 mr-2" />
       </Button>
 
-      <Button
-        variant="outline"
-        onClick={onShowTestInfo}
-        className="w-full border-[#053468] text-[#053468] hover:bg-[#053468] hover:text-white"
-      >
-        حساب تجريبي
-      </Button>
+      <div className="text-center text-xs text-gray-500 px-2">
+        <p>
+          سيتم تسجيل دخولك تلقائياً إذا كان لديك حساب مُفعل،
+          <br />
+          أو إنشاء حساب جديد إذا كنت مستخدم جديد
+        </p>
+      </div>
     </div>
   );
 };

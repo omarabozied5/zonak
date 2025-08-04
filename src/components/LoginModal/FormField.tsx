@@ -1,4 +1,4 @@
-// FormField.tsx
+// FormField.tsx - Component for form fields
 import React from "react";
 
 interface FormFieldProps {
@@ -28,3 +28,5 @@ export const FormField: React.FC<FormFieldProps> = ({
     )}
   </div>
 );
+
+// Also need the missing imports for the registration form

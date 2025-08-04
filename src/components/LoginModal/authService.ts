@@ -1,85 +1,207 @@
-// authService.ts
+// authService.ts - Updated to handle user name from backend response
+import { realAuthService } from "./realAuthService";
+import type { BackendUser } from "./types";
 import { validation } from "./validation";
 import { ExistingUser, AuthResult, UserCheckResult } from "./types";
+
+const convertBackendUserToExistingUser = (
+  backendUser: BackendUser
+): ExistingUser => {
+  return {
+    id: backendUser.id,
+    first_name: backendUser.first_name,
+    last_name: backendUser.last_name,
+    phone: backendUser.phone,
+    createdAt: backendUser.createdAt,
+    lastLogin: backendUser.lastLogin,
+    isNewUser: backendUser.isNewUser,
+  };
+};
+
+// Helper to convert UserCheckResult userData to ExistingUser
+const convertUserDataToExistingUser = (
+  userData: any,
+  phone: string
+): ExistingUser => {
+  return {
+    id: userData.id,
+    first_name: userData.first_name,
+    last_name: userData.last_name,
+    phone: phone,
+    createdAt: userData.createdAt || new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    isNewUser: false,
+  };
+};
 
 export const authService = {
   validatePhone: validation.phone,
 
+  /**
+   * Check user status using login-otp-web endpoint
+   * Returns token for both verified and unverified users
+   * Now properly extracts user data from backend response
+   */
   checkUserExists: async (phone: string): Promise<UserCheckResult> => {
-    const mockUsers: ExistingUser[] = [
-      { id: "1", name: "أحمد محمد", phone: "0512345678", countryCode: "+966" },
-      { id: "2", name: "فاطمة علي", phone: "0523456789", countryCode: "+966" },
-      {
-        id: "3",
-        name: "محمد عبدالله",
-        phone: "0534567890",
-        countryCode: "+966",
-      },
-    ];
+    try {
+      const result = await realAuthService.checkUserStatus(phone);
 
-    const phoneValidation = authService.validatePhone(phone);
-    if (!phoneValidation.isValid) {
-      return { exists: false, user: null };
+      switch (result.userType) {
+        case "verified": {
+          // Create user from actual backend data
+          let user: ExistingUser;
+
+          if (result.userData) {
+            user = convertUserDataToExistingUser(result.userData, phone);
+            console.log("✅ Using actual user data from backend:", {
+              name: `${user.first_name} ${user.last_name}`,
+              phone: user.phone,
+            });
+          } else {
+            // Fallback to default values (should rarely happen now)
+            user = {
+              id: `verified_${Date.now()}`,
+              first_name: "مستخدم",
+              last_name: "مُفعل",
+              phone: phone,
+              lastLogin: new Date().toISOString(),
+              isNewUser: false,
+            };
+            console.warn(
+              "⚠️ Using fallback user data - backend didn't provide user info"
+            );
+          }
+
+          return {
+            exists: true,
+            user: user,
+            token: result.token,
+            needsVerification: false,
+          };
+        }
+
+        case "unverified": {
+          // For unverified users, we may have user data for display purposes
+          return {
+            exists: true,
+            user: result.userData
+              ? convertUserDataToExistingUser(result.userData, phone)
+              : null,
+            token: result.token, // Include token for send_otp
+            needsVerification: true,
+          };
+        }
+
+        case "new":
+        default: {
+          return {
+            exists: false,
+            user: null,
+            needsVerification: false,
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error checking user existence:", error);
+      throw error;
     }
-
-    const normalizedPhone = phone.replace(/\D/g, "");
-    const user = mockUsers.find((u) => {
-      const userPhone = u.phone.replace(/\D/g, "");
-      return (
-        userPhone === normalizedPhone ||
-        userPhone === normalizedPhone.substring(3) ||
-        `966${userPhone}` === normalizedPhone
-      );
-    });
-
-    return { exists: !!user, user: user || null };
   },
 
-  loginExistingUser: async (
+  /**
+   * Send OTP - now requires token from previous login/registration
+   */
+  sendOTP: async (
     phone: string,
-    password: string
-  ): Promise<AuthResult> => {
-    if (password === "12345678") {
-      const phoneValidation = authService.validatePhone(phone);
-      const mockUser: ExistingUser = {
-        id: Date.now().toString(),
-        name: "مستخدم تجريبي",
-        phone,
-        countryCode: phoneValidation.countryCode,
-      };
-      return { user: mockUser, token: "mock-token-" + Date.now() };
+    token: string
+  ): Promise<{ sessionId: string; message: string }> => {
+    try {
+      if (!token) {
+        throw new Error("Token required for sending OTP");
+      }
+      return await realAuthService.sendOTP(phone, token);
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      throw error;
     }
-    throw new Error("كلمة المرور غير صحيحة");
   },
 
-  sendOTP: async (phone: string): Promise<void> => {
-    const phoneValidation = authService.validatePhone(phone);
-    if (!phoneValidation.isValid) {
-      throw new Error(phoneValidation.message);
-    }
-    return Promise.resolve();
-  },
-
-  verifyOTPAndCreateUser: async (
+  /**
+   * Verify OTP
+   */
+  verifyOTP: async (
     phone: string,
     otp: string,
-    name: string,
-    password: string
-  ): Promise<AuthResult> => {
-    if (otp === "1234") {
-      const phoneValidation = authService.validatePhone(phone);
-      if (!phoneValidation.isValid) {
-        throw new Error(phoneValidation.message);
-      }
-      const mockUser: ExistingUser = {
-        id: Date.now().toString(),
-        name,
+    sessionId: string,
+    token: string
+  ): Promise<boolean> => {
+    try {
+      const result = await realAuthService.verifyOTP(
         phone,
-        countryCode: phoneValidation.countryCode,
-        isNewUser: true,
-      };
-      return { user: mockUser, token: "mock-token-" + Date.now() };
+        otp,
+        sessionId,
+        token
+      );
+      return result.isValid;
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      throw error;
     }
-    throw new Error("رمز التحقق غير صحيح");
   },
+
+  /**
+   * Register new user - creates account immediately and returns token
+   */
+  registerUser: async (
+    phone: string,
+    firstName: string,
+    lastName: string,
+    password: string
+  ): Promise<AuthResult & { registrationToken: string }> => {
+    try {
+      const result = await realAuthService.registerUser(
+        phone,
+        firstName,
+        lastName,
+        password
+      );
+      const user = convertBackendUserToExistingUser(result.user);
+
+      return {
+        user,
+        token: result.token,
+        registrationToken: result.token, // Same token, but explicit for send_otp
+      };
+    } catch (error) {
+      console.error("Error registering user:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Login after OTP verification
+   * Now properly extracts user name from backend response
+   */
+  loginAfterOTPVerification: async (phone: string): Promise<AuthResult> => {
+    try {
+      const result = await realAuthService.loginAfterOTPVerification(phone);
+      return {
+        user: convertBackendUserToExistingUser(result.user),
+        token: result.token,
+      };
+    } catch (error) {
+      console.error("Error logging in after OTP verification:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Format phone number for display
+   */
+  formatPhoneNumber: (phone: string): string => {
+    return realAuthService.formatPhoneForDisplay(phone);
+  },
+
+  validateUserName: validation.name,
+  validatePassword: validation.password,
+  validateOTP: validation.otp,
 };

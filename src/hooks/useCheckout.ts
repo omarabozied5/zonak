@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Coupon } from "../components/checkout/types";
+import { Coupon } from "../types/types";
 import { findCouponByCode } from "../lib/couponUtils";
 
 export const useCoupon = () => {
@@ -51,18 +51,40 @@ export const useCoupon = () => {
 export const useFormValidation = () => {
   const validateForm = useCallback(
     (user: any, items: any[], total: number): boolean => {
-      if (!user?.name || !user?.phone) {
+      const fullName = user
+        ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+        : "";
+
+      // Check if user has a valid name (first_name is required, last_name is optional)
+      if (!user?.first_name || !user?.phone) {
         toast.error("معلومات المستخدم غير مكتملة");
+        console.error("User validation failed:", {
+          user: user,
+          first_name: user?.first_name,
+          last_name: user?.last_name,
+          phone: user?.phone,
+          fullName: fullName,
+        });
         return false;
       }
+
       if (items.length === 0) {
         toast.error("السلة فارغة");
         return false;
       }
+
       if (total <= 0) {
         toast.error("إجمالي الطلب غير صحيح");
         return false;
       }
+
+      console.log("✅ Form validation passed:", {
+        userName: fullName,
+        phone: user.phone,
+        itemsCount: items.length,
+        total: total,
+      });
+
       return true;
     },
     []
