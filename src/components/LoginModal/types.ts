@@ -1,9 +1,10 @@
-// types.ts - Updated to include name field in login response
+// types.ts - Updated to support new phone → password → login flow
 export type LoginStep =
   | "phone"
+  | "password" // NEW: Password step for existing users
   | "new-user-details"
   | "new-user-otp"
-  | "existing-user-otp"; // Added existing-user-otp
+  | "existing-user-otp";
 
 // Backend interfaces - Updated to match actual API responses
 export interface BackendUser {
@@ -18,6 +19,7 @@ export interface BackendUser {
 
 export interface LoginOtpRequest {
   phone: string;
+  password?: string; // Password is optional for existence check
   device_token: null;
   device_type: string;
   uuid: string;
@@ -119,7 +121,7 @@ export interface PhoneValidationResult {
   isValid: boolean;
   message: string;
   formattedPhone: string;
-  countryCode?: string; // Made optional since it's not always used
+  countryCode?: string;
 }
 
 export interface LoginModalProps {
@@ -133,11 +135,25 @@ export interface AuthResult {
   token: string;
 }
 
+// Updated interfaces for the new flow
+export interface UserExistsResult {
+  exists: boolean;
+  message: string;
+}
+
+export interface UserLoginResult {
+  userType: "verified" | "unverified";
+  user: ExistingUser;
+  token: string;
+  needsVerification: boolean;
+}
+
+// Legacy interface - keeping for backward compatibility
 export interface UserCheckResult {
   exists: boolean;
   user: ExistingUser | null;
-  token?: string; // Include JWT token for existing users
-  needsVerification?: boolean; // Add this field for unverified users
+  token?: string;
+  needsVerification?: boolean;
 }
 
 // Additional types for name handling

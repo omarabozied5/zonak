@@ -1,11 +1,8 @@
-// CurrentOrders.tsx - Fixed version with reduced re-renders
-
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { useOrderStore, Order } from "../hooks/useOrderStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useOrderRefresh } from "../hooks/useOrderRefresh";
 import OrderCard from "../components/currentOrder/OrderCard";
 import EmptyState from "../components/currentOrder/EmptyState";
 import LoadingState from "../components/currentOrder/LoadingState";
@@ -18,23 +15,20 @@ const CurrentOrders: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore();
   const orderStore = useOrderStore(user?.id || null);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const fetchAttempts = useRef(0);
-  const maxFetchAttempts = 3;
 
   // Check if we just submitted an order
   const justSubmitted = location.state?.justSubmitted;
   const orderId = location.state?.orderId;
 
-  // Clear navigation state after first render to prevent infinite refreshes
+  // Clear navigation state after first render
   useEffect(() => {
     if (justSubmitted) {
       const timer = setTimeout(() => {
         window.history.replaceState({}, document.title, location.pathname);
-      }, 3000); // Reduced from 5000ms
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, []); // Only run once
+  }, []);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -43,36 +37,22 @@ const CurrentOrders: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // ✅ FIXED: Single effect for initial data fetching
+  // Initial data fetching
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
 
-    const fetchInitialData = async () => {
-      console.log("🚀 Initial fetch for user:", user.id);
-      setIsInitialLoad(true);
-      fetchAttempts.current = 0;
-
+    const fetchData = async () => {
       try {
-        if (justSubmitted) {
-          console.log(
-            "📦 Just submitted order, waiting 3 seconds before fetch..."
-          );
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-
         await orderStore.fetchCurrentOrders();
-        console.log("✅ Initial fetch completed");
       } catch (error) {
-        console.error("❌ Initial fetch failed:", error);
-      } finally {
-        setIsInitialLoad(false);
+        // Error is handled by the store
       }
     };
 
-    fetchInitialData();
-  }, [isAuthenticated, user?.id]); // Remove justSubmitted dependency
+    fetchData();
+  }, [isAuthenticated, user?.id]);
 
-  // ✅ FIXED: Separate effect for updating local state when store changes
+  // Update local state when store changes
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
       setActiveOrders([]);
@@ -80,67 +60,14 @@ const CurrentOrders: React.FC = () => {
     }
 
     const orders = orderStore.getActiveOrders();
-    console.log("📋 Store orders updated:", {
-      totalOrders: orderStore.orders.length,
-      activeOrders: orders.length,
-      loading: orderStore.loading,
-      userId: user.id,
-    });
-
     setActiveOrders(orders);
+  }, [orderStore.orders, orderStore.loading, isAuthenticated, user?.id]);
 
-    // ✅ FIXED: Retry logic only if we just submitted and still no orders
-    if (
-      justSubmitted &&
-      orders.length === 0 &&
-      !orderStore.loading &&
-      !isInitialLoad &&
-      fetchAttempts.current < maxFetchAttempts
-    ) {
-      const retryDelay = (fetchAttempts.current + 1) * 2000; // 2s, 4s, 6s
-      console.log(
-        `🔄 Retry ${
-          fetchAttempts.current + 1
-        }/${maxFetchAttempts} in ${retryDelay}ms...`
-      );
-
-      const timer = setTimeout(async () => {
-        fetchAttempts.current++;
-        console.log(`🔄 Retry attempt ${fetchAttempts.current}...`);
-        try {
-          await orderStore.fetchCurrentOrders();
-        } catch (error) {
-          console.error(`❌ Retry ${fetchAttempts.current} failed:`, error);
-        }
-      }, retryDelay);
-
-      return () => clearTimeout(timer);
-    }
-  }, [
-    orderStore.orders,
-    orderStore.loading,
-    isAuthenticated,
-    user?.id,
-    justSubmitted,
-    isInitialLoad,
-  ]);
-
-  // Use the refresh hook (but disable it during initial load)
-  useOrderRefresh({
-    isAuthenticated: isAuthenticated && !isInitialLoad,
-    userId: user?.id || null,
-    fetchOrders: orderStore.fetchCurrentOrders,
-  });
-
-  // ✅ Enhanced refresh handler
   const handleRefresh = useCallback(async () => {
-    console.log("🔄 Manual refresh triggered");
-    fetchAttempts.current = 0; // Reset attempts on manual refresh
     try {
       await orderStore.fetchCurrentOrders();
-      console.log("✅ Manual refresh completed");
     } catch (error) {
-      console.error("❌ Manual refresh failed:", error);
+      // Error is handled by the store
     }
   }, [orderStore]);
 
@@ -152,9 +79,8 @@ const CurrentOrders: React.FC = () => {
     return null;
   }
 
-  // Show success message if we just submitted an order
   const showSuccessMessage = justSubmitted && orderId;
-  const isLoading = orderStore.loading || isInitialLoad;
+  const isLoading = orderStore.loading;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFAA01]/10 to-white">
@@ -201,31 +127,6 @@ const CurrentOrders: React.FC = () => {
               </div>
             </div>
           )}
-
-          {/* ✅ Enhanced debug info */}
-          {process.env.NODE_ENV === "development" && (
-            <div className="text-xs text-gray-400 mt-2 p-2 bg-gray-50 rounded">
-              <div>
-                المستخدم: {user?.id} | جاري التحميل: {isLoading ? "نعم" : "لا"}
-              </div>
-              <div>
-                إجمالي الطلبات: {orderStore.orders.length} | النشطة:{" "}
-                {activeOrders.length}
-              </div>
-              <div>
-                محاولات الجلب: {fetchAttempts.current}/{maxFetchAttempts}
-              </div>
-              <div>
-                آخر تحديث:{" "}
-                {orderStore.lastFetchTime
-                  ? new Date(orderStore.lastFetchTime).toLocaleTimeString("ar")
-                  : "لم يتم"}
-              </div>
-              {orderStore.error && (
-                <div className="text-red-500">خطأ: {orderStore.error}</div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Error State */}
@@ -249,16 +150,10 @@ const CurrentOrders: React.FC = () => {
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">
-                  {fetchAttempts.current < maxFetchAttempts
-                    ? "جاري البحث عن طلبك..."
-                    : "قد يستغرق الأمر بعض الوقت"}
+                  جاري البحث عن طلبك...
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  {fetchAttempts.current < maxFetchAttempts
-                    ? `محاولة ${
-                        fetchAttempts.current + 1
-                      } من ${maxFetchAttempts}`
-                    : "يرجى المحاولة يدوياً أو الانتظار قليلاً"}
+                  قد يستغرق ظهور الطلب بعض الوقت
                 </p>
                 <button
                   onClick={handleRefresh}

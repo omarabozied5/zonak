@@ -4,11 +4,13 @@ import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useOrderStore } from "@/hooks/useOrderStore";
 
 // Components
 import CheckoutHeader from "../components/checkout/CheckoutHeader";
 import ContactInfoCard from "../components/checkout/ContactInfoCard";
 import CouponCard from "../components/checkout/CouponCard";
+import PaymentMethodCard from "../components/checkout/PaymentMethodCard";
 import OrderSummaryCard from "../components/checkout/OrderSummaryCard";
 
 // Hooks and Utils
@@ -16,7 +18,6 @@ import { useCoupon, useFormValidation } from "../hooks/useCheckout";
 import { calculateDiscountAmount } from "../lib/couponUtils";
 import { apiService, buildOrderPayload } from "../services/apiService";
 import { OrderResponse, CartItem } from "../types/types";
-import { refreshOrdersAfterSubmission } from "../hooks/useOrderStore";
 
 interface OrderValidation {
   isValid: boolean;
@@ -37,8 +38,10 @@ const Checkout: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore();
   const { items, totalPrice, clearCart } = useCartStore(user?.id);
   const { validateForm } = useFormValidation();
+  const orderStore = useOrderStore(user?.id?.toString());
 
   const [notes, setNotes] = useState<string>("");
+  const [paymentType, setPaymentType] = useState<number>(1); // Default to Cash on Delivery
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   const {
@@ -186,8 +189,9 @@ const Checkout: React.FC = () => {
 
     return { isValid: true, placeId, merchantId };
   };
+
   const handleSubmitOrder = async (): Promise<void> => {
-    if (!validateForm(user, items, total)) return;
+    if (!validateForm(user, items, total, paymentType)) return;
 
     const validation = validateOrderData();
     if (!validation.isValid) return;
@@ -202,14 +206,16 @@ const Checkout: React.FC = () => {
         merchantId,
         totalPrice: total,
         discountAmount,
+        paymentType,
       });
 
-      // Build the order payload
+      // Build the order payload with selected payment type
       const orderPayload = buildOrderPayload(
         items,
         placeId!,
         merchantId!,
         total,
+        paymentType, // Use selected payment type
         discountAmount
       );
 
@@ -236,26 +242,48 @@ const Checkout: React.FC = () => {
 
         toast.success(response.message || "تم تأكيد طلبك بنجاح!");
 
-        // ✅ ENHANCED: Use improved refresh with expected order ID
-        console.log("🔄 Starting enhanced order refresh...");
+        // Handle payment based on type
+        if (paymentType === 0 && orderId) {
+          // Online payment - get payment URL and redirect
+          try {
+            console.log("🔄 Getting payment URL for order:", orderId);
+            const paymentResponse = await apiService.getPaymentUrl(orderId);
 
-        // Start the refresh process in background (don't await to avoid blocking navigation)
-        refreshOrdersAfterSubmission(user?.id?.toString() || null, {
-          maxRetries: 6, // Increased retries
-          retryDelay: 2000, // Start with 2 seconds
-          expectedOrderId: orderId ? parseInt(orderId.toString()) : undefined,
-        }).catch((error) => {
-          console.error("⚠️ Background order refresh failed:", error);
-          // Don't show error to user since the order was successful
-        });
+            if (paymentResponse.data) {
+              console.log("💳 Opening payment URL:", paymentResponse.data);
+              // Open payment URL in new tab
+              window.open(paymentResponse.data, "_blank");
 
-        // Navigate with more detailed state
+              toast.success("تم فتح صفحة الدفع في نافذة جديدة");
+            } else {
+              throw new Error("Payment URL not received");
+            }
+          } catch (paymentError) {
+            console.error("Payment URL error:", paymentError);
+            toast.error(
+              "فشل في فتح صفحة الدفع. يمكنك المتابعة للطلبات الحالية"
+            );
+          }
+        }
+
+        // Refresh orders in background to get the new order
+        setTimeout(() => {
+          orderStore.fetchCurrentOrders().catch((error) => {
+            console.error("Background order refresh failed:", error);
+          });
+        }, 1000);
+
+        // Navigate with detailed state
         navigate("/current-orders", {
           state: {
             orderId: orderId,
-            message: "تم إرسال طلبك بنجاح",
+            message:
+              paymentType === 0
+                ? "تم إرسال طلبك بنجاح - يرجى إكمال عملية الدفع"
+                : "تم إرسال طلبك بنجاح",
             justSubmitted: true,
-            timestamp: Date.now(), // Add timestamp to force re-render
+            timestamp: Date.now(),
+            paymentType: paymentType,
             orderDetails: {
               total: total,
               itemsCount: items.length,
@@ -274,83 +302,6 @@ const Checkout: React.FC = () => {
       setIsProcessing(false);
     }
   };
-  // const handleSubmitOrder = async (): Promise<void> => {
-  //   if (!validateForm(user, items, total)) return;
-
-  //   const validation = validateOrderData();
-  //   if (!validation.isValid) return;
-
-  //   const { placeId, merchantId } = validation;
-
-  //   setIsProcessing(true);
-  //   try {
-  //     console.log("Building order payload with:", {
-  //       itemsCount: items.length,
-  //       placeId,
-  //       merchantId,
-  //       totalPrice: total,
-  //       discountAmount,
-  //     });
-
-  //     // Build the order payload
-  //     const orderPayload = buildOrderPayload(
-  //       items,
-  //       placeId!,
-  //       merchantId!,
-  //       total,
-  //       discountAmount
-  //     );
-
-  //     console.log(
-  //       "Final order payload:",
-  //       JSON.stringify(orderPayload, null, 2)
-  //     );
-
-  //     // Submit order to backend
-  //     const response: OrderResponse = await apiService.submitOrder(
-  //       orderPayload
-  //     );
-
-  //     if (response.success) {
-  //       console.log("Order submitted successfully:", response);
-
-  //       // Clear cart on successful order
-  //       clearCart();
-
-  //       toast.success(response.message || "تم تأكيد طلبك بنجاح!");
-
-  //       // ✅ FIXED: Use async refresh without hooks
-  //       console.log(
-  //         "🔄 Scheduling order refresh after successful submission..."
-  //       );
-
-  //       // Don't await this - let it run in background to avoid blocking navigation
-  //       refreshOrdersAfterSubmission(user?.id?.toString() || null).catch(
-  //         (error) => {
-  //           console.error("⚠️ Background order refresh failed:", error);
-  //           // Don't show error to user since the order was successful
-  //         }
-  //       );
-
-  //       // Navigate immediately
-  //       navigate("/current-orders", {
-  //         state: {
-  //           orderId: response.order_id,
-  //           message: "تم إرسال طلبك بنجاح",
-  //           justSubmitted: true, // Flag to indicate fresh submission
-  //         },
-  //       });
-  //     } else {
-  //       console.error("Order submission failed:", response);
-  //       toast.error(response.message || "فشل في إرسال الطلب");
-  //     }
-  //   } catch (error) {
-  //     console.error("Order submission error:", error);
-  //     toast.error("حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى");
-  //   } finally {
-  //     setIsProcessing(false);
-  //   }
-  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFAA01]/5 to-white">
@@ -370,6 +321,10 @@ const Checkout: React.FC = () => {
               applyCoupon={applyCoupon}
               removeCoupon={removeCoupon}
             />
+            <PaymentMethodCard
+              paymentType={paymentType}
+              setPaymentType={setPaymentType}
+            />
           </div>
 
           {/* Order Summary */}
@@ -383,6 +338,7 @@ const Checkout: React.FC = () => {
               totalItemDiscounts={totalItemDiscounts}
               handleSubmitOrder={handleSubmitOrder}
               isProcessing={isProcessing}
+              paymentType={paymentType}
             />
           </div>
         </div>

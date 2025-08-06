@@ -48,9 +48,18 @@ export const useCoupon = () => {
   };
 };
 
+export const usePaymentMethod = () => {
+  const [paymentType, setPaymentType] = useState<number>(1); // Default to cash on delivery
+
+  return {
+    paymentType,
+    setPaymentType,
+  };
+};
+
 export const useFormValidation = () => {
   const validateForm = useCallback(
-    (user: any, items: any[], total: number): boolean => {
+    (user: any, items: any[], total: number, paymentType: number): boolean => {
       const fullName = user
         ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
         : "";
@@ -78,11 +87,18 @@ export const useFormValidation = () => {
         return false;
       }
 
+      // Validate payment type
+      if (paymentType !== 0 && paymentType !== 1) {
+        toast.error("يرجى اختيار طريقة الدفع");
+        return false;
+      }
+
       console.log("✅ Form validation passed:", {
         userName: fullName,
         phone: user.phone,
         itemsCount: items.length,
         total: total,
+        paymentType: paymentType === 1 ? "Cash on Delivery" : "Pay Online",
       });
 
       return true;

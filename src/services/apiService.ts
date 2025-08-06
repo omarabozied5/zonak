@@ -1,4 +1,4 @@
-// apiService.ts - Fixed with correct API response handling
+// apiService.ts - Cleaned and simplified
 
 import axios from "axios";
 import { useState } from "react";
@@ -26,6 +26,11 @@ import { useAuthStore } from "../stores/useAuthStore";
 
 const BASE_URL = "https://dev-backend.zonak.net/api";
 
+interface PaymentUrlResponse {
+  message: string;
+  data: string; // The payment URL
+}
+
 // ===== Axios Configuration =====
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -50,7 +55,6 @@ const getBaseItemId = (cartItemId: string): number => {
   const numericId = parseInt(baseId, 10);
 
   if (isNaN(numericId) || numericId <= 0) {
-    console.error("Invalid item ID:", cartItemId, "parsed as:", numericId);
     throw new Error(`Invalid item ID format: ${cartItemId}`);
   }
 
@@ -125,30 +129,25 @@ export const apiService = {
     userId: string,
     placeId?: string | number
   ): Promise<ApiResponse<MenuItem>> => {
-    try {
-      const menuData = await apiService.fetchMenuItems(userId, placeId);
+    const menuData = await apiService.fetchMenuItems(userId, placeId);
 
-      if (!menuData?.data?.items) {
-        throw new Error("No menu items found");
-      }
-
-      const item = menuData.data.items.find(
-        (item) => item.id.toString() === itemId.toString()
-      );
-
-      if (!item) {
-        throw new Error(`Item with ID ${itemId} not found`);
-      }
-
-      return {
-        success: true,
-        message: "Item found successfully",
-        data: item,
-      };
-    } catch (error) {
-      console.error("Error fetching single menu item:", error);
-      throw error;
+    if (!menuData?.data?.items) {
+      throw new Error("No menu items found");
     }
+
+    const item = menuData.data.items.find(
+      (item) => item.id.toString() === itemId.toString()
+    );
+
+    if (!item) {
+      throw new Error(`Item with ID ${itemId} not found`);
+    }
+
+    return {
+      success: true,
+      message: "Item found successfully",
+      data: item,
+    };
   },
 
   fetchMostOrderedItems: async (
@@ -179,8 +178,6 @@ export const apiService = {
 
   // AUTHENTICATED ENDPOINTS - Require token
 
-  // Enhanced fetchCurrentOrders function for apiService.ts
-
   fetchCurrentOrders: async (): Promise<CurrentOrdersApiResponse> => {
     const token = getAuthToken();
 
@@ -189,13 +186,6 @@ export const apiService = {
     }
 
     try {
-      console.log("🔍 Fetching current orders...", {
-        timestamp: new Date().toISOString(),
-        tokenExists: !!token,
-        tokenLength: token.length,
-        tokenStart: token.substring(0, 20) + "...",
-      });
-
       const response = await axiosInstance.get("/get/current/orders", {
         headers: {
           "x-auth-token": token,
@@ -203,74 +193,12 @@ export const apiService = {
         },
       });
 
-      console.log("📡 API Response Details:", {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        data: response.data,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Enhanced logging for response structure
-      if (response.data) {
-        console.log("📊 Response Analysis:", {
-          message: response.data.message,
-          hasData: !!response.data.data,
-          dataType: Array.isArray(response.data.data)
-            ? "array"
-            : typeof response.data.data,
-          dataLength: Array.isArray(response.data.data)
-            ? response.data.data.length
-            : "N/A",
-          dataKeys:
-            response.data.data && typeof response.data.data === "object"
-              ? Object.keys(response.data.data)
-              : "N/A",
-        });
-
-        // If we have orders, log the first one in detail
-        if (
-          Array.isArray(response.data.data) &&
-          response.data.data.length > 0
-        ) {
-          const firstOrder = response.data.data[0];
-          console.log("📋 First Order Details:", {
-            id: firstOrder.id,
-            user_id: firstOrder.user_id,
-            status: firstOrder.status,
-            total_price: firstOrder.total_price,
-            created_at: firstOrder.created_at,
-            place_title: firstOrder.place?.title,
-            merchant_id: firstOrder.merchant_id,
-            place_id: firstOrder.place_id,
-            orderitemsCount: firstOrder.orderitems?.length || 0,
-          });
-        }
-      }
-
       return response.data;
     } catch (error) {
-      console.error("❌ fetchCurrentOrders error:", error);
-
       if (axios.isAxiosError(error)) {
         const errorData = error.response?.data;
-        console.error("🚨 Detailed API Error:", {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: errorData,
-          message: errorData?.message,
-          headers: error.response?.headers,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers,
-          },
-          timestamp: new Date().toISOString(),
-        });
-
         throw new Error(errorData?.message || "Failed to fetch current orders");
       }
-
       throw error;
     }
   },
@@ -302,8 +230,6 @@ export const apiService = {
         message: response.data?.message || "تم إنشاء الطلب بنجاح",
       };
     } catch (error: unknown) {
-      console.error("Order submission failed:", error);
-
       if (axios.isAxiosError(error)) {
         const errorData = error.response?.data;
         return {
@@ -324,6 +250,37 @@ export const apiService = {
       }
     }
   },
+
+  getPaymentUrl: async (
+    orderId: string | number
+  ): Promise<PaymentUrlResponse> => {
+    const token = getAuthToken();
+
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
+
+    try {
+      const response = await axiosInstance.get("/pay/order/place", {
+        params: {
+          order_id: orderId,
+          device_type: "android",
+        },
+        headers: {
+          "x-auth-token": token,
+          "Content-Type": "application/json",
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data;
+        throw new Error(errorData?.message || "Failed to get payment URL");
+      }
+      throw error;
+    }
+  },
 };
 
 // ===== Transform Functions =====
@@ -336,13 +293,6 @@ export const transformCartItemsToBackend = (
     }
 
     if (!item.categoryId || item.categoryId === 0) {
-      console.error("Item missing categoryId:", {
-        index,
-        id: item.id,
-        name: item.name,
-        categoryId: item.categoryId,
-        productId: item.productId,
-      });
       throw new Error(
         `Item ${item.name} has invalid categoryId: ${item.categoryId}`
       );
@@ -424,6 +374,7 @@ export const buildOrderPayload = (
   placeId: number,
   merchantId: number,
   totalPrice: number,
+  paymentType: number,
   discountAmount = 0
 ): BackendOrderPayload => {
   try {
@@ -459,7 +410,7 @@ export const buildOrderPayload = (
       place_id: placeId,
       total_price: Math.round(totalPrice * 100) / 100,
       zonak_discount: 0,
-      type: 0,
+      type: paymentType,
       cashback_value: cashbackValue,
       is_new: true,
       is_delivery: 0,
@@ -471,51 +422,11 @@ export const buildOrderPayload = (
 
     return payload;
   } catch (error) {
-    console.error("Error building order payload:", error);
     throw new Error(
       `Failed to build order payload: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
-  }
-};
-
-// ===== API Integration Helper =====
-const fetchCurrentOrdersFromAPI = async (): Promise<BackendOrder[]> => {
-  try {
-    const response = await apiService.fetchCurrentOrders();
-
-    console.log("🔍 API Response structure:", {
-      message: response.message,
-      hasData: !!response.data,
-      dataLength: response.data?.length || 0,
-    });
-
-    if (response.message === "Success" && response.data) {
-      console.log("✅ Orders fetched successfully:", response.data.length);
-
-      // Log first order for debugging
-      if (response.data.length > 0) {
-        console.log("📋 Sample order:", {
-          id: response.data[0].id,
-          status: response.data[0].status,
-          user_id: response.data[0].user_id,
-          total_price: response.data[0].total_price,
-          place: response.data[0].place?.title,
-        });
-      }
-
-      return response.data;
-    } else {
-      console.log(
-        "ℹ️ No orders found or unsuccessful response. Message:",
-        response.message
-      );
-      return [];
-    }
-  } catch (error) {
-    console.error("❌ Failed to fetch orders from API:", error);
-    throw error;
   }
 };
 
@@ -601,11 +512,9 @@ export const dataHelpers = {
         ) {
           categoryId = (item.categories as MenuItemCategory).id;
         } else {
-          console.warn("Unable to extract categoryId from item:", item);
           categoryId = 0;
         }
       } else {
-        console.warn("Item missing categories field:", item);
         categoryId = 0;
       }
 
@@ -697,6 +606,3 @@ export const dataHelpers = {
     }));
   },
 };
-
-// Export the fixed API integration helper
-export { fetchCurrentOrdersFromAPI };

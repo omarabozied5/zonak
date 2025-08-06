@@ -1,12 +1,14 @@
 import React from "react";
 import { User } from "lucide-react";
-import { Order } from "../hooks/useOrderStore";
+import { Order } from "../../hooks/useOrderStore";
+import { User as UserType } from "../../types/types";
 
 interface CustomerInfoProps {
+  user: UserType | null;
   order: Order;
 }
 
-const CustomerInfo: React.FC<CustomerInfoProps> = ({ order }) => {
+const CustomerInfo: React.FC<CustomerInfoProps> = ({ order, user }) => {
   return (
     <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border-l-4 border-[#053468]">
       <h4 className="font-semibold text-[#053468] mb-3 flex items-center gap-2">
@@ -17,13 +19,15 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ order }) => {
         {order.title && (
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
             <span className="text-gray-600">الاسم:</span>
-            <span className="font-medium">{order.title}</span>
+            <span className="font-medium">
+              {`${user.first_name || ""} ${user.last_name || ""}`.trim()}
+            </span>
           </div>
         )}
         {order.phone && (
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
             <span className="text-gray-600">الهاتف:</span>
-            <span className="font-medium">{order.phone}</span>
+            <span className="font-medium">{user?.phone || ""}</span>
           </div>
         )}
         {order.address && (

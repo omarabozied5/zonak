@@ -1,8 +1,8 @@
-// authService.ts - Updated to handle user name from backend response
+// authService.ts - Updated with separate phone check and password login
 import { realAuthService } from "./realAuthService";
 import type { BackendUser } from "./types";
 import { validation } from "./validation";
-import { ExistingUser, AuthResult, UserCheckResult } from "./types";
+import { ExistingUser, AuthResult } from "./types";
 
 const convertBackendUserToExistingUser = (
   backendUser: BackendUser
@@ -18,7 +18,7 @@ const convertBackendUserToExistingUser = (
   };
 };
 
-// Helper to convert UserCheckResult userData to ExistingUser
+// Helper to convert user data to ExistingUser
 const convertUserDataToExistingUser = (
   userData: any,
   phone: string
@@ -34,81 +34,104 @@ const convertUserDataToExistingUser = (
   };
 };
 
+// New interfaces for the updated flow
+export interface UserExistsResult {
+  exists: boolean;
+  message: string;
+  user?: ExistingUser;
+}
+
+export interface UserLoginResult {
+  userType: "verified" | "unverified";
+  user: ExistingUser;
+  token: string;
+  needsVerification: boolean;
+}
+
 export const authService = {
   validatePhone: validation.phone,
 
   /**
-   * Check user status using login-otp-web endpoint
-   * Returns token for both verified and unverified users
-   * Now properly extracts user data from backend response
+   * Check if user exists (phone only)
+   * Used in the first step to determine if user should go to password step or registration
    */
-  checkUserExists: async (phone: string): Promise<UserCheckResult> => {
+  checkUserExists: async (phone: string): Promise<UserExistsResult> => {
     try {
-      const result = await realAuthService.checkUserStatus(phone);
-
-      switch (result.userType) {
-        case "verified": {
-          // Create user from actual backend data
-          let user: ExistingUser;
-
-          if (result.userData) {
-            user = convertUserDataToExistingUser(result.userData, phone);
-            console.log("✅ Using actual user data from backend:", {
-              name: `${user.first_name} ${user.last_name}`,
-              phone: user.phone,
-            });
-          } else {
-            // Fallback to default values (should rarely happen now)
-            user = {
-              id: `verified_${Date.now()}`,
-              first_name: "مستخدم",
-              last_name: "مُفعل",
-              phone: phone,
-              lastLogin: new Date().toISOString(),
-              isNewUser: false,
-            };
-            console.warn(
-              "⚠️ Using fallback user data - backend didn't provide user info"
-            );
-          }
-
-          return {
-            exists: true,
-            user: user,
-            token: result.token,
-            needsVerification: false,
-          };
-        }
-
-        case "unverified": {
-          // For unverified users, we may have user data for display purposes
-          return {
-            exists: true,
-            user: result.userData
-              ? convertUserDataToExistingUser(result.userData, phone)
-              : null,
-            token: result.token, // Include token for send_otp
-            needsVerification: true,
-          };
-        }
-
-        case "new":
-        default: {
-          return {
-            exists: false,
-            user: null,
-            needsVerification: false,
-          };
-        }
-      }
+      const result = await realAuthService.checkUserExists(phone);
+      return {
+        exists: result.exists,
+        message: result.message,
+        user: result.userData
+          ? convertUserDataToExistingUser(result.userData, phone)
+          : undefined,
+      };
     } catch (error) {
-      console.error("Error checking user existence:", error);
+      console.error("Error checking if user exists:", error);
       throw error;
     }
   },
 
   /**
-   * Send OTP - now requires token from previous login/registration
+   * Login with phone and password
+   * Used after phone check confirms user exists
+   */
+  loginWithPassword: async (
+    phone: string,
+    password: string
+  ): Promise<UserLoginResult> => {
+    try {
+      const result = await realAuthService.loginWithPassword(phone, password);
+
+      // Convert user data to ExistingUser format
+      let user: ExistingUser;
+
+      if (result.userData) {
+        user = convertUserDataToExistingUser(result.userData, phone);
+        console.log("✅ Using user data from login response:", {
+          name: `${user.first_name} ${user.last_name}`,
+          phone: user.phone,
+        });
+      } else {
+        // Fallback user data
+        user = {
+          id: `user_${Date.now()}`,
+          first_name: "مستخدم",
+          last_name: "",
+          phone: phone,
+          lastLogin: new Date().toISOString(),
+          isNewUser: false,
+        };
+        console.warn("⚠️ Using fallback user data - no data in login response");
+      }
+
+      switch (result.userType) {
+        case "verified":
+          return {
+            userType: "verified",
+            user: user,
+            token: result.token!,
+            needsVerification: false,
+          };
+
+        case "unverified":
+          return {
+            userType: "unverified",
+            user: user,
+            token: result.token!,
+            needsVerification: true,
+          };
+
+        default:
+          throw new Error("Unexpected user type from login");
+      }
+    } catch (error) {
+      console.error("Error logging in with password:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Send OTP - requires token from login
    */
   sendOTP: async (
     phone: string,
@@ -169,7 +192,7 @@ export const authService = {
       return {
         user,
         token: result.token,
-        registrationToken: result.token, // Same token, but explicit for send_otp
+        registrationToken: result.token, // Same token for send_otp
       };
     } catch (error) {
       console.error("Error registering user:", error);
@@ -179,7 +202,6 @@ export const authService = {
 
   /**
    * Login after OTP verification
-   * Now properly extracts user name from backend response
    */
   loginAfterOTPVerification: async (phone: string): Promise<AuthResult> => {
     try {

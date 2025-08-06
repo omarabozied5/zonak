@@ -1,4 +1,4 @@
-// LoginModal.tsx - Updated to handle token flow for send_otp
+// LoginModal.tsx - Updated for phone → password → login flow
 import React, { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -11,6 +11,7 @@ import { authService } from "./LoginModal/authService";
 
 // Import step components
 import { PhoneStep } from "./LoginModal/PhoneStep";
+import { PasswordStep } from "./LoginModal/PasswordStep";
 import { StepIndicator } from "./LoginModal/StepIndicator";
 import { UserDetailsStep } from "./LoginModal/UserDetailsStep";
 import { OTPStep } from "./LoginModal/OTPStep";
@@ -28,12 +29,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
 }) => {
   // State management
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSessionId, setOtpSessionId] = useState("");
-  const [authToken, setAuthToken] = useState<string>(""); // Store token for send_otp
+  const [authToken, setAuthToken] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<any>(null); // Store logged in user info
   const [step, setStep] = useState<LoginStep>("phone");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -101,7 +103,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   }, [otp, validateField, validationState.otp.touched]);
 
-  // MAIN PHONE SUBMIT HANDLER
+  // MAIN PHONE SUBMIT HANDLER - Updated for new flow
   const handlePhoneSubmit = useCallback(async () => {
     const isValid = validateField("phone", phone);
     if (!isValid) {
@@ -111,60 +113,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
     setIsLoading(true);
     try {
-      const userCheck = await authService.checkUserExists(phone);
+      // Step 1: Check if user exists (phone only)
+      const userExistsResult = await authService.checkUserExists(phone);
 
-      if (
-        userCheck.exists &&
-        userCheck.user &&
-        userCheck.token &&
-        !userCheck.needsVerification
-      ) {
-        // CASE 1: Verified user - auto login
-        setUserType("verified");
-
-        const storeUser = {
-          id: userCheck.user.id,
-          first_name: userCheck.user.first_name,
-          last_name: userCheck.user.last_name,
-          phone: userCheck.user.phone,
-          createdAt: userCheck.user.createdAt,
-          lastLogin: userCheck.user.lastLogin,
-          isNewUser: false,
-        };
-
-        storeLogin(storeUser, userCheck.token);
-        resetModal();
-        onClose();
-        onSuccess?.();
-
-        const displayName = combineName(
-          userCheck.user.first_name,
-          userCheck.user.last_name
-        );
-        toast.success(`مرحباً بعودتك ${displayName}!`);
-      } else if (
-        userCheck.exists &&
-        userCheck.needsVerification &&
-        userCheck.token
-      ) {
-        // CASE 2: Unverified user - send OTP using token
-        setUserType("unverified");
-        setAuthToken(userCheck.token); // Store token for send_otp
-
-        try {
-          const otpResult = await authService.sendOTP(phone, userCheck.token);
-          setOtpSessionId(otpResult.sessionId);
-          setStep("existing-user-otp");
-          toast.info("تم إرسال رمز التحقق لتفعيل حسابك");
-        } catch (otpError) {
-          console.error("Failed to send OTP:", otpError);
-          toast.error("فشل في إرسال رمز التحقق. يرجى المحاولة مرة أخرى");
-          // Reset to phone step on failure
-          setUserType(null);
-          setAuthToken("");
+      if (userExistsResult.exists) {
+        // User exists - go to password step
+        console.log("✅ User exists - proceeding to password step");
+        if (userExistsResult.user) {
+          setCurrentUser(userExistsResult.user);
         }
+        setStep("password");
+        toast.info("يرجى إدخال كلمة المرور للمتابعة");
       } else {
-        // CASE 3: New user - registration
+        // User doesn't exist - go to registration
+        console.log("🆕 New user - proceeding to registration");
         setUserType("new");
         setStep("new-user-details");
         toast.info("مرحباً! يرجى إكمال بياناتك لإنشاء حساب جديد");
@@ -177,7 +139,77 @@ const LoginModal: React.FC<LoginModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [phone, validateField, storeLogin, onClose, onSuccess]);
+  }, [phone, validateField]);
+
+  // NEW PASSWORD SUBMIT HANDLER
+  const handlePasswordSubmit = useCallback(async () => {
+    const isPasswordValid = validateField("password", password);
+    if (!isPasswordValid) {
+      toast.error("يرجى إدخال كلمة مرور صحيحة");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Step 2: Login with phone and password
+      const loginResult = await authService.loginWithPassword(phone, password);
+
+      // Store user info and token
+      setCurrentUser(loginResult.user);
+      setAuthToken(loginResult.token);
+
+      if (loginResult.userType === "verified") {
+        // User is verified - complete login
+        setUserType("verified");
+
+        const storeUser = {
+          id: loginResult.user.id,
+          first_name: loginResult.user.first_name,
+          last_name: loginResult.user.last_name,
+          phone: loginResult.user.phone,
+          createdAt: loginResult.user.createdAt,
+          lastLogin: loginResult.user.lastLogin,
+          isNewUser: false,
+        };
+
+        storeLogin(storeUser, loginResult.token);
+        resetModal();
+        onClose();
+        onSuccess?.();
+
+        const displayName = combineName(
+          loginResult.user.first_name,
+          loginResult.user.last_name
+        );
+        toast.success(`مرحباً بعودتك ${displayName}!`);
+      } else if (loginResult.userType === "unverified") {
+        // User login successful but needs verification
+        setUserType("unverified");
+
+        try {
+          const otpResult = await authService.sendOTP(phone, loginResult.token);
+          setOtpSessionId(otpResult.sessionId);
+          setStep("existing-user-otp");
+          toast.info("تم إرسال رمز التحقق لتفعيل حسابك");
+        } catch (otpError) {
+          console.error("Failed to send OTP:", otpError);
+          toast.error("فشل في إرسال رمز التحقق. يرجى المحاولة مرة أخرى");
+          // Reset on failure
+          setStep("phone");
+          setUserType(null);
+          setAuthToken("");
+          setCurrentUser(null);
+        }
+      }
+    } catch (error) {
+      console.error("Password submit error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "فشل في تسجيل الدخول"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [phone, password, validateField, storeLogin, onClose, onSuccess]);
 
   // NEW USER REGISTRATION SUBMIT
   const handleNewUserDetailsSubmit = useCallback(async () => {
@@ -245,7 +277,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         phone,
         otp,
         otpSessionId,
-        authToken // Use the stored token for verification
+        authToken
       );
 
       if (!verificationResult) {
@@ -302,11 +334,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
         if (userType === "new") {
           setStep("new-user-details");
         } else {
-          setStep("phone");
+          setStep("password");
         }
         setOtp("");
         setOtpSessionId("");
-        setAuthToken(""); // Clear token on expiry
+        setAuthToken("");
       } else {
         toast.error(errorMessage);
       }
@@ -323,11 +355,18 @@ const LoginModal: React.FC<LoginModalProps> = ({
     storeLogin,
     onClose,
     onSuccess,
+    authToken,
   ]);
 
-  // Navigation handlers
+  // Navigation handlers - Updated for new flow
   const handleBack = useCallback(() => {
     switch (step) {
+      case "password":
+        setStep("phone");
+        setPassword("");
+        setShowPassword(false);
+        setCurrentUser(null);
+        break;
       case "new-user-details":
         setStep("phone");
         setPassword("");
@@ -335,16 +374,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
         setLastName("");
         setShowPassword(false);
         setUserType(null);
-        setAuthToken(""); // Clear token
+        setAuthToken("");
         break;
       case "new-user-otp":
       case "existing-user-otp":
         if (userType === "new") {
           setStep("new-user-details");
         } else {
-          setStep("phone");
-          setUserType(null);
-          setAuthToken(""); // Clear token
+          setStep("password");
         }
         setOtp("");
         setOtpSessionId("");
@@ -354,12 +391,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const resetModal = useCallback(() => {
     setPhone("");
+    setPassword("");
     setFirstName("");
     setLastName("");
-    setPassword("");
     setOtp("");
     setOtpSessionId("");
-    setAuthToken(""); // Clear token
+    setAuthToken("");
+    setCurrentUser(null);
     setStep("phone");
     setShowPassword(false);
     setUserType(null);
@@ -432,6 +470,25 @@ const LoginModal: React.FC<LoginModalProps> = ({
           />
         );
 
+      case "password":
+        return (
+          <PasswordStep
+            existingUser={currentUser}
+            phone={phone} // Pass phone for display if no user data
+            password={password}
+            showPassword={showPassword}
+            validationState={validationState}
+            isLoading={isLoading}
+            onPasswordChange={(value) =>
+              handleInputChange("password", value, setPassword)
+            }
+            onPasswordBlur={() => handleInputBlur("password", password)}
+            onTogglePassword={() => setShowPassword(!showPassword)}
+            onSubmit={handlePasswordSubmit}
+            onBack={handleBack}
+          />
+        );
+
       case "new-user-details":
         return (
           <UserDetailsStep
@@ -491,6 +548,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
           title: "مرحباً بك في زونك",
           description: "ادخل رقم جوالك للدخول أو التسجيل",
         };
+      case "password":
+        return {
+          title: "تسجيل الدخول",
+          description: "ادخل كلمة المرور لتسجيل الدخول",
+        };
       case "new-user-details":
         return {
           title: "إنشاء حساب جديد",
@@ -533,8 +595,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
             <p className="text-gray-600 text-sm">{stepInfo.description}</p>
           </div>
 
-          {/* Step Indicator - Only show for multi-step flows */}
-          {step !== "phone" && step !== "existing-user-otp" && (
+          {/* Step Indicator - Show for multi-step flows */}
+          {(step === "new-user-details" || step === "new-user-otp") && (
             <StepIndicator currentStep={step} />
           )}
 

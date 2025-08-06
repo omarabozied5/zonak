@@ -1,4 +1,4 @@
-// useOrders.ts - Simplified wrapper around useOrderStore for backward compatibility
+// useOrders.ts - Simplified wrapper around useOrderStore
 
 import { useCallback } from "react";
 import { useOrderStore, Order } from "@/hooks/useOrderStore";
@@ -9,30 +9,6 @@ export const useOrders = () => {
   const userId = user?.id?.toString() || null;
 
   const orderStore = useOrderStore(userId);
-
-  // Order actions
-  const updateStatus = useCallback(
-    (orderId: number, status: Order["status"]) => {
-      // This would typically call an API to update order status
-      // For now, we don't implement this since orders are read-only from customer side
-      console.log(
-        "Update status not implemented for customer orders:",
-        orderId,
-        status
-      );
-    },
-    []
-  );
-
-  const deleteOrder = useCallback((orderId: number) => {
-    // This would typically call an API to cancel/delete order
-    // For now, we don't implement this since it requires API integration
-    console.log("Delete order not implemented:", orderId);
-  }, []);
-
-  const clearOrders = useCallback(() => {
-    orderStore.clearOrders();
-  }, [orderStore]);
 
   // Get orders with different filters
   const getOrdersByStatus = useCallback(
@@ -62,16 +38,6 @@ export const useOrders = () => {
     [orderStore]
   );
 
-  const getOrdersByPaymentMethod = useCallback(
-    (paymentMethod: string) => {
-      return orderStore
-        .getUserOrders()
-        .filter((order) => order.status_payment === paymentMethod);
-    },
-    [orderStore]
-  );
-
-  // Get single order
   const getOrderById = useCallback(
     (orderId: number) => {
       return orderStore.getOrderById(orderId);
@@ -187,7 +153,6 @@ export const useOrders = () => {
     return isDelivery === 1 ? "توصيل" : "استلام";
   }, []);
 
-  // Helper to check if user can place orders
   const canPlaceOrder = useCallback(() => {
     return !!userId;
   }, [userId]);
@@ -206,20 +171,14 @@ export const useOrders = () => {
     hasOrders,
     hasActiveOrders,
 
-    // Actions (limited for customer side)
-    updateStatus,
-    deleteOrder,
-    clearOrders,
-
-    // Direct store actions
+    // Actions
     fetchOrders: orderStore.fetchCurrentOrders,
-    refreshOrders: orderStore.refreshOrders,
+    clearOrders: orderStore.clearOrders,
 
     // Getters
     getOrdersByStatus,
     getOrdersByDateRange,
     getOrdersByType,
-    getOrdersByPaymentMethod,
     getOrderById,
     getOrdersPaginated,
 

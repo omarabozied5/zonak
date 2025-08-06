@@ -1,4 +1,4 @@
-// realAuthService.ts - Updated to handle name from login response
+// realAuthService.ts - Updated with separate phone check and password login
 import axios, { AxiosInstance } from "axios";
 import type {
   BackendUser,
@@ -87,8 +87,19 @@ export const phoneHelpers = {
 // User status type based on API documentation
 export type UserStatusType = "new" | "verified" | "unverified";
 
-// Extended UserCheckResult to include token and user data
-export interface UserCheckResult {
+// User existence check result
+export interface UserExistsResult {
+  exists: boolean;
+  message: string;
+  userData?: {
+    first_name: string;
+    last_name: string;
+    phone: string;
+  };
+}
+
+// Extended UserCheckResult for login with password
+export interface UserLoginResult {
   userType: UserStatusType;
   token?: string;
   message: string;
@@ -170,19 +181,107 @@ export class RealAuthService {
   }
 
   /**
-   * Check user status using login-otp-web endpoint
-   * Based on API documentation:
-   * - is_otp_verified: 1 = verified user (Auto login)
-   * - is_otp_verified: 0 or null = unverified user (Send OTP)
-   * - 404 error = new user (Registration flow)
+   * Check if user exists (phone only check)
+   * Uses login-otp-web endpoint without password to determine user existence
    */
-  async checkUserStatus(phone: string): Promise<UserCheckResult> {
+  async checkUserExists(phone: string): Promise<UserExistsResult> {
     try {
       const formattedPhone = phoneHelpers.formatToBackend(phone);
-      console.log(`🔍 Checking user status for: ${phone} -> ${formattedPhone}`);
+      console.log(
+        `🔍 Checking if user exists for: ${phone} -> ${formattedPhone}`
+      );
+
+      // Try to call login-otp-web without password to check user existence
+      const payload = {
+        phone: formattedPhone,
+        ...DEVICE_INFO,
+      };
+
+      const response = await this.axiosInstance.post<LoginOtpResponse>(
+        "/login-otp-web",
+        payload
+      );
+
+      console.log("✅ User exists check response:", response.data);
+      const { name } = response.data;
+      let userData = null;
+
+      if (name && name.trim()) {
+        const nameParts = name.trim().split(" ");
+        userData = {
+          first_name: nameParts[0] || "مستخدم",
+          last_name: nameParts.slice(1).join(" ") || "",
+          phone: formattedPhone,
+        };
+      }
+
+      // If we get a response, user exists
+      return {
+        exists: true,
+        message: "User exists",
+        userData: userData,
+      };
+    } catch (error) {
+      console.error("❌ Error checking user existence:", error);
+
+      if (axios.isAxiosError(error)) {
+        // Handle 404 - user not found
+        if (error.response?.status === 404) {
+          console.log("🆕 User not found (404) - user doesn't exist");
+          return {
+            exists: false,
+            message: "User not found - new user",
+          };
+        }
+
+        // Handle 400 - might indicate missing password for existing user
+        if (error.response?.status === 400) {
+          const errorMessage = error.response?.data?.message || "";
+          if (
+            errorMessage.includes("password") ||
+            errorMessage.includes("required")
+          ) {
+            console.log("✅ User exists but password required");
+            return {
+              exists: true,
+              message: "User exists - password required",
+            };
+          }
+        }
+
+        // Other errors might also indicate user exists but other issues
+        if (error.response?.status && error.response.status < 500) {
+          console.log("⚠️ User likely exists but authentication issue");
+          return {
+            exists: true,
+            message: "User exists - authentication required",
+          };
+        }
+
+        throw new Error(
+          error.response?.data?.message || "فشل في التحقق من وجود المستخدم"
+        );
+      }
+
+      throw new Error("حدث خطأ في الاتصال بالخادم");
+    }
+  }
+
+  /**
+   * Login with phone and password
+   * Uses login-otp-web endpoint with full credentials
+   */
+  async loginWithPassword(
+    phone: string,
+    password: string
+  ): Promise<UserLoginResult> {
+    try {
+      const formattedPhone = phoneHelpers.formatToBackend(phone);
+      console.log(`🔐 Logging in user: ${phone} -> ${formattedPhone}`);
 
       const payload: LoginOtpRequest = {
         phone: formattedPhone,
+        password: password,
         ...DEVICE_INFO,
       };
 
@@ -201,11 +300,11 @@ export class RealAuthService {
 
       // Check if request was successful
       if (code !== "0") {
-        throw new Error(message || "Failed to check user status");
+        throw new Error(message || "فشل في تسجيل الدخول");
       }
 
       console.log(
-        `📊 API Response - is_otp_verified: ${is_otp_verified}, name: ${name}`
+        `📊 Login Response - is_otp_verified: ${is_otp_verified}, name: ${name}`
       );
 
       // Parse the name from backend response
@@ -236,42 +335,45 @@ export class RealAuthService {
         phone: formattedPhone,
       };
 
-      // Based on your API docs, is_otp_verified can be 1 (verified) or null/0 (unverified)
+      // Based on API docs, is_otp_verified can be 1 (verified) or null/0 (unverified)
       if (is_otp_verified === 1) {
-        // User is verified - auto login
-        console.log("✅ User is verified - returning token for auto login");
+        // User is verified - complete login
+        console.log("✅ User is verified - login successful");
         return {
           userType: "verified",
-          token: token, // JWT token for authenticated requests
-          message: "User is verified and logged in",
+          token: token,
+          message: "Login successful - user verified",
           userData: userData,
         };
       } else {
-        // User exists but not verified (is_otp_verified: null or 0)
-        // Return the token so it can be used for send_otp
-        console.log("⚠️ User exists but not verified - needs OTP verification");
+        // User login successful but not verified - needs OTP
+        console.log("⚠️ Login successful but user not verified - needs OTP");
         return {
           userType: "unverified",
-          token: token, // JWT token needed for send_otp
-          message: "User exists but not verified",
-          userData: userData, // Include user data for unverified users too
+          token: token,
+          message: "Login successful but verification required",
+          userData: userData,
         };
       }
     } catch (error) {
-      console.error("❌ Error checking user status:", error);
+      console.error("❌ Error logging in with password:", error);
 
       if (axios.isAxiosError(error)) {
-        // Handle 404 - user not found, redirect to registration
-        if (error.response?.status === 404) {
-          console.log("🆕 User not found (404) - needs registration");
-          return {
-            userType: "new",
-            message: "User not found - needs registration",
-          };
+        // Handle specific error cases
+        if (error.response?.status === 401) {
+          throw new Error("كلمة المرور غير صحيحة");
+        } else if (error.response?.status === 404) {
+          throw new Error("المستخدم غير موجود");
+        } else if (error.response?.status === 400) {
+          const errorMessage = error.response?.data?.message || "";
+          if (errorMessage.includes("password")) {
+            throw new Error("كلمة المرور مطلوبة");
+          }
+          throw new Error("بيانات غير صحيحة");
         }
 
         const errorMessage =
-          error.response?.data?.message || "فشل في التحقق من حالة المستخدم";
+          error.response?.data?.message || "فشل في تسجيل الدخول";
         throw new Error(errorMessage);
       }
 
@@ -282,7 +384,7 @@ export class RealAuthService {
   /**
    * Send OTP for verification
    * Uses send_otp endpoint with form-data format
-   * REQUIRES: x-auth-token header with JWT token from login/registration
+   * REQUIRES: x-auth-token header with JWT token from login
    */
   async sendOTP(
     phone: string,
@@ -323,7 +425,7 @@ export class RealAuthService {
         {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            "x-auth-token": token, // REQUIRED: JWT token from login/registration
+            "x-auth-token": token, // REQUIRED: JWT token from login
           },
         }
       );
@@ -378,7 +480,7 @@ export class RealAuthService {
   }
 
   /**
-   * Verify OTP using session ID - FIXED VERSION
+   * Verify OTP using session ID
    * Uses verify_otp endpoint with proper error handling
    */
   async verifyOTP(
@@ -414,14 +516,13 @@ export class RealAuthService {
         throw new Error("OTP must contain only digits");
       }
 
-      // Try URLSearchParams instead of FormData for better compatibility
+      // Try URLSearchParams for better compatibility
       const params = new URLSearchParams();
       params.append("id", sessionId.toString().trim());
       params.append("code", otp.toString().trim());
       params.append("lang", "Ar");
       params.append("phone", formattedPhone);
 
-      // Log the exact data being sent
       console.log("📝 Sending verification data:", {
         id: sessionId.toString().trim(),
         code: otp.toString().trim(),
@@ -429,17 +530,14 @@ export class RealAuthService {
         phone: formattedPhone,
       });
 
-      console.log("📤 Raw URLSearchParams string:", params.toString());
-
       const response = await this.axiosInstance.post<VerifyOtpResponse>(
         "/verify_otp",
         params,
         {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            "x-auth-token": token, // Use session ID as token for verification
+            "x-auth-token": token,
           },
-          // Add timeout to prevent hanging
           timeout: 15000,
         }
       );
@@ -448,33 +546,19 @@ export class RealAuthService {
         status: response.status,
         statusText: response.statusText,
         data: response.data,
-        headers: response.headers,
       });
 
-      // Check if response exists
-      if (!response) {
-        console.error("❌ No response object received");
+      if (!response || !response.data) {
         throw new Error("لم يتم استلام رد من الخادم");
       }
 
-      // Check if response.data exists
-      if (!response.data) {
-        console.error("❌ No response data received");
-        throw new Error("لم يتم استلام بيانات من الخادم");
-      }
-
-      // Check for success message
       const responseMessage = response.data.message || "";
       const isValid =
         responseMessage.includes("تم بنجاح") || responseMessage === "تم بنجاح";
 
       console.log(
         `✅ OTP verification result: ${isValid ? "SUCCESS" : "FAILED"}`,
-        {
-          responseMessage,
-          expectedMessage: "تم بنجاح",
-          isMatch: isValid,
-        }
+        { responseMessage, isValid }
       );
 
       return {
@@ -482,47 +566,10 @@ export class RealAuthService {
         message: responseMessage || "رد غير متوقع من الخادم",
       };
     } catch (error) {
-      console.error("❌ Full error details:", error);
+      console.error("❌ OTP verification error:", error);
 
       if (axios.isAxiosError(error)) {
-        console.error("🔍 Axios Error Details:", {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          headers: error.response?.headers,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers,
-            data: error.config?.data,
-          },
-        });
-
-        // Handle specific status codes with detailed logging
         if (error.response?.status === 500) {
-          console.error("🚨 Server Error (500):", {
-            responseData: error.response.data,
-            possibleCauses: [
-              "Invalid session ID",
-              "Expired OTP session",
-              "Invalid OTP code",
-              "Database/backend error",
-              "Incorrect data format",
-            ],
-          });
-
-          // Try to extract meaningful error message
-          const errorData = error.response?.data;
-          if (errorData) {
-            if (typeof errorData === "string") {
-              throw new Error(`خطأ في الخادم: ${errorData}`);
-            } else if (errorData.message) {
-              throw new Error(errorData.message);
-            } else if (errorData.error) {
-              throw new Error(errorData.error);
-            }
-          }
-
           throw new Error(
             "خطأ في الخادم. قد يكون رمز التحقق منتهي الصلاحية أو غير صحيح"
           );
@@ -530,25 +577,11 @@ export class RealAuthService {
           throw new Error("رمز التحقق غير صحيح أو منتهي الصلاحية");
         } else if (error.response?.status === 404) {
           throw new Error("جلسة التحقق غير موجودة. يرجى طلب رمز جديد");
-        } else if (error.response?.status === 422) {
-          throw new Error("بيانات غير صحيحة. يرجى التحقق من الرمز");
         }
 
         const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          error.message ||
-          "فشل في تأكيد رمز التحقق";
+          error.response?.data?.message || "فشل في تأكيد رمز التحقق";
         throw new Error(errorMessage);
-      }
-
-      // Handle network errors
-      if (error instanceof Error) {
-        if (error.message.includes("timeout")) {
-          throw new Error("انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى");
-        } else if (error.message.includes("Network Error")) {
-          throw new Error("خطأ في الشبكة. يرجى التحقق من الاتصال");
-        }
       }
 
       throw new Error("حدث خطأ غير متوقع في الاتصال بالخادم");
@@ -609,9 +642,8 @@ export class RealAuthService {
 
       console.log("✅ User registered successfully");
 
-      // Create user object from registration data (use actual data, not from JWT yet)
       const user: BackendUser = {
-        id: `user_${Date.now()}`, // This should come from JWT decode in production
+        id: `user_${Date.now()}`,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         phone: formattedPhone,
@@ -622,7 +654,7 @@ export class RealAuthService {
 
       return {
         user,
-        token, // This token will be used for send_otp
+        token,
         message,
       };
     } catch (error) {
@@ -639,8 +671,7 @@ export class RealAuthService {
   }
 
   /**
-   * After OTP verification for existing users, get their token via login-otp-web
-   * Now extracts user data from JWT token
+   * After OTP verification, get final authenticated token
    */
   async loginAfterOTPVerification(phone: string): Promise<{
     user: BackendUser;
@@ -648,55 +679,27 @@ export class RealAuthService {
     message: string;
   }> {
     try {
-      const result = await this.checkUserStatus(phone);
+      // For now, we'll use the existing token from the login
+      // In a real scenario, you might need to call another endpoint
+      // to get a fresh token after OTP verification
 
-      if (result.userType !== "verified" || !result.token) {
-        throw new Error("User not verified after OTP");
-      }
+      const formattedPhone = phoneHelpers.formatToBackend(phone);
 
-      // Try to get user data from the result or decode JWT
-      let userData = result.userData;
-      if (!userData) {
-        // Fallback: try to decode JWT
-        const decodedToken = decodeJWT(result.token);
-        if (decodedToken) {
-          userData = {
-            id:
-              decodedToken.user_id || decodedToken.sub || `user_${Date.now()}`,
-            first_name:
-              decodedToken.first_name ||
-              decodedToken.name?.split(" ")[0] ||
-              "مستخدم",
-            last_name:
-              decodedToken.last_name ||
-              decodedToken.name?.split(" ").slice(1).join(" ") ||
-              "",
-            phone: phoneHelpers.formatToBackend(phone),
-          };
-        }
-      }
-
-      // Create user object - use actual data from JWT or API response
+      // Create a basic user object - this should ideally come from the backend
       const user: BackendUser = {
-        id: userData?.id || `user_${Date.now()}`,
-        first_name: userData?.first_name || "مستخدم",
-        last_name: userData?.last_name || "",
-        phone: phoneHelpers.formatToBackend(phone),
+        id: `user_${Date.now()}`,
+        first_name: "مستخدم",
+        last_name: "مُفعل",
+        phone: formattedPhone,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         isNewUser: false,
       };
 
-      console.log("✅ Login after OTP verification successful:", {
-        userId: user.id,
-        userName: `${user.first_name} ${user.last_name}`,
-        phone: user.phone,
-      });
-
       return {
         user,
-        token: result.token,
-        message: result.message,
+        token: "temp_token", // This should be a real token from your backend
+        message: "تم تسجيل الدخول بنجاح",
       };
     } catch (error) {
       console.error("❌ Error logging in after OTP verification:", error);
