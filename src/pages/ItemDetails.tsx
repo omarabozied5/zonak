@@ -27,9 +27,10 @@ const ItemDetails = () => {
   const { itemDetails, loading, error } = useItemDetails(itemId);
 
   //Get Resturant Context
-  const placeId = searchParams.get("placeId") || "";
-  const merchantId = searchParams.get("merchantId") || "";
-  const restaurantName = searchParams.get("restaurantName") || "Restaurant";
+  //Get Restaurant Context
+  const urlPlaceId = searchParams.get("placeId") || "";
+  const urlMerchantId = searchParams.get("merchantId") || "";
+  const urlRestaurantName = searchParams.get("restaurantName") || "Restaurant";
 
   // Get current user from auth store
   const { user } = useAuthStore();
@@ -45,6 +46,14 @@ const ItemDetails = () => {
   const editingItem = isEditMode
     ? items.find((item) => item.id === editItemId)
     : null;
+
+  // Get final restaurant context - prefer editing item's data over URL params
+  const finalPlaceId =
+    isEditMode && editingItem ? editingItem.placeId : urlPlaceId;
+  const finalMerchantId =
+    isEditMode && editingItem ? editingItem.restaurantId : urlMerchantId;
+  const finalRestaurantName =
+    isEditMode && editingItem ? editingItem.restaurantName : urlRestaurantName;
 
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<
@@ -255,9 +264,9 @@ const ItemDetails = () => {
           : itemDetails!.categories.name || ""
         : "",
       categoryId: categoryId,
-      restaurantId: merchantId,
-      restaurantName: restaurantName,
-      placeId: placeId,
+      restaurantId: finalMerchantId,
+      restaurantName: finalRestaurantName,
+      placeId: finalPlaceId,
       isAvailable: itemDetails!.is_active === "active",
       preparationTime: itemDetails!.minutes,
       selectedOptions:

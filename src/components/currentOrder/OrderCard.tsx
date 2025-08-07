@@ -43,6 +43,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
         {isExpanded && (
           <div className="space-y-4 sm:space-y-6 animate-in slide-in-from-top-2 duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {/* Remove user prop since CustomerInfo will get it from store */}
               <CustomerInfo order={order} />
               <OrderSummary order={order} />
             </div>

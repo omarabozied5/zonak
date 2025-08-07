@@ -70,7 +70,15 @@ const Cart = () => {
     try {
       const baseItemId = item.id.split("-")[0];
       setEditingItem(item.id);
-      navigate(`/item/${baseItemId}?edit=${item.id}`);
+
+      // Preserve restaurant information in edit navigation
+      const editUrl = new URL(`/item/${baseItemId}`, window.location.origin);
+      editUrl.searchParams.set("edit", item.id);
+      editUrl.searchParams.set("placeId", item.placeId || "");
+      editUrl.searchParams.set("merchantId", item.restaurantId || "");
+      editUrl.searchParams.set("restaurantName", item.restaurantName || "");
+
+      navigate(editUrl.pathname + editUrl.search);
     } catch (error) {
       console.error("Error editing item:", error);
       toast.error("حدث خطأ أثناء تعديل الصنف");
