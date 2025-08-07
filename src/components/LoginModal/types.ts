@@ -1,12 +1,7 @@
-// types.ts - Updated to support new phone → password → login flow
-export type LoginStep =
-  | "phone"
-  | "password" // NEW: Password step for existing users
-  | "new-user-details"
-  | "new-user-otp"
-  | "existing-user-otp";
+// types.ts - Simplified types for the new flow
+export type LoginStep = "login" | "registration" | "otp";
 
-// Backend interfaces - Updated to match actual API responses
+// Backend interfaces
 export interface BackendUser {
   id: string;
   first_name: string;
@@ -19,7 +14,7 @@ export interface BackendUser {
 
 export interface LoginOtpRequest {
   phone: string;
-  password?: string; // Password is optional for existence check
+  password?: string;
   device_token: null;
   device_type: string;
   uuid: string;
@@ -33,8 +28,8 @@ export interface LoginOtpResponse {
   message: string;
   data: string; // JWT token
   code: string;
-  name?: string; // User's full name from backend (e.g., "حمزة احمد")
-  is_otp_verified: number | null; // 1 = verified user, null = new user, 0 = unverified user
+  name?: string;
+  is_otp_verified: number | null; // 1 = verified, null = new user, 0 = unverified
 }
 
 export interface RegisterRequest {
@@ -60,7 +55,6 @@ export interface RegisterResponse {
   is_otp_verified: null;
 }
 
-// Updated to match actual API responses
 export interface SendOtpRequest {
   phone: string;
   lang: string; // "Ar" or "En"
@@ -100,12 +94,12 @@ export interface ValidationState {
     message: string;
     touched: boolean;
   };
-  name: {
+  password: {
     isValid: boolean;
     message: string;
     touched: boolean;
   };
-  password: {
+  name: {
     isValid: boolean;
     message: string;
     touched: boolean;
@@ -135,7 +129,7 @@ export interface AuthResult {
   token: string;
 }
 
-// Updated interfaces for the new flow
+// Updated interfaces for the simplified flow
 export interface UserExistsResult {
   exists: boolean;
   message: string;
@@ -148,7 +142,6 @@ export interface UserLoginResult {
   needsVerification: boolean;
 }
 
-// Legacy interface - keeping for backward compatibility
 export interface UserCheckResult {
   exists: boolean;
   user: ExistingUser | null;
@@ -156,13 +149,12 @@ export interface UserCheckResult {
   needsVerification?: boolean;
 }
 
-// Additional types for name handling
+// Helper functions for name handling
 export interface NameParts {
   firstName: string;
   lastName: string;
 }
 
-// Helper function to split name into parts
 export const splitName = (fullName: string): NameParts => {
   const trimmed = fullName.trim();
   const parts = trimmed.split(" ");
@@ -173,7 +165,6 @@ export const splitName = (fullName: string): NameParts => {
   };
 };
 
-// Helper function to combine name parts
 export const combineName = (firstName: string, lastName: string): string => {
   return `${firstName} ${lastName}`.trim();
 };

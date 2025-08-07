@@ -1,4 +1,4 @@
-// PhoneStep.tsx - Clean version
+// PhoneStep.tsx - Simplified version
 import React from "react";
 import { Phone, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
             onPhoneChange(value);
           }}
           onBlur={onPhoneBlur}
+          placeholder="05xxxxxxxx أو +966xxxxxxxx"
           className={cn(
             "text-right",
             validationState.phone.touched && !validationState.phone.isValid
@@ -62,17 +63,17 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
         onClick={onSubmit}
         disabled={isLoading || !validationState.phone.isValid}
         className="w-full bg-[#FFAA01] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="التحقق من رقم الجوال وتسجيل الدخول أو إنشاء حساب"
+        aria-label="المتابعة بعد إدخال رقم الجوال"
       >
-        {isLoading ? "جاري التحقق..." : "متابعة"}
+        {isLoading ? "جاري المعالجة..." : "متابعة"}
         <ArrowRight className="w-4 h-4 mr-2" />
       </Button>
 
       <div className="text-center text-xs text-gray-500 px-2">
         <p>
-          سيتم تسجيل دخولك تلقائياً إذا كان لديك حساب مُفعل،
+          ستحتاج إلى إدخال كلمة المرور
           <br />
-          أو إنشاء حساب جديد إذا كنت مستخدم جديد
+          أو إنشاء حساب جديد إذا لم يكن لديك حساب
         </p>
       </div>
     </div>

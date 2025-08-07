@@ -51,6 +51,12 @@ const CurrentOrders: React.FC = () => {
 
     fetchData();
   }, [isAuthenticated, user?.id]);
+  console.log("Auth Check:", {
+    isAuthenticated,
+    userId: user?.id,
+    storeOrders: orderStore.orders.length,
+    activeOrdersCalculated: orderStore.getActiveOrders().length,
+  });
 
   // Update local state when store changes
   useEffect(() => {

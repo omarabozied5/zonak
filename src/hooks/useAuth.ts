@@ -1,9 +1,11 @@
+// useAuth.ts - Fixed to match useAuthStore interface
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export interface User {
   id: string;
-  name: string;
+  first_name: string; // Changed from 'name' to 'first_name'
+  last_name: string; // Added last_name
   phone: string;
   createdAt?: string;
   lastLogin?: string;
@@ -26,6 +28,7 @@ interface AuthState {
 
   // Getters
   getUserDisplayName: () => string;
+  getUserFullName: () => string;
   isUserLoggedIn: () => boolean;
   getAuthToken: () => string | null;
   getUserId: () => string | null;
@@ -156,7 +159,9 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         });
 
-        console.log(`User logged in: ${user.id}`);
+        console.log(
+          `User logged in: ${user.id} - ${user.first_name} ${user.last_name}`
+        );
       },
 
       logout: () => {
@@ -225,9 +230,19 @@ export const useAuthStore = create<AuthState>()(
         const user = get().user;
         if (!user) return "مستخدم";
 
-        // Return first name if full name is provided
-        const firstName = user.name.split(" ")[0];
-        return firstName || user.name;
+        // Return first name for display
+        return user.first_name || "مستخدم";
+      },
+
+      getUserFullName: () => {
+        const user = get().user;
+        if (!user) return "مستخدم";
+
+        // Combine first and last name
+        const fullName = `${user.first_name || ""} ${
+          user.last_name || ""
+        }`.trim();
+        return fullName || "مستخدم";
       },
 
       isUserLoggedIn: () => {
@@ -280,7 +295,7 @@ export const isUserAuthenticated = (): boolean => {
   return useAuthStore.getState().isUserLoggedIn();
 };
 
-// Add the useAuth hook that HeroSection is trying to import
+// Add the useAuth hook that components can use
 export const useAuth = () => {
   const {
     user,
@@ -293,6 +308,7 @@ export const useAuth = () => {
     setLoading,
     clearAuthData,
     getUserDisplayName,
+    getUserFullName,
     isUserLoggedIn,
     getAuthToken,
     getUserId,
@@ -312,8 +328,9 @@ export const useAuth = () => {
     setLoading,
     clearAuthData,
 
-    // Getters (with more intuitive names)
+    // Getters
     getDisplayName: getUserDisplayName,
+    getFullName: getUserFullName,
     isLoggedIn: isUserLoggedIn,
     getToken: getAuthToken,
     getUserId,

@@ -1,46 +1,33 @@
-// RegistrationForm.tsx - Improved responsive design
+// LoginForm.tsx - Fixed phone validation
 import React, { useState } from "react";
-import { User, Phone, Lock, Eye, EyeOff, UserPlus } from "lucide-react";
+import { Phone, Lock, Eye, EyeOff, LogIn } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "./FormField";
 import { ValidationState } from "./types";
 import { cn } from "@/lib/utils";
 
-interface RegistrationFormProps {
+interface LoginFormProps {
   phone: string;
-  firstName: string;
-  lastName: string;
   password: string;
   validationState: ValidationState;
   isLoading: boolean;
   onPhoneChange: (value: string) => void;
-  onFirstNameChange: (value: string) => void;
-  onLastNameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-  onSubmit: (
-    phone: string,
-    firstName: string,
-    lastName: string,
-    password: string
-  ) => void;
-  onSwitchToLogin: () => void;
+  onSubmit: (phone: string, password: string) => void;
+  onSwitchToRegistration: () => void;
   onValidate: (field: keyof ValidationState, value: string) => boolean;
 }
 
-export const RegistrationForm: React.FC<RegistrationFormProps> = ({
+export const LoginForm: React.FC<LoginFormProps> = ({
   phone,
-  firstName,
-  lastName,
   password,
   validationState,
   isLoading,
   onPhoneChange,
-  onFirstNameChange,
-  onLastNameChange,
   onPasswordChange,
   onSubmit,
-  onSwitchToLogin,
+  onSwitchToRegistration,
   onValidate,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -72,115 +59,38 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     onValidate("password", password);
   };
 
-  const handleNameChange = (field: "firstName" | "lastName", value: string) => {
-    if (field === "firstName") {
-      onFirstNameChange(value);
-    } else {
-      onLastNameChange(value);
-    }
-
-    // Validate name on change if either field was touched
-    if (validationState.name.touched) {
-      const fullName =
-        field === "firstName"
-          ? `${value} ${lastName}`.trim()
-          : `${firstName} ${value}`.trim();
-      onValidate("name", fullName);
-    }
-  };
-
-  const handleNameBlur = () => {
-    onValidate("name", `${firstName} ${lastName}`.trim());
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(phone, firstName, lastName, password);
+    onSubmit(phone, password);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && isFormValid) {
+    if (e.key === "Enter" && phone && password) {
       handleSubmit(e as any);
     }
   };
 
   const isFormValid =
     phone.trim() &&
-    firstName.trim() &&
-    lastName.trim() &&
     password.trim() &&
     validationState.phone.isValid &&
-    validationState.password.isValid &&
-    validationState.name.isValid;
+    validationState.password.isValid;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-[#FFAA01] to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <UserPlus className="w-8 h-8 text-white" />
+        <div className="w-16 h-16 bg-gradient-to-br from-[#053468] to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <LogIn className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-[#053468] mb-2">
-          إنشاء حساب جديد
+          مرحباً بك في زونك
         </h2>
-        <p className="text-gray-600 text-sm">
-          أكمل بياناتك لإنشاء حسابك الجديد
-        </p>
+        <p className="text-gray-600 text-sm">ادخل بياناتك لتسجيل الدخول</p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Name Fields - Improved responsive layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FormField
-            label="الاسم الأول"
-            icon={<User className="w-4 h-4" />}
-            error={
-              validationState.name.touched &&
-              !validationState.name.isValid &&
-              firstName.trim()
-                ? "الاسم الأول مطلوب"
-                : undefined
-            }
-          >
-            <Input
-              type="text"
-              value={firstName}
-              onChange={(e) => handleNameChange("firstName", e.target.value)}
-              onBlur={handleNameBlur}
-              onKeyDown={handleKeyDown}
-              placeholder="الاسم الأول"
-              className="text-right transition-colors focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-              disabled={isLoading}
-              autoComplete="given-name"
-            />
-          </FormField>
-
-          <FormField
-            label="الاسم الأخير"
-            icon={<User className="w-4 h-4" />}
-            error={
-              validationState.name.touched &&
-              !validationState.name.isValid &&
-              lastName.trim()
-                ? "الاسم الأخير مطلوب"
-                : undefined
-            }
-          >
-            <Input
-              type="text"
-              value={lastName}
-              onChange={(e) => handleNameChange("lastName", e.target.value)}
-              onBlur={handleNameBlur}
-              onKeyDown={handleKeyDown}
-              placeholder="الاسم الأخير"
-              className="text-right transition-colors focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-              disabled={isLoading}
-              autoComplete="family-name"
-            />
-          </FormField>
-        </div>
-
         {/* Phone Field */}
         <FormField
           label="رقم الجوال"
@@ -226,7 +136,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               onChange={(e) => handlePasswordChange(e.target.value)}
               onBlur={handlePasswordBlur}
               onKeyDown={handleKeyDown}
-              placeholder="ادخل كلمة المرور (8 أحرف على الأقل)"
+              placeholder="ادخل كلمة المرور"
               className={cn(
                 "text-right pr-10 transition-colors",
                 validationState.password.touched &&
@@ -235,7 +145,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                   : "border-gray-300 focus:border-[#FFAA01] focus:ring-[#FFAA01]"
               )}
               disabled={isLoading}
-              autoComplete="new-password"
+              autoComplete="current-password"
             />
             <button
               type="button"
@@ -253,48 +163,6 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           </div>
         </FormField>
 
-        {/* Password Strength Indicator - Improved responsive layout */}
-        {password && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <div
-                className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
-                  password.length >= 8 ? "bg-green-500" : "bg-gray-300"
-                )}
-              />
-              <span
-                className={
-                  password.length >= 8 ? "text-green-600" : "text-gray-500"
-                }
-              >
-                8 أحرف على الأقل
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
-                  /[a-zA-Z\u0621-\u064A]/.test(password) &&
-                    /[0-9\u0660-\u0669]/.test(password)
-                    ? "bg-green-500"
-                    : "bg-gray-300"
-                )}
-              />
-              <span
-                className={
-                  /[a-zA-Z\u0621-\u064A]/.test(password) &&
-                  /[0-9\u0660-\u0669]/.test(password)
-                    ? "text-green-600"
-                    : "text-gray-500"
-                }
-              >
-                أحرف وأرقام
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Submit Button */}
         <Button
           type="submit"
@@ -304,27 +172,27 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           {isLoading ? (
             <span className="flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              جاري إنشاء الحساب...
+              جاري تسجيل الدخول...
             </span>
           ) : (
             <>
-              إنشاء الحساب
-              <UserPlus className="w-4 h-4 mr-2" />
+              تسجيل الدخول
+              <LogIn className="w-4 h-4 mr-2" />
             </>
           )}
         </Button>
       </form>
 
-      {/* Switch to Login Link */}
+      {/* New User Link */}
       <div className="text-center pt-4 border-t border-gray-100">
-        <p className="text-sm text-gray-600 mb-2">لديك حساب بالفعل؟</p>
+        <p className="text-sm text-gray-600 mb-2">ليس لديك حساب؟</p>
         <button
           type="button"
-          onClick={onSwitchToLogin}
+          onClick={onSwitchToRegistration}
           disabled={isLoading}
           className="text-[#053468] hover:text-[#FFAA01] font-medium text-sm transition-colors duration-200 underline hover:no-underline"
         >
-          تسجيل الدخول
+          إنشاء حساب جديد
         </button>
       </div>
 
