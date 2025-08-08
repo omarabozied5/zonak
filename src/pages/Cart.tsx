@@ -146,7 +146,7 @@ const Cart = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Enhanced Header with Restaurant Info */}
         <CartHeader
-          userName={user.name}
+          userName={user.first_name}
           onGoBack={handleGoBack}
           primaryRestaurant={cartSummary.primaryRestaurant}
         />

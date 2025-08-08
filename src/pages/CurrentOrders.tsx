@@ -8,6 +8,7 @@ import EmptyState from "../components/currentOrder/EmptyState";
 import LoadingState from "../components/currentOrder/LoadingState";
 import ErrorState from "../components/currentOrder/ErrorState";
 import RefreshButton from "../components/currentOrder/RefreshButton";
+import { toast } from "sonner";
 
 const CurrentOrders: React.FC = () => {
   const navigate = useNavigate();
@@ -76,6 +77,18 @@ const CurrentOrders: React.FC = () => {
       // Error is handled by the store
     }
   }, [orderStore]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast.error("يجب تسجيل الدخول لعرض الطلبات الحالية");
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Don't render if not authenticated
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   const handleNavigateToRestaurants = useCallback(() => {
     navigate("/");
