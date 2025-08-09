@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { apiService } from "@/services/apiService";
+import { useDebounce } from "./useDebounce";
 
 interface SearchResult {
   id: number;
@@ -13,11 +14,6 @@ interface SearchResult {
   is_favor: boolean;
   is_busy: number;
   enable_delivery: number;
-  user?: {
-    user_id: number;
-    full_name: string;
-    is_exclusive_partner: number;
-  };
   place?: {
     id: number;
     distance: number;
@@ -27,14 +23,6 @@ interface SearchResult {
   };
 }
 
-interface SearchFilters {
-  category?: string;
-  minRating?: number;
-  maxDistance?: number;
-  deliveryOnly?: boolean;
-}
-
-// Default coordinates for Medina
 const DEFAULT_COORDS = {
   lat: 24.455374838891599,
   lng: 39.501528887063987,
@@ -42,296 +30,251 @@ const DEFAULT_COORDS = {
 
 export const useSearch = () => {
   const [allRestaurants, setAllRestaurants] = useState<SearchResult[]>([]);
-  const [filteredRestaurants, setFilteredRestaurants] = useState<
-    SearchResult[]
-  >([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showResults, setShowResults] = useState(false);
+
+  // Only these states should change after debouncing
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
 
-  const debounceRef = useRef<NodeJS.Timeout>();
+  // Debounce search query with 300ms delay (reduced from 500ms for better UX)
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const transformOrderToSearchResult = useCallback(
-    (order: any): SearchResult => {
-      return {
-        id: order.id,
-        user_id: order.user_id,
-        merchant_name: order.merchant_name,
-        taddress: order.place?.taddress || "عنوان غير محدد",
-        distance: order.place?.distance || 0,
-        review_average: order.place?.review_average || 0,
-        category_name: order.category_name,
-        profile_image: order.profile_image,
-        is_favor: order.place?.is_favor || false,
-        is_busy: order.is_busy || 0,
-        enable_delivery: order.enable_delivery || 0,
-        user: order.user,
-        place: order.place,
-      };
-    },
-    []
-  );
+  // Track if we're currently debouncing to show appropriate UI feedback
+  const isDebouncing =
+    searchQuery !== debouncedSearchQuery && searchQuery.length > 0;
 
-  const filterRestaurants = useCallback(
-    (
-      restaurants: SearchResult[],
-      query: string,
-      filters: SearchFilters = {}
-    ) => {
-      if (
-        !query.trim() &&
-        !filters.category &&
-        !filters.minRating &&
-        !filters.maxDistance &&
-        !filters.deliveryOnly
-      ) {
+  // Transform API response to SearchResult
+  const transformToSearchResult = useCallback((order: any): SearchResult => {
+    return {
+      id: order.id,
+      user_id: order.user_id,
+      merchant_name: order.merchant_name,
+      taddress: order.place?.taddress || "عنوان غير محدد",
+      distance: order.place?.distance || 0,
+      review_average: order.place?.review_average || 0,
+      category_name: order.category_name,
+      profile_image: order.profile_image,
+      is_favor: order.place?.is_favor || false,
+      is_busy: order.is_busy || 0,
+      enable_delivery: order.enable_delivery || 0,
+      place: order.place,
+    };
+  }, []);
+
+  // Fetch all restaurants
+  const fetchRestaurants = useCallback(async () => {
+    if (loading) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiService.fetchPreparedOrders(
+        DEFAULT_COORDS.lng,
+        DEFAULT_COORDS.lat,
+        1
+      );
+
+      const orders = response?.data?.data || [];
+      const transformedResults = orders.map(transformToSearchResult);
+
+      setAllRestaurants(transformedResults);
+
+      // Only update search results if not actively searching
+      if (!isSearchActive) {
+        setSearchResults(transformedResults);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "فشل في تحميل المطاعم";
+      setError(errorMessage);
+      setAllRestaurants([]);
+      if (!isSearchActive) {
+        setSearchResults([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [transformToSearchResult, isSearchActive, loading]);
+
+  // Memoized search function for better performance
+  const searchFunction = useMemo(() => {
+    return (query: string, restaurants: SearchResult[]): SearchResult[] => {
+      if (!query.trim()) {
         return restaurants;
       }
 
-      return restaurants.filter((restaurant) => {
+      const searchTerm = query.toLowerCase().trim();
+      const filtered = restaurants.filter((restaurant) => {
         const merchantName = restaurant.merchant_name?.toLowerCase() || "";
-        const address = restaurant.taddress?.toLowerCase() || "";
         const categoryName = restaurant.category_name?.toLowerCase() || "";
-        const searchTerm = query.toLowerCase();
-
-        // Text search match
-        const textMatch =
-          !query.trim() ||
-          merchantName.includes(searchTerm) ||
-          address.includes(searchTerm) ||
-          categoryName.includes(searchTerm);
-
-        // Apply filters
-        const categoryMatch =
-          !filters.category ||
-          merchantName.includes(filters.category.toLowerCase()) ||
-          categoryName.includes(filters.category.toLowerCase());
-
-        const ratingMatch =
-          !filters.minRating || restaurant.review_average >= filters.minRating;
-        const distanceMatch =
-          !filters.maxDistance || restaurant.distance <= filters.maxDistance;
-        const deliveryMatch =
-          !filters.deliveryOnly || restaurant.enable_delivery === 1;
+        const address = restaurant.taddress?.toLowerCase() || "";
 
         return (
-          textMatch &&
-          categoryMatch &&
-          ratingMatch &&
-          distanceMatch &&
-          deliveryMatch
+          merchantName.includes(searchTerm) ||
+          categoryName.includes(searchTerm) ||
+          address.includes(searchTerm)
         );
       });
-    },
-    []
-  );
 
-  const sortResults = useCallback((results: SearchResult[], query: string) => {
-    if (!query.trim()) {
-      return results.sort((a, b) => {
-        if (a.review_average !== b.review_average) {
+      // Enhanced sorting with multiple criteria
+      const sorted = filtered.sort((a, b) => {
+        const aName = a.merchant_name.toLowerCase();
+        const bName = b.merchant_name.toLowerCase();
+
+        // 1. Exact name matches first
+        const aExactMatch = aName === searchTerm;
+        const bExactMatch = bName === searchTerm;
+        if (aExactMatch && !bExactMatch) return -1;
+        if (!aExactMatch && bExactMatch) return 1;
+
+        // 2. Name starts with search term
+        const aStartsWith = aName.startsWith(searchTerm);
+        const bStartsWith = bName.startsWith(searchTerm);
+        if (aStartsWith && !bStartsWith) return -1;
+        if (!aStartsWith && bStartsWith) return 1;
+
+        // 3. Available restaurants before busy ones
+        if (a.is_busy !== b.is_busy) {
+          return a.is_busy - b.is_busy;
+        }
+
+        // 4. Higher rating
+        if (Math.abs(a.review_average - b.review_average) > 0.1) {
           return b.review_average - a.review_average;
         }
+
+        // 5. Closer distance
         return a.distance - b.distance;
       });
-    }
 
-    return results.sort((a, b) => {
-      // Prioritize exact name matches
-      const aExactMatch = a.merchant_name
-        .toLowerCase()
-        .includes(query.toLowerCase());
-      const bExactMatch = b.merchant_name
-        .toLowerCase()
-        .includes(query.toLowerCase());
-
-      if (aExactMatch && !bExactMatch) return -1;
-      if (!aExactMatch && bExactMatch) return 1;
-
-      // Then by rating
-      if (a.review_average !== b.review_average) {
-        return b.review_average - a.review_average;
-      }
-
-      // Finally by distance
-      return a.distance - b.distance;
-    });
+      return sorted;
+    };
   }, []);
 
-  const fetchRestaurants = useCallback(
-    async (
-      coordinates: { lat: number; lng: number } = DEFAULT_COORDS,
-      page: number = 1,
-      append: boolean = false
-    ) => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await apiService.fetchPreparedOrders(
-          coordinates.lng,
-          coordinates.lat,
-          page
-        );
-        const orders = response?.data?.data || [];
-        const transformedResults = orders.map(transformOrderToSearchResult);
-
-        if (append) {
-          setAllRestaurants((prev) => [...prev, ...transformedResults]);
-        } else {
-          setAllRestaurants(transformedResults);
-          if (!isSearchActive) {
-            setFilteredRestaurants(transformedResults);
-          }
-        }
-
-        return transformedResults;
-      } catch (err) {
-        console.error("Fetch restaurants error:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "فشل في تحميل المطاعم";
-        setError(errorMessage);
-        if (!append) {
-          setAllRestaurants([]);
-          setFilteredRestaurants([]);
-        }
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [transformOrderToSearchResult, isSearchActive]
-  );
-
+  // Filter restaurants based on search query - Only called after debouncing
   const performSearch = useCallback(
-    (query: string, filters: SearchFilters = {}) => {
-      const hasSearchCriteria =
-        query.trim() ||
-        filters.category ||
-        filters.minRating ||
-        filters.maxDistance ||
-        filters.deliveryOnly;
-
-      if (!hasSearchCriteria) {
-        setIsSearchActive(false);
-        setFilteredRestaurants(allRestaurants);
-        return allRestaurants;
-      }
-
-      setIsSearchActive(true);
-      const filtered = filterRestaurants(allRestaurants, query, filters);
-      const sorted = sortResults(filtered, query);
-      setFilteredRestaurants(sorted);
-      setShowResults(true);
-      return sorted;
-    },
-    [allRestaurants, filterRestaurants, sortResults]
-  );
-
-  const handleSearchChange = useCallback(
     (query: string) => {
-      setSearchQuery(query);
-
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+      // If empty query, reset everything
+      if (!query.trim()) {
+        setSearchResults(allRestaurants);
+        setIsSearchActive(false);
+        setShowResults(false);
+        setSearchLoading(false);
+        return;
       }
 
-      if (query.trim()) {
-        debounceRef.current = setTimeout(() => {
-          performSearch(
-            query,
-            selectedCategory ? { category: selectedCategory } : {}
-          );
-        }, 300);
-      } else {
-        clearSearch();
-      }
+      // Show loading state
+      setSearchLoading(true);
+
+      // Perform search
+      const filtered = searchFunction(query, allRestaurants);
+
+      // Update all search-related states together
+      setSearchResults(filtered);
+      setIsSearchActive(true);
+      setShowResults(true);
+      setSearchLoading(false);
     },
-    [performSearch, selectedCategory]
+    [allRestaurants, searchFunction]
   );
+
+  // Handle debounced search - This is the ONLY place where search logic runs
+  useEffect(() => {
+    performSearch(debouncedSearchQuery);
+  }, [debouncedSearchQuery, performSearch]);
+
+  // Load restaurants on mount
+  useEffect(() => {
+    if (allRestaurants.length === 0) {
+      fetchRestaurants();
+    }
+  }, [fetchRestaurants, allRestaurants.length]);
+
+  // OPTIMIZED: Only update search query immediately, defer all other state changes
+  const handleSearchChange = useCallback((query: string) => {
+    // Only update the search query immediately for input responsiveness
+    setSearchQuery(query);
+
+    // Don't update any other states here - let debouncing handle it
+    // This prevents cascading re-renders on every character
+  }, []);
 
   const handleSearchSubmit = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
+    if (searchQuery.trim().length >= 1) {
+      // Force immediate search on submit (bypass debouncing)
+      performSearch(searchQuery);
     }
-    if (searchQuery.trim()) {
-      performSearch(
-        searchQuery,
-        selectedCategory ? { category: selectedCategory } : {}
-      );
-    }
-  }, [performSearch, searchQuery, selectedCategory]);
+  }, [searchQuery, performSearch]);
 
   const handleCategoryClick = useCallback(
     (category: string) => {
-      setSelectedCategory(category);
       setSearchQuery(category);
-      performSearch(category, { category });
+      // Perform immediate search for category clicks
+      performSearch(category);
     },
     [performSearch]
   );
 
+  const handleResultClick = useCallback((result: SearchResult) => {
+    console.log("Navigate to restaurant:", result.user_id);
+    setShowResults(false);
+    // You can add navigation logic here or return the result to parent
+  }, []);
+
   const clearSearch = useCallback(() => {
     setSearchQuery("");
-    setSelectedCategory(null);
-    setIsSearchActive(false);
-    setShowResults(false);
-    setFilteredRestaurants(allRestaurants);
-    setError(null);
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-  }, [allRestaurants]);
-
-  const handleResultClick = useCallback((result: SearchResult) => {
-    console.log("Navigate to restaurant:", result.id);
-    setShowResults(false);
-    setSearchQuery(result.merchant_name);
+    // performSearch will be called automatically via useEffect when debouncedSearchQuery updates
   }, []);
 
   const hideResults = useCallback(() => {
     setShowResults(false);
   }, []);
 
-  // Load initial data
-  useEffect(() => {
-    fetchRestaurants();
-  }, [fetchRestaurants]);
+  // Computed values
+  const displayedRestaurants = isSearchActive ? searchResults : allRestaurants;
 
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
-
-  const displayRestaurants = isSearchActive
-    ? filteredRestaurants
-    : allRestaurants;
+  // Optimized search status
+  const searchStatus = useMemo(() => {
+    if (!searchQuery.trim()) return "idle";
+    if (isDebouncing) return "debouncing";
+    if (searchLoading) return "searching";
+    return "completed";
+  }, [searchQuery, isDebouncing, searchLoading]);
 
   return {
-    // State
-    restaurants: displayRestaurants,
-    searchResults: filteredRestaurants,
+    // Data
+    restaurants: displayedRestaurants,
+    searchResults,
+    allRestaurants,
+
+    // States - Only essential ones that should trigger re-renders
     loading,
     error,
-    searchQuery,
-    selectedCategory,
+    searchQuery, // This updates immediately for input responsiveness
+
+    // These only update after debouncing
+    searchLoading,
     showResults,
     isSearchActive,
+    searchStatus,
+
+    // Computed values
+    hasResults: searchResults.length > 0,
+    resultsCount: searchResults.length,
+    isDebouncing, // Now properly calculated
 
     // Actions
-    handleSearchChange,
+    fetchRestaurants,
+    handleSearchChange, // Optimized - minimal state updates
     handleSearchSubmit,
     handleCategoryClick,
     handleResultClick,
     clearSearch,
     hideResults,
-    fetchRestaurants,
   };
 };

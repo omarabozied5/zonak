@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
@@ -15,6 +15,129 @@ import {
   Search,
 } from "lucide-react";
 
+// Memoized RestaurantCard component to prevent unnecessary re-renders
+const RestaurantCard = React.memo(
+  ({
+    restaurant,
+    onRestaurantClick,
+  }: {
+    restaurant: any;
+    onRestaurantClick: (user_id: number) => void;
+  }) => (
+    <Card
+      className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 bg-white rounded-2xl cursor-pointer transform hover:-translate-y-1"
+      onClick={() =>
+        onRestaurantClick(restaurant.place?.id || restaurant.user_id)
+      }
+    >
+      <div className="relative">
+        <div className="aspect-video overflow-hidden">
+          <img
+            src={
+              restaurant.profile_image ||
+              "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+            }
+            alt={restaurant.merchant_name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        </div>
+
+        {/* Status Badges - Top Right */}
+        <div className="absolute top-2 md:top-3 right-2 md:right-3 flex flex-col gap-1 md:gap-2">
+          {restaurant.review_average > 0 && (
+            <div className="bg-white/95 backdrop-blur-sm rounded-full px-2 md:px-3 py-1 flex items-center space-x-1 space-x-reverse shadow-sm">
+              <Star className="h-3 w-3 text-yellow-500 fill-current" />
+              <span className="text-xs font-bold text-gray-800">
+                {restaurant.review_average.toFixed(1)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Status Badges - Top Left */}
+        <div className="absolute top-2 md:top-3 left-2 md:left-3 flex flex-col gap-1 md:gap-2">
+          <div
+            className={`rounded-full px-2 md:px-3 py-1 shadow-sm ${
+              restaurant.is_busy
+                ? "bg-red-500 text-white"
+                : "bg-green-500 text-white"
+            }`}
+          >
+            <span className="text-xs font-bold">
+              {restaurant.is_busy ? "مشغول" : "متاح"}
+            </span>
+          </div>
+        </div>
+
+        {/* Favorite Badge - Bottom Right */}
+        {restaurant.is_favor && (
+          <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3">
+            <div className="bg-red-500 text-white rounded-full p-2 shadow-lg">
+              <Star className="h-3 w-3 fill-current" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <CardContent className="p-4 md:p-5">
+        <div className="space-y-3 md:space-y-4">
+          {/* Restaurant Name & Category */}
+          <div>
+            <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+              {restaurant.merchant_name}
+            </h3>
+            {restaurant.category_name && (
+              <p className="text-[#FFAA01] font-medium text-sm">
+                {restaurant.category_name}
+              </p>
+            )}
+          </div>
+
+          {/* Restaurant Details */}
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
+              <MapPin className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
+              <span className="text-sm line-clamp-1">
+                {restaurant.taddress}
+              </span>
+            </div>
+
+            {restaurant.distance > 0 && (
+              <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
+                <Clock className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
+                <span className="text-sm">
+                  {restaurant.distance.toFixed(1)} كم • 20-30 دقيقة
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
+              <ChefHat className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
+              <span className="text-sm">مأكولات عربية</span>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="pt-2">
+            <Button
+              className="w-full bg-gradient-to-r from-[#FFAA01] to-yellow-500 hover:from-[#FFAA01]/90 hover:to-yellow-500/90 text-white font-bold py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRestaurantClick(restaurant.place?.id || restaurant.user_id);
+              }}
+            >
+              عرض المنيو
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+);
+
+RestaurantCard.displayName = "RestaurantCard";
+
 const Home = () => {
   const navigate = useNavigate();
   const {
@@ -26,6 +149,9 @@ const Home = () => {
     isSearchActive,
     searchQuery,
     showResults,
+    searchLoading,
+    isDebouncing,
+    searchStatus,
     handleSearchChange,
     handleSearchSubmit,
     handleCategoryClick,
@@ -43,14 +169,38 @@ const Home = () => {
     error
   );
 
-  const handleRetry = () => {
+  // Memoized handlers to prevent recreation on every render
+  const handleRetry = useCallback(() => {
     fetchRestaurants();
-  };
+  }, [fetchRestaurants]);
 
-  const handleRestaurantClick = (user_id: number) => {
-    navigate(`/restaurant/${user_id}`);
-    console.log("Navigating to restaurant:", user_id);
-  };
+  const handleRestaurantClick = useCallback(
+    (user_id: number) => {
+      navigate(`/restaurant/${user_id}`);
+      console.log("Navigating to restaurant:", user_id);
+    },
+    [navigate]
+  );
+
+  // Memoized section title and description
+  const sectionInfo = useMemo(
+    () => ({
+      title: isSearchActive ? "نتائج البحث" : "أفضل المطاعم",
+      description: isSearchActive
+        ? `نتائج البحث عن: "${searchQuery}"`
+        : "اختر من مجموعة مميزة من أشهر المطاعم في المملكة",
+    }),
+    [isSearchActive, searchQuery]
+  );
+
+  // Memoized stats to prevent recalculation
+  const stats = useMemo(
+    () => ({
+      restaurantCount: restaurants.length,
+      searchResultText: isSearchActive ? "نتيجة" : "مطعم متاح",
+    }),
+    [restaurants.length, isSearchActive]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,8 +208,11 @@ const Home = () => {
       <HeroSection
         searchResults={searchResults}
         loading={loading}
+        searchLoading={searchLoading}
         searchQuery={searchQuery}
         showResults={showResults}
+        isDebouncing={isDebouncing}
+        searchStatus={searchStatus}
         onSearchChange={handleSearchChange}
         onSearchSubmit={handleSearchSubmit}
         onCategoryClick={handleCategoryClick}
@@ -74,14 +227,10 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 md:mb-8 gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                <span className="text-[#FFAA01]">
-                  {isSearchActive ? "نتائج البحث" : "أفضل المطاعم"}
-                </span>
+                <span className="text-[#FFAA01]">{sectionInfo.title}</span>
               </h2>
               <p className="text-sm sm:text-base text-gray-600">
-                {isSearchActive
-                  ? `نتائج البحث عن: "${searchQuery}"`
-                  : "اختر من مجموعة مميزة من أشهر المطاعم في المملكة"}
+                {sectionInfo.description}
               </p>
             </div>
 
@@ -89,10 +238,10 @@ const Home = () => {
             <div className="flex items-center justify-center sm:justify-end space-x-6 space-x-reverse">
               <div className="text-center">
                 <div className="text-xl sm:text-2xl font-bold text-[#FFAA01]">
-                  {restaurants.length}+
+                  {stats.restaurantCount}+
                 </div>
                 <div className="text-xs sm:text-sm text-gray-500">
-                  {isSearchActive ? "نتيجة" : "مطعم متاح"}
+                  {stats.searchResultText}
                 </div>
               </div>
               <div className="text-center">
@@ -106,8 +255,8 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Search Results Info */}
-          {isSearchActive && (
+          {/* Search Results Info - Only show when search is active and not debouncing */}
+          {isSearchActive && !isDebouncing && (
             <div className="bg-gradient-to-r from-[#FFAA01]/10 to-yellow-100 border border-[#FFAA01]/20 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3 space-x-reverse">
@@ -169,148 +318,43 @@ const Home = () => {
             </div>
           )}
 
-          {/* Restaurants Grid */}
+          {/* Restaurants Grid - Only render when we have data and not in initial loading */}
           {(!loading || restaurants.length > 0) && restaurants.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {restaurants.map((restaurant) => (
-                <Card
+                <RestaurantCard
                   key={restaurant.id}
-                  className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 bg-white rounded-2xl cursor-pointer transform hover:-translate-y-1"
-                  onClick={() =>
-                    handleRestaurantClick(
-                      restaurant.place?.id || restaurant.user_id
-                    )
-                  }
-                >
-                  <div className="relative">
-                    <div className="aspect-video overflow-hidden">
-                      <img
-                        src={
-                          restaurant.profile_image ||
-                          "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-                        }
-                        alt={restaurant.merchant_name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                    </div>
-
-                    {/* Status Badges - Top Right */}
-                    <div className="absolute top-2 md:top-3 right-2 md:right-3 flex flex-col gap-1 md:gap-2">
-                      {restaurant.review_average > 0 && (
-                        <div className="bg-white/95 backdrop-blur-sm rounded-full px-2 md:px-3 py-1 flex items-center space-x-1 space-x-reverse shadow-sm">
-                          <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                          <span className="text-xs font-bold text-gray-800">
-                            {restaurant.review_average.toFixed(1)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Status Badges - Top Left */}
-                    <div className="absolute top-2 md:top-3 left-2 md:left-3 flex flex-col gap-1 md:gap-2">
-                      <div
-                        className={`rounded-full px-2 md:px-3 py-1 shadow-sm ${
-                          restaurant.is_busy
-                            ? "bg-red-500 text-white"
-                            : "bg-green-500 text-white"
-                        }`}
-                      >
-                        <span className="text-xs font-bold">
-                          {restaurant.is_busy ? "مشغول" : "متاح"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Favorite Badge - Bottom Right */}
-                    {restaurant.is_favor && (
-                      <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3">
-                        <div className="bg-red-500 text-white rounded-full p-2 shadow-lg">
-                          <Star className="h-3 w-3 fill-current" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <CardContent className="p-4 md:p-5">
-                    <div className="space-y-3 md:space-y-4">
-                      {/* Restaurant Name & Category */}
-                      <div>
-                        <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-1">
-                          {restaurant.merchant_name}
-                        </h3>
-                        {restaurant.category_name && (
-                          <p className="text-[#FFAA01] font-medium text-sm">
-                            {restaurant.category_name}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Restaurant Details */}
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                          <MapPin className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
-                          <span className="text-sm line-clamp-1">
-                            {restaurant.taddress}
-                          </span>
-                        </div>
-
-                        {restaurant.distance > 0 && (
-                          <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                            <Clock className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
-                            <span className="text-sm">
-                              {restaurant.distance.toFixed(1)} كم • 20-30 دقيقة
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                          <ChefHat className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
-                          <span className="text-sm">مأكولات عربية</span>
-                        </div>
-                      </div>
-
-                      {/* Action Button */}
-                      <div className="pt-2">
-                        <Button
-                          className="w-full bg-gradient-to-r from-[#FFAA01] to-yellow-500 hover:from-[#FFAA01]/90 hover:to-yellow-500/90 text-white font-bold py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRestaurantClick(
-                              restaurant.place?.id || restaurant.user_id
-                            );
-                          }}
-                        >
-                          عرض المنيو
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  restaurant={restaurant}
+                  onRestaurantClick={handleRestaurantClick}
+                />
               ))}
             </div>
           )}
 
-          {/* No Results State */}
-          {!loading && restaurants.length === 0 && !error && isSearchActive && (
-            <div className="text-center py-12 md:py-16">
-              <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Search className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+          {/* No Results State - Only show when search is complete (not debouncing) */}
+          {!loading &&
+            restaurants.length === 0 &&
+            !error &&
+            isSearchActive &&
+            !isDebouncing && (
+              <div className="text-center py-12 md:py-16">
+                <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+                  لم يتم العثور على نتائج
+                </h3>
+                <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto px-4 mb-4">
+                  لم نتمكن من العثور على مطاعم تطابق بحثك عن "{searchQuery}"
+                </p>
+                <Button
+                  onClick={clearSearch}
+                  className="bg-[#FFAA01] hover:bg-[#FFAA01]/90 text-white"
+                >
+                  مسح البحث وعرض جميع المطاعم
+                </Button>
               </div>
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
-                لم يتم العثور على نتائج
-              </h3>
-              <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto px-4 mb-4">
-                لم نتمكن من العثور على مطاعم تطابق بحثك عن "{searchQuery}"
-              </p>
-              <Button
-                onClick={clearSearch}
-                className="bg-[#FFAA01] hover:bg-[#FFAA01]/90 text-white"
-              >
-                مسح البحث وعرض جميع المطاعم
-              </Button>
-            </div>
-          )}
+            )}
 
           {/* Empty State */}
           {!loading &&

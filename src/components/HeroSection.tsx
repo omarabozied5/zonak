@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, memo, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, Star, Truck, Clock, X, Loader2 } from "lucide-react";
@@ -6,6 +6,7 @@ import { useAuthStore } from "../stores/useAuthStore";
 
 interface SearchResult {
   id: number;
+  user_id: number;
   merchant_name: string;
   taddress: string;
   distance: number;
@@ -13,17 +14,25 @@ interface SearchResult {
   category_name?: string;
   profile_image?: string;
   is_favor: boolean;
-  user?: {
-    full_name: string;
-    is_exclusive_partner: number;
+  is_busy: number;
+  enable_delivery: number;
+  place?: {
+    id: number;
+    distance: number;
+    review_average: number;
+    taddress: string;
+    is_favor: boolean;
   };
 }
 
 interface HeroSectionProps {
   searchResults: SearchResult[];
   loading: boolean;
+  searchLoading?: boolean;
   searchQuery: string;
   showResults: boolean;
+  isDebouncing?: boolean;
+  searchStatus?: "idle" | "debouncing" | "searching" | "completed";
   onSearchChange: (query: string) => void;
   onSearchSubmit: () => void;
   onCategoryClick: (category: string) => void;
@@ -32,7 +41,7 @@ interface HeroSectionProps {
   onHideResults: () => void;
 }
 
-// Feature data
+// Memoized static data to prevent recreating on every render
 const features = [
   {
     icon: Truck,
@@ -51,7 +60,6 @@ const features = [
   },
 ];
 
-// Category data
 const categories = [
   { name: "برجر", emoji: "🍔" },
   { name: "بيتزا", emoji: "🍕" },
@@ -59,11 +67,89 @@ const categories = [
   { name: "مشروبات", emoji: "🥤" },
 ];
 
+// Memoized SearchResultItem to prevent unnecessary re-renders
+const SearchResultItem = memo(
+  ({
+    result,
+    onResultClick,
+  }: {
+    result: SearchResult;
+    onResultClick: (result: SearchResult) => void;
+  }) => (
+    <div
+      onClick={() => onResultClick(result)}
+      className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 hover:bg-gray-50 rounded-lg sm:rounded-xl cursor-pointer transition-colors"
+    >
+      <div className="w-10 sm:w-12 h-10 sm:h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+        {result.profile_image ? (
+          <img
+            src={result.profile_image}
+            alt={result.merchant_name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+              const parent = target.parentElement;
+              if (parent) {
+                parent.innerHTML =
+                  '<span class="text-lg sm:text-2xl">🍽️</span>';
+              }
+            }}
+          />
+        ) : (
+          <span className="text-lg sm:text-2xl">🍽️</span>
+        )}
+      </div>
+      <div className="flex-1 text-right min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center space-x-1 space-x-reverse">
+            {result.is_busy === 0 ? (
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            ) : (
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            )}
+            <span className="text-xs text-gray-500">
+              {result.is_busy === 0 ? "متاح" : "مشغول"}
+            </span>
+          </div>
+          {result.is_favor && (
+            <Star className="h-3 w-3 text-red-500 fill-current" />
+          )}
+        </div>
+        <h4 className="font-medium text-gray-900 text-xs sm:text-sm truncate">
+          {result.merchant_name}
+        </h4>
+        <p className="text-xs text-gray-500 mt-0.5 sm:mt-1 truncate">
+          {result.taddress}
+        </p>
+        <div className="flex items-center justify-end gap-1 sm:gap-2 mt-0.5 sm:mt-1">
+          <span className="text-xs text-gray-400">
+            {result.distance?.toFixed(1)} كم
+          </span>
+          {result.review_average > 0 && (
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-yellow-500 fill-current" />
+              <span className="text-xs text-gray-600">
+                {result.review_average.toFixed(1)}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+);
+
+SearchResultItem.displayName = "SearchResultItem";
+
 const HeroSection: React.FC<HeroSectionProps> = ({
   searchResults,
   loading,
+  searchLoading = false,
   searchQuery,
   showResults,
+  isDebouncing = false,
+  searchStatus = "idle",
   onSearchChange,
   onSearchSubmit,
   onCategoryClick,
@@ -71,7 +157,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   onClearSearch,
   onHideResults,
 }) => {
-  // Use the new auth store
+  // Use the auth store
   const { isUserLoggedIn, getUserDisplayName } = useAuthStore();
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -90,12 +176,56 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onHideResults]);
 
+  // Handle input change - optimized
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onSearchChange(e.target.value);
+    },
+    [onSearchChange]
+  );
+
   // Handle Enter key press
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      onSearchSubmit();
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        onSearchSubmit();
+      }
+    },
+    [onSearchSubmit]
+  );
+
+  // Memoized loading state
+  const isSearching = useMemo(
+    () => loading || searchLoading,
+    [loading, searchLoading]
+  );
+
+  // Memoized status message
+  const statusMessage = useMemo(() => {
+    switch (searchStatus) {
+      case "debouncing":
+        return "جاري الكتابة...";
+      case "searching":
+        return "جاري البحث...";
+      default:
+        return null;
     }
-  };
+  }, [searchStatus]);
+
+  // Memoized search results display (limited to 8 items)
+  const displayedResults = useMemo(
+    () => searchResults.slice(0, 8),
+    [searchResults]
+  );
+
+  // Memoized user info to prevent auth store re-computation
+  const userInfo = useMemo(
+    () => ({
+      isLoggedIn: isUserLoggedIn(),
+      displayName: getUserDisplayName(),
+    }),
+    [isUserLoggedIn, getUserDisplayName]
+  );
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-[#FFAA01] via-[#FFAA01]/95 to-[#FFAA01]/90 py-8 sm:py-12 lg:py-16">
@@ -137,9 +267,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                 اكتشف أجمل المأكولات العربية الأصيلة
               </p>
 
-              {isUserLoggedIn() && (
+              {userInfo.isLoggedIn && (
                 <p className="text-sm sm:text-base text-white/80">
-                  مرحباً، {getUserDisplayName()}
+                  مرحباً، {userInfo.displayName}
                 </p>
               )}
             </div>
@@ -176,21 +306,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
             {/* Search Bar */}
             <div
-              className="bg-white/10 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 relative"
+              className="bg-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 relative"
               ref={searchRef}
             >
               <h3 className="text-white font-semibold mb-3 sm:mb-4 text-center text-sm sm:text-base">
                 ابحث عن مطعمك المفضل
               </h3>
               <div className="relative">
-                <Search className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
+                <Search className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5 pointer-events-none" />
                 <Input
                   type="text"
                   placeholder="اسم المطعم أو نوع الطعام..."
                   value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
-                  className="w-full pl-3 sm:pl-4 pr-10 sm:pr-12 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-0 bg-white/95 backdrop-blur-sm text-right shadow-lg focus:ring-2 focus:ring-[#053468]/20 text-sm sm:text-base"
+                  className="w-full pl-3 sm:pl-4 pr-10 sm:pr-12 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-0 bg-white/95 text-right shadow-lg focus:ring-2 focus:ring-[#053468]/20 text-sm sm:text-base"
                 />
 
                 {/* Clear button */}
@@ -205,10 +335,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
                 <Button
                   onClick={onSearchSubmit}
-                  disabled={loading}
+                  disabled={isSearching}
                   className="absolute left-1 sm:left-2 top-1/2 transform -translate-y-1/2 bg-[#053468] hover:bg-[#053468]/90 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm disabled:opacity-70"
                 >
-                  {loading ? (
+                  {isSearching ? (
                     <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                   ) : (
                     "بحث"
@@ -216,55 +346,55 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                 </Button>
               </div>
 
-              {/* Search Results Dropdown */}
-              {showResults && (
+              {/* Search status indicator - Only show when actively debouncing/searching */}
+              {statusMessage && searchQuery.length > 0 && (
+                <div className="absolute top-2 left-2 sm:left-4">
+                  <div className="flex items-center space-x-1 space-x-reverse bg-blue-100/90 text-blue-700 px-2 py-1 rounded-full text-xs backdrop-blur-sm">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>{statusMessage}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Search Results Dropdown - Only render when needed */}
+              {showResults && searchQuery.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-gray-100 max-h-80 sm:max-h-96 overflow-y-auto z-50">
-                  {searchResults.length > 0 ? (
+                  {searchLoading ? (
+                    <div className="p-3 sm:p-4 text-center">
+                      <div className="flex items-center justify-center space-x-2 space-x-reverse">
+                        <Loader2 className="h-4 w-4 animate-spin text-[#FFAA01]" />
+                        <span className="text-sm text-gray-600">
+                          جاري البحث...
+                        </span>
+                      </div>
+                    </div>
+                  ) : displayedResults.length > 0 ? (
                     <div className="p-1 sm:p-2">
-                      {searchResults.map((result) => (
-                        <div
+                      {displayedResults.map((result) => (
+                        <SearchResultItem
                           key={result.id}
-                          onClick={() => onResultClick(result)}
-                          className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 hover:bg-gray-50 rounded-lg sm:rounded-xl cursor-pointer transition-colors"
-                        >
-                          <div className="w-10 sm:w-12 h-10 sm:h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            {result.profile_image ? (
-                              <img
-                                src={result.profile_image}
-                                alt={result.merchant_name}
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                            ) : (
-                              <span className="text-lg sm:text-2xl">🍽️</span>
-                            )}
-                          </div>
-                          <div className="flex-1 text-right min-w-0">
-                            <h4 className="font-medium text-gray-900 text-xs sm:text-sm truncate">
-                              {result.merchant_name}
-                            </h4>
-                            <p className="text-xs text-gray-500 mt-0.5 sm:mt-1 truncate">
-                              {result.taddress}
-                            </p>
-                            <div className="flex items-center justify-end gap-1 sm:gap-2 mt-0.5 sm:mt-1">
-                              <span className="text-xs text-gray-400">
-                                {result.distance?.toFixed(1)} كم
-                              </span>
-                              {result.review_average > 0 && (
-                                <div className="flex items-center gap-0.5 sm:gap-1">
-                                  <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-yellow-500 fill-current" />
-                                  <span className="text-xs text-gray-600">
-                                    {result.review_average.toFixed(1)}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                          result={result}
+                          onResultClick={onResultClick}
+                        />
                       ))}
+                      {searchResults.length > 8 && (
+                        <div className="p-2 text-center border-t border-gray-100">
+                          <span className="text-xs text-gray-500">
+                            وجدنا {searchResults.length} مطعم • اضغط بحث لرؤية
+                            الجميع
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="p-3 sm:p-4 text-center text-gray-500">
-                      <p className="text-sm">لا توجد نتائج للبحث</p>
+                      <div className="flex flex-col items-center space-y-2">
+                        <Search className="h-8 w-8 text-gray-300" />
+                        <p className="text-sm">لا توجد نتائج للبحث</p>
+                        <p className="text-xs text-gray-400">
+                          جرب البحث بكلمات مختلفة
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -302,4 +432,5 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   );
 };
 
-export default HeroSection;
+// Export memoized component to prevent unnecessary re-renders
+export default memo(HeroSection);
