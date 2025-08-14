@@ -1,9 +1,9 @@
 import React from "react";
-import { Coupon } from "../../types/types";
+import { ValidatedCoupon } from "../../lib/couponUtils";
 
 interface PriceBreakdownProps {
   totalPrice: number;
-  appliedCoupon: Coupon | null;
+  appliedCoupon: ValidatedCoupon | null;
   discountAmount: number;
   total: number;
   totalItemDiscounts?: number;
@@ -30,7 +30,7 @@ const PriceBreakdown: React.FC<PriceBreakdownProps> = React.memo(
         </div>
       )}
 
-      {appliedCoupon && (
+      {appliedCoupon && discountAmount > 0 && (
         <div className="flex justify-between text-green-600 text-sm">
           <span>الخصم ({appliedCoupon.code})</span>
           <span>-{discountAmount.toFixed(2)} ر.س</span>
@@ -41,6 +41,14 @@ const PriceBreakdown: React.FC<PriceBreakdownProps> = React.memo(
         <span>المجموع الكلي</span>
         <span className="text-[#FFAA01]">{total.toFixed(2)} ر.س</span>
       </div>
+
+      {/* Show total savings if any */}
+      {(totalItemDiscounts > 0 || discountAmount > 0) && (
+        <div className="flex justify-between text-green-600 text-sm font-medium pt-1">
+          <span>إجمالي التوفير</span>
+          <span>{(totalItemDiscounts + discountAmount).toFixed(2)} ر.س</span>
+        </div>
+      )}
     </div>
   )
 );

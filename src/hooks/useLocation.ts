@@ -31,7 +31,15 @@ export const useLocation = (options: GeolocationOptions = {}) => {
   };
 
   const getCurrentLocation = () => {
+    console.log("🌍 Location Service Debug:", {
+      geolocationSupported: !!navigator.geolocation,
+      isHTTPS: window.location.protocol === "https:",
+      isLocalhost: window.location.hostname === "localhost",
+      userAgent: navigator.userAgent.substring(0, 50) + "...",
+    });
+
     if (!navigator.geolocation) {
+      console.log("❌ Geolocation not supported");
       setLocation((prev) => ({
         ...prev,
         loading: false,
@@ -41,9 +49,15 @@ export const useLocation = (options: GeolocationOptions = {}) => {
     }
 
     setLocation((prev) => ({ ...prev, loading: true, error: null }));
+    console.log("📍 Requesting user location...");
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log("✅ Location obtained:", {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy + "m",
+        });
         setLocation({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -53,6 +67,10 @@ export const useLocation = (options: GeolocationOptions = {}) => {
         });
       },
       (error) => {
+        console.log("❌ Location error:", {
+          code: error.code,
+          message: error.message,
+        });
         let errorMessage = "Unable to retrieve location";
 
         switch (error.code) {

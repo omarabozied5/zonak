@@ -1,10 +1,12 @@
+// Updated Checkout.tsx with restoration functionality
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useOrderStore } from "@/hooks/useOrderStore";
+import { usePaymentStore } from "@/stores/usePaymentStore";
 
 // Components
 import CheckoutHeader from "../components/checkout/CheckoutHeader";
@@ -14,8 +16,14 @@ import PaymentMethodCard from "../components/checkout/PaymentMethodCard";
 import OrderSummaryCard from "../components/checkout/OrderSummaryCard";
 
 // Hooks and Utils
-import { useCoupon, useFormValidation } from "../hooks/useCheckout";
+import { useCoupon } from "../hooks/useCoupon";
+import { useFormValidation } from "../hooks/useCheckout";
+import { useCheckoutRestoration } from "../hooks/useCheckoutRestoration"; // New hook
 import { calculateDiscountAmount } from "../lib/couponUtils";
+import {
+  calculateTotalItemDiscounts,
+  calculateOriginalTotal,
+} from "../lib/cartUtils";
 import { apiService, buildOrderPayload } from "../services/apiService";
 import { OrderResponse, CartItem } from "../types/types";
 
@@ -23,34 +31,67 @@ interface OrderValidation {
   isValid: boolean;
   placeId?: number;
   merchantId?: number;
-  categoryId?: number;
 }
-
-const calculateTotalItemDiscounts = (items: CartItem[]): number => {
-  return items.reduce((total, item) => {
-    const itemDiscount = (item.discountAmount || 0) * item.quantity;
-    return total + itemDiscount;
-  }, 0);
-};
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuthStore();
-  const { items, totalPrice, clearCart } = useCartStore(user?.id);
+  const cartStore = useCartStore(user?.id);
+  const { items, totalPrice, clearCart } = cartStore;
   const { validateForm } = useFormValidation();
   const orderStore = useOrderStore(user?.id?.toString());
+  const paymentStore = usePaymentStore();
 
   const [notes, setNotes] = useState<string>("");
-  const [paymentType, setPaymentType] = useState<number>(1); // Default to Cash on Delivery
+  const [paymentType, setPaymentType] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+
+  // Get placeId from first item for coupon validation
+  const placeId = items.length > 0 ? items[0].placeId : "";
 
   const {
     couponCode,
     setCouponCode,
     appliedCoupon,
+    setAppliedCoupon, // Add this method to useCoupon hook
     applyCoupon,
     removeCoupon,
-  } = useCoupon();
+    isValidating,
+  } = useCoupon({
+    totalPrice,
+    placeId,
+  });
+
+  // Use the restoration hook
+  const { restorationState, applyRestoredState, isRestoring } =
+    useCheckoutRestoration(user?.id || null, cartStore, {
+      notes,
+      paymentType,
+      couponCode,
+    });
+
+  // Calculate discount information
+  const totalItemDiscounts = calculateTotalItemDiscounts(items);
+  const originalTotalPrice = calculateOriginalTotal(items);
+  const couponDiscountAmount = calculateDiscountAmount(
+    totalPrice,
+    appliedCoupon
+  );
+  const total = totalPrice - couponDiscountAmount;
+
+  // Apply restored state when available
+  useEffect(() => {
+    if (isRestoring) {
+      applyRestoredState(
+        setNotes,
+        setPaymentType,
+        setCouponCode,
+        setAppliedCoupon || (() => {}) // Fallback if setAppliedCoupon not available
+      );
+    }
+  }, [isRestoring, applyRestoredState]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -65,11 +106,27 @@ const Checkout: React.FC = () => {
     }
   }, [isAuthenticated, items.length, navigate]);
 
-  if (!isAuthenticated || items.length === 0) return null;
+  // Log discount information for debugging
+  useEffect(() => {
+    if (totalItemDiscounts > 0 || couponDiscountAmount > 0) {
+      console.log("Checkout discount breakdown:", {
+        originalTotal: originalTotalPrice,
+        itemDiscounts: totalItemDiscounts,
+        subtotalAfterItemDiscounts: totalPrice,
+        couponDiscount: couponDiscountAmount,
+        finalTotal: total,
+        totalSavings: totalItemDiscounts + couponDiscountAmount,
+      });
+    }
+  }, [
+    totalItemDiscounts,
+    originalTotalPrice,
+    totalPrice,
+    couponDiscountAmount,
+    total,
+  ]);
 
-  const totalItemDiscounts = calculateTotalItemDiscounts(items);
-  const discountAmount = calculateDiscountAmount(totalPrice, appliedCoupon);
-  const total = totalPrice - discountAmount;
+  if (!isAuthenticated || items.length === 0) return null;
 
   const handleBack = (): void => {
     navigate("/cart");
@@ -81,57 +138,21 @@ const Checkout: React.FC = () => {
       return { isValid: false };
     }
 
-    console.log("=== DEBUGGING ORDER VALIDATION ===");
-
     const firstItem = items[0];
 
-    // Debug all items
-    items.forEach((item, index) => {
-      console.log(`Item ${index}:`, {
-        id: item.id,
-        productId: item.productId,
-        categoryId: item.categoryId,
-        price: item.price,
-        totalPriceWithModifiers: item.totalPriceWithModifiers,
-        quantity: item.quantity,
-        restaurantId: item.restaurantId,
-        placeId: item.placeId,
-        name: item.name,
-      });
-
-      // Test ID parsing
-      try {
-        const baseId = item.id.includes("-") ? item.id.split("-")[0] : item.id;
-        const numericId = parseInt(baseId, 10);
-        console.log(`Base ID for ${item.id}: ${baseId} -> ${numericId}`);
-        if (isNaN(numericId) || numericId <= 0) {
-          console.error("❌ Invalid base ID:", item.id);
-        }
-      } catch (e) {
-        console.error("❌ Error parsing item ID:", item.id, e);
-      }
-    });
-
-    // Validate restaurantId (merchant_id)
     if (
       !firstItem.restaurantId ||
       firstItem.restaurantId.toString().trim() === ""
     ) {
       toast.error("معرف المطعم مفقود - يرجى إعادة اختيار العناصر");
-      console.error("Missing restaurant ID:", {
-        restaurantId: firstItem.restaurantId,
-      });
       return { isValid: false };
     }
 
-    // Validate placeId
     if (!firstItem.placeId || firstItem.placeId.toString().trim() === "") {
       toast.error("معرف الفرع مفقود - يرجى إعادة اختيار العناصر");
-      console.error("Missing place ID:", { placeId: firstItem.placeId });
       return { isValid: false };
     }
 
-    // Check for items with missing or invalid data
     const invalidItems = items.filter((item: CartItem) => {
       return (
         !item.id ||
@@ -146,12 +167,10 @@ const Checkout: React.FC = () => {
     });
 
     if (invalidItems.length > 0) {
-      console.error("Invalid items found:", invalidItems);
       toast.error("بعض العناصر في السلة غير صالحة - يرجى إعادة إضافة العناصر");
       return { isValid: false };
     }
 
-    // Convert to numbers and validate
     const placeId = parseInt(firstItem.placeId.toString());
     const merchantId = parseInt(firstItem.restaurantId.toString());
 
@@ -162,16 +181,9 @@ const Checkout: React.FC = () => {
       merchantId <= 0
     ) {
       toast.error("معرف المطعم غير صحيح");
-      console.error("Invalid restaurant IDs:", {
-        placeId: firstItem.placeId,
-        restaurantId: firstItem.restaurantId,
-        parsedPlaceId: placeId,
-        parsedMerchantId: merchantId,
-      });
       return { isValid: false };
     }
 
-    // Validate all items are from same restaurant
     const allFromSameRestaurant = items.every(
       (item) =>
         item.placeId === firstItem.placeId &&
@@ -180,12 +192,8 @@ const Checkout: React.FC = () => {
 
     if (!allFromSameRestaurant) {
       toast.error("لا يمكن طلب عناصر من مطاعم مختلفة في طلب واحد");
-      console.error("Items from different restaurants found");
       return { isValid: false };
     }
-
-    console.log("✅ Order validation successful:", { placeId, merchantId });
-    console.log("=== END VALIDATION DEBUG ===");
 
     return { isValid: true, placeId, merchantId };
   };
@@ -200,23 +208,41 @@ const Checkout: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      console.log("Building order payload with:", {
-        itemsCount: items.length,
-        placeId,
-        merchantId,
-        totalPrice: total,
-        discountAmount,
+      // Create comprehensive checkout data snapshot
+      const checkoutData = {
+        items: [...items], // Deep copy of items
+        totalPrice,
+        appliedCoupon,
+        couponDiscountAmount,
+        total,
         paymentType,
-      });
+        notes,
+        userInfo: user,
+        formState: {
+          notes,
+          paymentType,
+          couponCode: appliedCoupon?.code || couponCode,
+        },
+        // Additional metadata for restoration
+        timestamp: Date.now(),
+        restaurantInfo: {
+          placeId: placeId!,
+          merchantId: merchantId!,
+          restaurantName: items[0]?.restaurantName || "",
+        },
+      };
 
-      // Build the order payload with selected payment type
+      console.log("Building order payload...");
+
+      // Build the order payload with coupon information
       const orderPayload = buildOrderPayload(
         items,
         placeId!,
         merchantId!,
         total,
-        paymentType, // Use selected payment type
-        discountAmount
+        paymentType,
+        appliedCoupon,
+        couponDiscountAmount
       );
 
       console.log(
@@ -232,65 +258,86 @@ const Checkout: React.FC = () => {
       if (response.success) {
         console.log("Order submitted successfully:", response);
 
-        // Extract order ID from response
         const orderId =
           response.order_id || response.data?.order_id || response.data?.id;
-        console.log("📝 Order ID from response:", orderId);
 
-        // Clear cart on successful order
-        clearCart();
-
-        toast.success(response.message || "تم تأكيد طلبك بنجاح!");
-
-        // Handle payment based on type
         if (paymentType === 0 && orderId) {
-          // Online payment - get payment URL and redirect
+          // ONLINE PAYMENT - Preserve state before redirecting
           try {
-            console.log("🔄 Getting payment URL for order:", orderId);
             const paymentResponse = await apiService.getPaymentUrl(orderId);
 
             if (paymentResponse.data) {
-              console.log("💳 Opening payment URL:", paymentResponse.data);
-              // Open payment URL in new tab
-              window.open(paymentResponse.data, "_blank");
+              // ✅ CRITICAL: Store checkout state BEFORE opening payment URL
+              paymentStore.initiatePay(
+                checkoutData,
+                orderId.toString(),
+                paymentResponse.data
+              );
 
-              toast.success("تم فتح صفحة الدفع في نافذة جديدة");
-            } else {
-              throw new Error("Payment URL not received");
+              // Save additional form state
+              paymentStore.updateCheckoutFormState({
+                notes,
+                paymentType,
+                couponCode: appliedCoupon?.code || couponCode,
+              });
+
+              // Mark that user is leaving app for payment
+              paymentStore.markLeftAppForPayment();
+
+              // Show success message
+              toast.success("تم إنشاء الطلب! جاري توجيهك لصفحة الدفع...", {
+                duration: 3000,
+              });
+
+              // ⚠️ IMPORTANT: Don't clear cart here - only clear after successful payment
+              console.log(
+                "💳 Redirecting to payment URL:",
+                paymentResponse.data
+              );
+
+              // Add a small delay to ensure state is saved
+              setTimeout(() => {
+                // Open payment URL in same window
+                window.location.href = paymentResponse.data;
+              }, 1000);
+
+              return; // Don't continue with success flow
             }
           } catch (paymentError) {
             console.error("Payment URL error:", paymentError);
-            toast.error(
-              "فشل في فتح صفحة الدفع. يمكنك المتابعة للطلبات الحالية"
-            );
+            toast.error("فشل في فتح صفحة الدفع");
+            return;
           }
+        } else {
+          // CASH ON DELIVERY - Clear cart immediately
+          clearCart();
+          toast.success(response.message || "تم تأكيد طلبك بنجاح!");
+
+          // Navigate to current orders
+          navigate("/current-orders", {
+            state: {
+              orderId: orderId,
+              message: "تم إرسال طلبك بنجاح",
+              justSubmitted: true,
+              timestamp: Date.now(),
+              paymentType: paymentType,
+              orderDetails: {
+                total: total,
+                itemsCount: items.length,
+                totalSavings: totalItemDiscounts + couponDiscountAmount,
+                restaurantName: items[0]?.restaurantName || "المطعم",
+                couponUsed: appliedCoupon?.code || null,
+              },
+            },
+          });
         }
 
-        // Refresh orders in background to get the new order
+        // Refresh orders in background
         setTimeout(() => {
           orderStore.fetchCurrentOrders().catch((error) => {
             console.error("Background order refresh failed:", error);
           });
         }, 1000);
-
-        // Navigate with detailed state
-        navigate("/current-orders", {
-          state: {
-            orderId: orderId,
-            message:
-              paymentType === 0
-                ? "تم إرسال طلبك بنجاح - يرجى إكمال عملية الدفع"
-                : "تم إرسال طلبك بنجاح",
-            justSubmitted: true,
-            timestamp: Date.now(),
-            paymentType: paymentType,
-            orderDetails: {
-              total: total,
-              itemsCount: items.length,
-              restaurantName: items[0]?.restaurantName || "المطعم",
-            },
-          },
-        });
       } else {
         console.error("Order submission failed:", response);
         toast.error(response.message || "فشل في إرسال الطلب");
@@ -310,6 +357,15 @@ const Checkout: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <CheckoutHeader onBack={handleBack} />
 
+        {/* Show restoration indicator */}
+        {isRestoring && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-700 text-sm">
+              🔄 جاري استعادة بيانات الطلب السابق...
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
           {/* Forms Section */}
           <div className="xl:col-span-2 space-y-6">
@@ -320,6 +376,7 @@ const Checkout: React.FC = () => {
               appliedCoupon={appliedCoupon}
               applyCoupon={applyCoupon}
               removeCoupon={removeCoupon}
+              isValidating={isValidating}
             />
             <PaymentMethodCard
               paymentType={paymentType}
@@ -333,9 +390,10 @@ const Checkout: React.FC = () => {
               items={items}
               totalPrice={totalPrice}
               appliedCoupon={appliedCoupon}
-              discountAmount={discountAmount}
+              discountAmount={couponDiscountAmount}
               total={total}
               totalItemDiscounts={totalItemDiscounts}
+              originalTotalPrice={originalTotalPrice}
               handleSubmitOrder={handleSubmitOrder}
               isProcessing={isProcessing}
               paymentType={paymentType}

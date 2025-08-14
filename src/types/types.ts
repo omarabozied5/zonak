@@ -1,6 +1,3 @@
-// types.ts - Improved with better type safety
-
-// ===== Core Domain Types =====
 export interface WorkingHour {
   id: number;
   place_id: number;

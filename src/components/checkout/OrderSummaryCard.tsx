@@ -1,21 +1,23 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CartItem, Coupon } from "../../types/types";
+import { CartItem } from "../../types/types";
 import OrderItem from "./OrderItem";
 import PriceBreakdown from "./PriceBreakdown";
 import EstimatedTime from "./EstimatedTime";
+import { ValidatedCoupon } from "../../lib/couponUtils";
 
 interface OrderSummaryCardProps {
   items: CartItem[];
   totalPrice: number;
-  appliedCoupon: Coupon | null;
   discountAmount: number;
   totalItemDiscounts?: number;
+  originalTotalPrice?: number;
   total: number;
   handleSubmitOrder: () => void;
   isProcessing: boolean;
   paymentType?: number;
+  appliedCoupon: ValidatedCoupon | null;
 }
 
 const OrderSummaryCard: React.FC<OrderSummaryCardProps> = React.memo(
@@ -26,6 +28,7 @@ const OrderSummaryCard: React.FC<OrderSummaryCardProps> = React.memo(
     discountAmount,
     total,
     totalItemDiscounts = 0,
+    originalTotalPrice = 0,
     handleSubmitOrder,
     isProcessing,
     paymentType = 1,
@@ -55,12 +58,14 @@ const OrderSummaryCard: React.FC<OrderSummaryCardProps> = React.memo(
             ))}
           </div>
 
+          {/* Enhanced Price Breakdown with Item Discounts */}
           <PriceBreakdown
             totalPrice={totalPrice}
             appliedCoupon={appliedCoupon}
             discountAmount={discountAmount}
             total={total}
             totalItemDiscounts={totalItemDiscounts}
+            originalTotalPrice={originalTotalPrice}
           />
 
           <EstimatedTime />

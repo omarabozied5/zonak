@@ -12,6 +12,7 @@ interface QuantityCartSectionProps {
   isItemActive: boolean;
   canAddToCart: () => boolean;
   handleAddToCart: () => void;
+  isAuthenticated: boolean;
 }
 
 const QuantityCartSection: React.FC<QuantityCartSectionProps> = ({
@@ -23,6 +24,7 @@ const QuantityCartSection: React.FC<QuantityCartSectionProps> = ({
   isItemActive,
   canAddToCart,
   handleAddToCart,
+  isAuthenticatedو,
 }) => {
   return (
     <Card className="shadow-lg border-0 bg-gradient-to-br from-[#FFAA01]/5 to-[#053468]/5 sticky bottom-4 sm:static">

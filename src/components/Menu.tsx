@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import MenuCard from "./MenuCard";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { Card, CardContent } from "@/components/ui/card";
+import { Restaurant } from "@/types/types";
 
 interface MenuProps {
   userId: string | number;
@@ -14,6 +15,7 @@ interface MenuProps {
   placeId?: string | number;
   merchantId?: string | number;
   categoryId: number;
+  restaurant?: Restaurant;
 }
 
 const Menu = ({
@@ -22,6 +24,7 @@ const Menu = ({
   placeId,
   merchantId,
   categoryId,
+  restaurant,
 }: MenuProps) => {
   const { menuItems, loading, error } = useMenuItems(userId);
   const [selectedCategory, setSelectedCategory] = useState("الكل");
@@ -231,6 +234,7 @@ const Menu = ({
                 placeId={placeId}
                 merchantId={merchantId || userId}
                 categoryId={item.categories?.[0].id}
+                restaurant={restaurant}
               />
             ))}
           </div>

@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+// Updated ItemDetails.tsx - Complete file with new ConfirmationDialog
+
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import FloatingCart from "@/components/FloatingCart";
@@ -19,21 +26,22 @@ import ItemInfo from "../components/itemDetails/ItemInfo";
 import OptionGroups from "../components/itemDetails/OptionGroups";
 import NotesSection from "../components/itemDetails/NotesSection";
 import QuantityCartSection from "../components/itemDetails/QuantityCartSection";
+import ConfirmationDialog from "@/components/currentOrder/ConfirmationDialog";
 
 const ItemDetails = () => {
   const { itemId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { itemDetails, loading, error } = useItemDetails(itemId);
 
-  //Get Resturant Context
-  //Get Restaurant Context
+  // Get Restaurant Context
   const urlPlaceId = searchParams.get("placeId") || "";
   const urlMerchantId = searchParams.get("merchantId") || "";
   const urlRestaurantName = searchParams.get("restaurantName") || "Restaurant";
 
   // Get current user from auth store
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const userId = user?.id || null;
 
   // Get cart store instance for current user
@@ -63,6 +71,12 @@ const ItemDetails = () => {
   const [notes, setNotes] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // State for unsaved changes dialog
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<
+    (() => void) | null
+  >(null);
+
   // Initialize state from editing item
   useEffect(() => {
     if (isEditMode && editingItem && itemDetails) {
@@ -88,7 +102,7 @@ const ItemDetails = () => {
     }
   }, [itemDetails, loading, error, navigate]);
 
-  // Cleanup editing state when component unmounts or navigation occurs
+  // Cleanup editing state when component unmounts
   useEffect(() => {
     return () => {
       if (isEditMode) {
@@ -96,6 +110,60 @@ const ItemDetails = () => {
       }
     };
   }, [isEditMode, setEditingItem]);
+
+  // Check if user has made changes (only for non-edit mode)
+  const hasUnsavedChanges = useCallback(() => {
+    if (isEditMode) return false; // Don't check for edit mode
+    if (!itemDetails) return false;
+
+    // Check if any selections have been made
+    const hasSelectedOptions = Object.keys(selectedOptions).length > 0;
+    const hasSelectedOptional = selectedOptional.length > 0;
+    const hasNotes = notes.trim().length > 0;
+    const hasChangedQuantity = quantity !== 1;
+
+    return (
+      hasSelectedOptions ||
+      hasSelectedOptional ||
+      hasNotes ||
+      hasChangedQuantity
+    );
+  }, [
+    isEditMode,
+    itemDetails,
+    selectedOptions,
+    selectedOptional,
+    notes,
+    quantity,
+  ]);
+
+  // Handle navigation with unsaved changes check
+  const handleNavigation = useCallback(
+    (navigationFn: () => void) => {
+      if (hasUnsavedChanges()) {
+        setPendingNavigation(() => navigationFn);
+        setShowUnsavedDialog(true);
+      } else {
+        navigationFn();
+      }
+    },
+    [hasUnsavedChanges]
+  );
+
+  // Confirm unsaved changes dialog
+  const confirmUnsavedChanges = () => {
+    setShowUnsavedDialog(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+  };
+
+  // Cancel unsaved changes dialog
+  const cancelUnsavedChanges = () => {
+    setShowUnsavedDialog(false);
+    setPendingNavigation(null);
+  };
 
   const navigateImage = (direction: "next" | "prev") => {
     const images = itemDetails?.images || [];
@@ -165,6 +233,7 @@ const ItemDetails = () => {
 
     return { requiredOptionNames, optionalOptionNames };
   };
+
   const getSelectedOptionDetails = () => {
     const requiredOptionsDetails: Record<string, SelectedOptionDetails> = {};
     const optionalOptionsDetails: SelectedOptionDetails[] = [];
@@ -206,13 +275,30 @@ const ItemDetails = () => {
   };
 
   const handleAddToCart = () => {
+    // Check authentication first
+    if (!isAuthenticated) {
+      toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
+      return;
+    }
+
+    // Check item availability - Support multiple formats
+    const isItemAvailable =
+      itemDetails?.is_available === 1 ||
+      itemDetails?.is_available === "1" ||
+      itemDetails?.is_available === true;
+
+    if (!isItemAvailable) {
+      toast.error("هذا العنصر غير متوفر حالياً");
+      return;
+    }
+
+    // Check required options
     if (!canAddToCart()) {
       toast.error("يجب اختيار جميع الخيارات المطلوبة");
       return;
     }
 
     const { requiredOptionNames, optionalOptionNames } = getOptionNames();
-
     const { requiredOptionsDetails, optionalOptionsDetails } =
       getSelectedOptionDetails();
 
@@ -267,7 +353,7 @@ const ItemDetails = () => {
       restaurantId: finalMerchantId,
       restaurantName: finalRestaurantName,
       placeId: finalPlaceId,
-      isAvailable: itemDetails!.is_active === "active",
+      isAvailable: isItemAvailable,
       preparationTime: itemDetails!.minutes,
       selectedOptions:
         Object.keys(cleanSelectedOptions).length > 0
@@ -316,8 +402,15 @@ const ItemDetails = () => {
   }
 
   const images = itemDetails.images || [];
-  const isItemActive = itemDetails.is_active === "active";
-  const canAddToCartFinal = isItemActive && canAddToCart();
+
+  // Check authentication and availability, plus required options
+  const isItemAvailable =
+    itemDetails.is_available === 1 ||
+    itemDetails.is_available === "1" ||
+    itemDetails.is_available === true;
+
+  const canAddToCartFinal =
+    isAuthenticated && isItemAvailable && canAddToCart();
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -327,7 +420,9 @@ const ItemDetails = () => {
         {/* Back Button */}
         <Button
           variant="ghost"
-          onClick={() => navigate(isEditMode ? "/cart" : -1)}
+          onClick={() =>
+            handleNavigation(() => navigate(isEditMode ? "/cart" : -1))
+          }
           className="mb-4 sm:mb-6 hover:bg-[#FFAA01]/10 text-[#053468] font-medium"
         >
           <ArrowRight className="h-5 w-5 ml-2" />
@@ -347,7 +442,7 @@ const ItemDetails = () => {
               setCurrentImageIndex={setCurrentImageIndex}
               navigateImage={navigateImage}
               isCombo={itemDetails.is_combo === 1}
-              isItemActive={isItemActive}
+              isItemActive={isItemAvailable}
             />
 
             <ItemInfo
@@ -381,13 +476,27 @@ const ItemDetails = () => {
               totalPrice={calculateTotalPrice()}
               isEditMode={isEditMode}
               canAddToCartFinal={canAddToCartFinal}
-              isItemActive={isItemActive}
+              isItemActive={isItemAvailable}
               canAddToCart={canAddToCart}
               handleAddToCart={handleAddToCart}
+              isAuthenticated={isAuthenticated}
             />
           </div>
         </div>
       </div>
+
+      {/* Updated Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showUnsavedDialog}
+        onConfirm={confirmUnsavedChanges}
+        onCancel={cancelUnsavedChanges}
+        title="إزالة الطلب"
+        message="هل ترغب في المتابعة؟ مغادرة الصفحة ستؤدي إلى حذف التغييرات"
+        confirmText="متابعة"
+        cancelText="الإلغاء"
+        confirmVariant="default"
+        showCloseButton={true}
+      />
 
       <FloatingCart />
     </div>

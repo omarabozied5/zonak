@@ -1,20 +1,28 @@
 import React from "react";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Coupon } from "../../types/types";
+import { ValidatedCoupon } from "../../lib/couponUtils";
 
 interface CouponCardProps {
   couponCode: string;
   setCouponCode: (code: string) => void;
-  appliedCoupon: Coupon | null;
-  applyCoupon: () => void;
+  appliedCoupon: ValidatedCoupon | null;
+  applyCoupon: () => Promise<void>;
   removeCoupon: () => void;
+  isValidating: boolean;
 }
 
 const CouponCard: React.FC<CouponCardProps> = React.memo(
-  ({ couponCode, setCouponCode, appliedCoupon, applyCoupon, removeCoupon }) => (
+  ({
+    couponCode,
+    setCouponCode,
+    appliedCoupon,
+    applyCoupon,
+    removeCoupon,
+    isValidating,
+  }) => (
     <Card className="border-[#FFAA01]/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
@@ -29,14 +37,26 @@ const CouponCard: React.FC<CouponCardProps> = React.memo(
             onChange={(e) => setCouponCode(e.target.value)}
             placeholder="أدخل رمز الخصم"
             className="flex-1 focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-            disabled={!!appliedCoupon}
+            disabled={!!appliedCoupon || isValidating}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !appliedCoupon && !isValidating) {
+                applyCoupon();
+              }
+            }}
           />
           <Button
             onClick={applyCoupon}
-            disabled={!!appliedCoupon}
-            className="bg-[#FFAA01] hover:bg-[#FFAA01]/90 text-white"
+            disabled={!!appliedCoupon || isValidating || !couponCode.trim()}
+            className="bg-[#FFAA01] hover:bg-[#FFAA01]/90 text-white min-w-[80px]"
           >
-            تطبيق
+            {isValidating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                التحقق
+              </>
+            ) : (
+              "تطبيق"
+            )}
           </Button>
         </div>
 
@@ -47,9 +67,17 @@ const CouponCard: React.FC<CouponCardProps> = React.memo(
                 تم تطبيق رمز الخصم: {appliedCoupon.code}
               </p>
               <p className="text-xs text-green-600">
-                خصم {appliedCoupon.discount}
-                {appliedCoupon.type === "percentage" ? "%" : " ر.س"}
+                خصم {appliedCoupon.discount_value}
+                {appliedCoupon.discount_type === "percentage" ? "%" : " ر.س"}
               </p>
+              {appliedCoupon.minimum_order_value &&
+                parseFloat(appliedCoupon.minimum_order_value) > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    الحد الأدنى للطلب:{" "}
+                    {parseFloat(appliedCoupon.minimum_order_value).toFixed(2)}{" "}
+                    ر.س
+                  </p>
+                )}
             </div>
             <Button
               variant="ghost"
@@ -63,8 +91,7 @@ const CouponCard: React.FC<CouponCardProps> = React.memo(
         )}
 
         <div className="text-xs text-gray-500">
-          <p>أكواد الخصم المتاحة للتجربة:</p>
-          <p>SAVE10 (10%) • SAVE20 (20%) • SAVE50 (50%) • FIXED25 (25 ر.س)</p>
+          <p>أدخل رمز الخصم الخاص بك للحصول على خصم إضافي</p>
         </div>
       </CardContent>
     </Card>

@@ -14,6 +14,12 @@ import OrderSummary from "@/components/Cart/OrderSummury";
 import EmptyCartState from "@/components/Cart/EmptyCartState";
 import { CartItem } from "../types/types";
 
+// Import new utility functions
+import {
+  calculateTotalItemDiscounts,
+  calculateOriginalTotal,
+} from "@/lib/cartUtils";
+
 const Cart = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
@@ -44,6 +50,10 @@ const Cart = () => {
   // Get cart summary and validation (now includes primaryRestaurant)
   const cartSummary = useCartSummary(convertedItems);
   const cartValidation = useCartValidation(convertedItems);
+
+  // Calculate discount information using utility functions
+  const totalItemDiscounts = calculateTotalItemDiscounts(convertedItems);
+  const originalTotalPrice = calculateOriginalTotal(convertedItems);
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -84,15 +94,6 @@ const Cart = () => {
       toast.error("حدث خطأ أثناء تعديل الصنف");
     }
   };
-  const totalItemDiscounts = convertedItems.reduce((total, item) => {
-    return total + (item.discountAmount || 0) * item.quantity;
-  }, 0);
-
-  // Calculate original total price (before item discounts)
-  const originalTotalPrice = convertedItems.reduce((total, item) => {
-    const originalPrice = item.originalPrice || item.price;
-    return total + originalPrice * item.quantity;
-  }, 0);
 
   const handleQuantityUpdate = (itemId: string, newQuantity: number): void => {
     try {
@@ -139,6 +140,18 @@ const Cart = () => {
   // Check if checkout should be disabled
   const isCheckoutDisabled = cartValidation.isCheckoutDisabled;
 
+  // Log discount information for debugging
+  React.useEffect(() => {
+    if (totalItemDiscounts > 0) {
+      console.log("Cart discount summary:", {
+        originalTotal: originalTotalPrice,
+        currentTotal: totalPrice,
+        itemDiscounts: totalItemDiscounts,
+        savings: totalItemDiscounts,
+      });
+    }
+  }, [totalItemDiscounts, originalTotalPrice, totalPrice]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFAA01]/10 to-white">
       <Navigation />
@@ -170,7 +183,7 @@ const Cart = () => {
               ))}
             </div>
 
-            {/* Order Summary */}
+            {/* Order Summary with Discount Information */}
             <div className="xl:col-span-1">
               <OrderSummary
                 totalItems={cartSummary.totalItems}

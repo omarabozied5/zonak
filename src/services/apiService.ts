@@ -1,5 +1,3 @@
-// apiService.ts - Cleaned and simplified
-
 import axios from "axios";
 import { useState } from "react";
 import {
@@ -23,6 +21,7 @@ import {
   BackendOrder,
 } from "../types/types";
 import { useAuthStore } from "../stores/useAuthStore";
+import { ValidatedCoupon } from "../lib/couponUtils";
 
 const BASE_URL = "https://dev-backend.zonak.net/api";
 
@@ -298,8 +297,14 @@ export const transformCartItemsToBackend = (
       );
     }
 
-    if (!item.price || isNaN(item.price) || item.price < 0) {
-      throw new Error(`Item ${item.name} has invalid price: ${item.price}`);
+    // Use current price (after item discount) for calculations
+    const currentPrice = item.price;
+    const originalPrice = item.originalPrice || item.price;
+
+    if (!currentPrice || isNaN(currentPrice) || currentPrice < 0) {
+      throw new Error(
+        `Item ${item.name} has invalid current price: ${currentPrice}`
+      );
     }
 
     if (
@@ -355,11 +360,21 @@ export const transformCartItemsToBackend = (
     }
 
     const baseItemId = getBaseItemId(item.id);
+    const itemDiscount = (originalPrice - currentPrice) * item.quantity;
+    if (itemDiscount > 0) {
+      console.log(
+        `Item ${
+          item.name
+        }: Original ${originalPrice}, Current ${currentPrice}, Discount per item: ${
+          originalPrice - currentPrice
+        }, Total discount: ${itemDiscount}`
+      );
+    }
 
     return {
       id: baseItemId,
       options,
-      price: Math.round(item.price * 100) / 100,
+      price: Math.round(currentPrice * 100) / 100, // Use current price (post-discount)
       quantity: item.quantity,
       note: item.selectedOptions?.notes?.trim() || null,
       category_id: item.categoryId,
@@ -368,6 +383,7 @@ export const transformCartItemsToBackend = (
     };
   });
 };
+// Updated buildOrderPayload function in apiService.ts
 
 export const buildOrderPayload = (
   cartItems: CartItem[],
@@ -375,7 +391,8 @@ export const buildOrderPayload = (
   merchantId: number,
   totalPrice: number,
   paymentType: number,
-  discountAmount = 0
+  appliedCoupon: ValidatedCoupon | null = null,
+  couponDiscountAmount = 0
 ): BackendOrderPayload => {
   try {
     if (!cartItems || cartItems.length === 0) {
@@ -392,18 +409,41 @@ export const buildOrderPayload = (
 
     const backendItems = transformCartItemsToBackend(cartItems);
 
+    // Calculate cart price using current prices (after item discounts are applied)
     const cartPrice = cartItems.reduce(
       (sum, item) => sum + item.totalPriceWithModifiers * item.quantity,
       0
     );
 
+    // Calculate total item discounts for logging/validation
+    const totalItemDiscounts = cartItems.reduce(
+      (total, item) =>
+        total +
+        ((item.originalPrice || item.price) - item.price) * item.quantity,
+      0
+    );
+
+    console.log("Order payload discount breakdown:", {
+      originalSubtotal: cartPrice + totalItemDiscounts,
+      itemDiscounts: totalItemDiscounts,
+      subtotalAfterItemDiscounts: cartPrice,
+      couponDiscount: couponDiscountAmount,
+      finalTotal: totalPrice,
+      totalSavings: totalItemDiscounts + couponDiscountAmount,
+    });
+
     const cashbackRate = 0.07;
     const cashbackValue = Math.round(totalPrice * cashbackRate * 100) / 100;
+
+    // Prepare coupon data for payload
+    const coupons = appliedCoupon ? [appliedCoupon.id] : [];
 
     const payload: BackendOrderPayload = {
       cart_price: Math.round(cartPrice * 100) / 100,
       discount:
-        discountAmount > 0 ? -Math.round(discountAmount * 100) / 100 : 0,
+        couponDiscountAmount > 0
+          ? -Math.round(couponDiscountAmount * 100) / 100
+          : 0,
       is_zonak_account_used: false,
       items_id: backendItems,
       merchant_id: merchantId,
@@ -414,11 +454,24 @@ export const buildOrderPayload = (
       cashback_value: cashbackValue,
       is_new: true,
       is_delivery: 0,
+      coupouns: coupons, // Add coupon IDs array
       cashback_from_coupons: 0,
-      discount_from_coupons: Math.round(discountAmount * 100) / 100,
-      max_coupoun_discount: Math.round(discountAmount * 100) / 100,
+      discount_from_coupons: Math.round(couponDiscountAmount * 100) / 100,
+      max_coupoun_discount: appliedCoupon?.max_coupoun_discount || 0,
       is_delivery_zonak: 0,
     };
+
+    console.log("Final payload being sent:", JSON.stringify(payload, null, 2));
+
+    if (appliedCoupon) {
+      console.log("Coupon details:", {
+        id: appliedCoupon.id,
+        code: appliedCoupon.code,
+        discount_value: appliedCoupon.discount_value,
+        discount_type: appliedCoupon.discount_type,
+        calculated_discount: couponDiscountAmount,
+      });
+    }
 
     return payload;
   } catch (error) {
@@ -429,6 +482,88 @@ export const buildOrderPayload = (
     );
   }
 };
+// export const buildOrderPayload = (
+//   cartItems: CartItem[],
+//   placeId: number,
+//   merchantId: number,
+//   totalPrice: number,
+//   paymentType: number,
+//   couponDiscountAmount = 0
+// ): BackendOrderPayload => {
+//   try {
+//     if (!cartItems || cartItems.length === 0) {
+//       throw new Error("No cart items provided");
+//     }
+
+//     if (!placeId || placeId <= 0) {
+//       throw new Error("Invalid place ID");
+//     }
+
+//     if (!merchantId || merchantId <= 0) {
+//       throw new Error("Invalid merchant ID");
+//     }
+
+//     const backendItems = transformCartItemsToBackend(cartItems);
+
+//     // Calculate cart price using current prices (after item discounts are applied)
+//     const cartPrice = cartItems.reduce(
+//       (sum, item) => sum + item.totalPriceWithModifiers * item.quantity,
+//       0
+//     );
+
+//     // Calculate total item discounts for logging/validation
+//     const totalItemDiscounts = cartItems.reduce(
+//       (total, item) =>
+//         total +
+//         ((item.originalPrice || item.price) - item.price) * item.quantity,
+//       0
+//     );
+
+//     console.log("Order payload discount breakdown:", {
+//       originalSubtotal: cartPrice + totalItemDiscounts,
+//       itemDiscounts: totalItemDiscounts,
+//       subtotalAfterItemDiscounts: cartPrice,
+//       couponDiscount: couponDiscountAmount,
+//       finalTotal: totalPrice,
+//       totalSavings: totalItemDiscounts + couponDiscountAmount,
+//     });
+
+//     const cashbackRate = 0.07;
+//     const cashbackValue = Math.round(totalPrice * cashbackRate * 100) / 100;
+
+//     const payload: BackendOrderPayload = {
+//       cart_price: Math.round(cartPrice * 100) / 100, // This already includes item discounts
+//       discount:
+//         couponDiscountAmount > 0
+//           ? -Math.round(couponDiscountAmount * 100) / 100
+//           : 0, // Only coupon discount
+//       is_zonak_account_used: false,
+//       items_id: backendItems,
+//       merchant_id: merchantId,
+//       place_id: placeId,
+//       total_price: Math.round(totalPrice * 100) / 100,
+//       zonak_discount: 0,
+//       type: paymentType,
+//       cashback_value: cashbackValue,
+//       is_new: true,
+//       is_delivery: 0,
+//       cashback_from_coupons: 0,
+//       discount_from_coupons: Math.round(couponDiscountAmount * 100) / 100, // Only coupon discount
+//       max_coupoun_discount: Math.round(couponDiscountAmount * 100) / 100,
+//       is_delivery_zonak: 0,
+//     };
+
+//     console.log("Final payload being sent:", JSON.stringify(payload, null, 2));
+
+//     return payload;
+//   } catch (error) {
+//     throw new Error(
+//       `Failed to build order payload: ${
+//         error instanceof Error ? error.message : "Unknown error"
+//       }`
+//     );
+//   }
+// };
 
 // ===== Custom Hook =====
 export const useApiService = () => {

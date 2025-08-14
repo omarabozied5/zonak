@@ -5,6 +5,8 @@ import HeroSection from "@/components/HeroSection";
 import { useSearch } from "@/hooks/useSearch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLocation } from "@/hooks/useLocation";
+
 import {
   Loader2,
   MapPin,
@@ -23,123 +25,133 @@ const RestaurantCard = React.memo(
   }: {
     restaurant: any;
     onRestaurantClick: (user_id: number) => void;
-  }) => (
-    <Card
-      className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 bg-white rounded-2xl cursor-pointer transform hover:-translate-y-1"
-      onClick={() =>
-        onRestaurantClick(restaurant.place?.id || restaurant.user_id)
-      }
-    >
-      <div className="relative">
-        <div className="aspect-video overflow-hidden">
-          <img
-            src={
-              restaurant.profile_image ||
-              "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-            }
-            alt={restaurant.merchant_name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-        </div>
+  }) => {
+    // Fixed logic: is_busy: 1 means available, is_busy: 0 means busy
+    const isBusy = restaurant.is_busy === 0;
 
-        {/* Status Badges - Top Right */}
-        <div className="absolute top-2 md:top-3 right-2 md:right-3 flex flex-col gap-1 md:gap-2">
-          {restaurant.review_average > 0 && (
-            <div className="bg-white/95 backdrop-blur-sm rounded-full px-2 md:px-3 py-1 flex items-center space-x-1 space-x-reverse shadow-sm">
-              <Star className="h-3 w-3 text-yellow-500 fill-current" />
-              <span className="text-xs font-bold text-gray-800">
-                {restaurant.review_average.toFixed(1)}
+    return (
+      <Card
+        className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 bg-white rounded-2xl cursor-pointer transform hover:-translate-y-1"
+        onClick={() =>
+          onRestaurantClick(restaurant.place?.id || restaurant.user_id)
+        }
+      >
+        <div className="relative">
+          <div className="aspect-video overflow-hidden">
+            <img
+              src={
+                restaurant.profile_image ||
+                "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+              }
+              alt={restaurant.merchant_name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+          </div>
+
+          {/* Status Badges - Top Right */}
+          <div className="absolute top-2 md:top-3 right-2 md:right-3 flex flex-col gap-1 md:gap-2">
+            {restaurant.review_average > 0 && (
+              <div className="bg-white/95 backdrop-blur-sm rounded-full px-2 md:px-3 py-1 flex items-center space-x-1 space-x-reverse shadow-sm">
+                <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                <span className="text-xs font-bold text-gray-800">
+                  {restaurant.review_average.toFixed(1)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Status Badges - Top Left */}
+          <div className="absolute top-2 md:top-3 left-2 md:left-3 flex flex-col gap-1 md:gap-2">
+            <div
+              className={`rounded-full px-2 md:px-3 py-1 shadow-sm ${
+                isBusy ? "bg-red-500 text-white" : "bg-green-500 text-white"
+              }`}
+            >
+              <span className="text-xs font-bold">
+                {isBusy ? "مشغول" : "متاح"}
               </span>
+            </div>
+          </div>
+
+          {/* Favorite Badge - Bottom Right */}
+          {restaurant.is_favor && (
+            <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3">
+              <div className="bg-red-500 text-white rounded-full p-2 shadow-lg">
+                <Star className="h-3 w-3 fill-current" />
+              </div>
             </div>
           )}
         </div>
 
-        {/* Status Badges - Top Left */}
-        <div className="absolute top-2 md:top-3 left-2 md:left-3 flex flex-col gap-1 md:gap-2">
-          <div
-            className={`rounded-full px-2 md:px-3 py-1 shadow-sm ${
-              restaurant.is_busy
-                ? "bg-red-500 text-white"
-                : "bg-green-500 text-white"
-            }`}
-          >
-            <span className="text-xs font-bold">
-              {restaurant.is_busy ? "مشغول" : "متاح"}
-            </span>
-          </div>
-        </div>
-
-        {/* Favorite Badge - Bottom Right */}
-        {restaurant.is_favor && (
-          <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3">
-            <div className="bg-red-500 text-white rounded-full p-2 shadow-lg">
-              <Star className="h-3 w-3 fill-current" />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <CardContent className="p-4 md:p-5">
-        <div className="space-y-3 md:space-y-4">
-          {/* Restaurant Name & Category */}
-          <div>
-            <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-1">
-              {restaurant.merchant_name}
-            </h3>
-            {restaurant.category_name && (
-              <p className="text-[#FFAA01] font-medium text-sm">
-                {restaurant.category_name}
-              </p>
-            )}
-          </div>
-
-          {/* Restaurant Details */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-              <MapPin className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
-              <span className="text-sm line-clamp-1">
-                {restaurant.taddress}
-              </span>
+        <CardContent className="p-4 md:p-5">
+          <div className="space-y-3 md:space-y-4">
+            {/* Restaurant Name & Category */}
+            <div>
+              <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+                {restaurant.merchant_name}
+              </h3>
+              {restaurant.category_name && (
+                <p className="text-[#FFAA01] font-medium text-sm">
+                  {restaurant.category_name}
+                </p>
+              )}
             </div>
 
-            {restaurant.distance > 0 && (
+            {/* Restaurant Details */}
+            <div className="space-y-2">
               <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                <Clock className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
-                <span className="text-sm">
-                  {restaurant.distance.toFixed(1)} كم • 20-30 دقيقة
+                <MapPin className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
+                <span className="text-sm line-clamp-1">
+                  {restaurant.taddress}
                 </span>
               </div>
-            )}
 
-            <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-              <ChefHat className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
-              <span className="text-sm">مأكولات عربية</span>
+              {restaurant.distance > 0 && (
+                <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
+                  <Clock className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
+                  <span className="text-sm">
+                    {restaurant.distance.toFixed(1)} كم • 20-30 دقيقة
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
+                <ChefHat className="h-4 w-4 text-[#FFAA01] flex-shrink-0" />
+                <span className="text-sm">مأكولات عربية</span>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="pt-2">
+              <Button
+                className="w-full bg-gradient-to-r from-[#FFAA01] to-yellow-500 hover:from-[#FFAA01]/90 hover:to-yellow-500/90 text-white font-bold py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestaurantClick(restaurant.place?.id || restaurant.user_id);
+                }}
+              >
+                عرض المنيو
+              </Button>
             </div>
           </div>
-
-          {/* Action Button */}
-          <div className="pt-2">
-            <Button
-              className="w-full bg-gradient-to-r from-[#FFAA01] to-yellow-500 hover:from-[#FFAA01]/90 hover:to-yellow-500/90 text-white font-bold py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRestaurantClick(restaurant.place?.id || restaurant.user_id);
-              }}
-            >
-              عرض المنيو
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+        </CardContent>
+      </Card>
+    );
+  }
 );
 
 RestaurantCard.displayName = "RestaurantCard";
 
 const Home = () => {
   const navigate = useNavigate();
+  const {
+    latitude,
+    longitude,
+    loading: locationLoading,
+    error: locationError,
+  } = useLocation();
+
   const {
     restaurants,
     searchResults,
@@ -158,7 +170,7 @@ const Home = () => {
     handleResultClick,
     clearSearch,
     hideResults,
-  } = useSearch();
+  } = useSearch(latitude, longitude);
 
   console.log(
     "Home component - restaurants:",
@@ -212,7 +224,9 @@ const Home = () => {
         searchQuery={searchQuery}
         showResults={showResults}
         isDebouncing={isDebouncing}
-        searchStatus={searchStatus}
+        searchStatus={
+          searchStatus as "idle" | "debouncing" | "searching" | "completed"
+        }
         onSearchChange={handleSearchChange}
         onSearchSubmit={handleSearchSubmit}
         onCategoryClick={handleCategoryClick}

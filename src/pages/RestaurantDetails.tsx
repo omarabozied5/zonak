@@ -14,6 +14,10 @@ import { ErrorState, LoadingState } from "../components/ErrorLoadingStates";
 import ImageSlider from "../components/ImageSlider";
 import RestaurantInfo from "../components/ResturantInfo";
 import { MenuItem } from "../hooks/useMenuItems";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Clock, AlertCircle } from "lucide-react";
+import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
+
 // Interface for comprehensive restaurant data
 interface RestaurantData {
   restaurant: Restaurant;
@@ -174,6 +178,44 @@ const RestaurantDetails: React.FC = () => {
   }
 
   const { restaurant, rating, branches } = restaurantData;
+  const RestaurantStatusBanner = ({
+    restaurant,
+  }: {
+    restaurant: Restaurant;
+  }) => {
+    const restaurantStatus = useRestaurantStatus(restaurant);
+
+    if (restaurantStatus.canOrder) return null;
+
+    return (
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-4">
+        <Alert
+          className={`border ${
+            restaurantStatus.reasonClosed === "busy"
+              ? "border-amber-200 bg-amber-50"
+              : "border-red-200 bg-red-50"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {restaurantStatus.reasonClosed === "busy" ? (
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+            ) : (
+              <Clock className="h-4 w-4 text-red-600" />
+            )}
+            <AlertDescription
+              className={`font-medium ${
+                restaurantStatus.reasonClosed === "busy"
+                  ? "text-amber-800"
+                  : "text-red-800"
+              }`}
+            >
+              {restaurantStatus.statusMessage}
+            </AlertDescription>
+          </div>
+        </Alert>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
@@ -209,10 +251,16 @@ const RestaurantDetails: React.FC = () => {
           branches={branches}
         />
       </div>
+      <RestaurantStatusBanner restaurant={restaurant} />
 
       {/* Most Ordered Items */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
-        <MostOrderedItems userId={restaurant.user_id.toString()} placeId={id} />
+        <MostOrderedItems
+          userId={restaurant.user_id.toString()}
+          placeId={id}
+          restaurant={restaurant}
+          restaurantName={restaurant.merchant_name}
+        />
       </div>
 
       {/* Menu */}
@@ -221,6 +269,7 @@ const RestaurantDetails: React.FC = () => {
           userId={restaurant.user_id.toString()}
           merchantId={restaurant.user_id}
           restaurantName={restaurant.merchant_name}
+          restaurant={restaurant}
           placeId={id}
           categoryId={menuItems[0]?.categories?.[0]?.id || 0}
         />

@@ -4,17 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Clock, Heart, Plus, Eye } from "lucide-react";
 import { MostOrderedItem } from "@/hooks/useMostOrderedItems";
+import { Restaurant } from "@/types/types";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { createCartItem } from "@/lib/cartUtils";
+import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
 
 interface MostOrderedItemCardProps {
   item: MostOrderedItem;
   index: number;
-  placeId?: string | number; // Add placeId prop
-  merchantId?: string | number; // Add merchantId prop
+  restaurant: Restaurant; // Add restaurant prop
+  placeId?: string | number;
+  merchantId?: string | number;
   categoryId: number;
   restaurantName: string;
   onAddToCart?: (item: MostOrderedItem) => void;
@@ -23,6 +26,7 @@ interface MostOrderedItemCardProps {
 const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
   item,
   index,
+  restaurant, // New prop
   restaurantName,
   placeId,
   merchantId,
@@ -31,29 +35,48 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Get current user ID from auth store
+  const { isAuthenticated } = useAuthStore();
   const currentUserId = useAuthStore((state) => state.getUserId());
-
-  // Get cart store instance for current user
   const cartStore = useCartStore(currentUserId);
   const { addItem, items } = cartStore;
 
+  // Get restaurant status
+  const restaurantStatus = useRestaurantStatus(restaurant);
+
   const hasOptions = item.options && item.options.length > 0;
-  const isAvailable = item.is_available === 1;
+  const isItemAvailable = item.is_available === 1;
+
+  // Combined availability check
+  const canAddToCart =
+    isAuthenticated && isItemAvailable && restaurantStatus.canOrder;
 
   // Calculate total quantity for this specific menu item across all cart items
   const itemQuantity = React.useMemo(() => {
+    if (!isAuthenticated) return 0;
+
     return items
       .filter((cartItem) => {
-        // Extract base item ID from cart item (remove timestamp suffix)
         const baseItemId = cartItem.id.split("-")[0];
         return baseItemId === item.id.toString();
       })
       .reduce((total, cartItem) => total + cartItem.quantity, 0);
-  }, [items, item.id]);
+  }, [items, item.id, isAuthenticated]);
 
   const handleAddToCart = () => {
-    if (!isAvailable) {
+    // Check authentication first
+    if (!isAuthenticated) {
+      toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
+      return;
+    }
+
+    // Check restaurant status
+    if (!restaurantStatus.canOrder) {
+      toast.error(restaurantStatus.statusMessage);
+      return;
+    }
+
+    // Check item availability
+    if (!isItemAvailable) {
       toast.error("هذا العنصر غير متوفر حالياً");
       return;
     }
@@ -63,15 +86,10 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
       return;
     }
 
-    // // Generate unique ID for cart item
-    // const uniqueId = `${item.id}-${Date.now()}-${Math.random()
-    //   .toString(36)
-    //   .substr(2, 9)}`;
-
     const cartItem = createCartItem({
       item,
       restaurantName,
-      placeId: placeId || "0", // Use placeId from props (this is place_id from URL)
+      placeId: placeId || "0",
       merchantId: merchantId,
       quantity: 1,
     });
@@ -79,7 +97,6 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
     addItem(cartItem);
     toast.success(`تم إضافة ${item.name} إلى السلة`);
 
-    // Call the optional callback
     if (onAddToCart) {
       onAddToCart(item);
     }
@@ -115,7 +132,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
   };
 
   const QuantityBadge = () => {
-    if (itemQuantity === 0) return null;
+    if (!isAuthenticated || itemQuantity === 0) return null;
 
     return (
       <div className="absolute -top-2 -right-4 z-20">
@@ -129,10 +146,40 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
     );
   };
 
-  const isUnavailable = item.is_available !== 1;
+  // Status indicator overlay
+  const StatusOverlay = () => {
+    if (canAddToCart) return null;
+
+    return (
+      <div className="absolute inset-0 bg-black/40 z-10 flex items-center justify-center rounded-xl sm:rounded-2xl">
+        <div className="text-center">
+          <Badge
+            className={`text-xs mb-2 ${
+              !isItemAvailable
+                ? "bg-red-500 text-white"
+                : restaurantStatus.reasonClosed === "busy"
+                ? "bg-amber-500 text-white"
+                : "bg-gray-600 text-white"
+            }`}
+          >
+            <Clock className="h-3 w-3 mr-1" />
+            {!isItemAvailable
+              ? "غير متوفر"
+              : restaurantStatus.reasonClosed === "busy"
+              ? "المطعم مشغول"
+              : "المطعم مغلق"}
+          </Badge>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <Card className="group hover:shadow-2xl transition-all duration-500 border-0 shadow-lg hover:shadow-[#FFAA01]/20 hover:-translate-y-1 sm:hover:-translate-y-2 relative overflow-hidden bg-white rounded-xl sm:rounded-2xl w-full max-w-[280px] sm:max-w-[260px] lg:max-w-[280px] xl:max-w-[300px] mx-auto h-[370px] sm:h-[410px] lg:h-[430px] flex flex-col mb-3">
+    <Card
+      className={`group hover:shadow-2xl transition-all duration-500 border-0 shadow-lg hover:shadow-[#FFAA01]/20 hover:-translate-y-1 sm:hover:-translate-y-2 relative overflow-hidden bg-white rounded-xl sm:rounded-2xl w-full max-w-[280px] sm:max-w-[260px] lg:max-w-[280px] xl:max-w-[300px] mx-auto h-[370px] sm:h-[410px] lg:h-[430px] flex flex-col mb-3 ${
+        !canAddToCart ? "opacity-80" : ""
+      }`}
+    >
       {/* Popularity Badge */}
       <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20">
         <Badge className="bg-gradient-to-r from-[#FFAA01] to-[#ff8c00] text-white text-xs px-2 sm:px-3 py-1 sm:py-1.5 shadow-lg rounded-full font-semibold border-2 border-white/20">
@@ -149,25 +196,8 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
         </div>
       )}
 
-      {/* Favorite Button */}
-      {/* <div className="absolute top-3 sm:top-4 left-1/4 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 sm:h-10 sm:w-10 p-0 bg-white/95 hover:bg-white rounded-full shadow-xl backdrop-blur-sm hover:scale-110 border border-gray-100"
-        >
-          <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600 hover:text-red-500 transition-colors duration-300" />
-        </Button>
-      </div> */}
-
-      {/* Unavailable Overlay */}
-      {isUnavailable && (
-        <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center rounded-xl sm:rounded-2xl">
-          <span className="text-white text-xs sm:text-sm font-semibold bg-gray-800/90 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full">
-            غير متوفر
-          </span>
-        </div>
-      )}
+      {/* Status Overlay */}
+      <StatusOverlay />
 
       <CardContent className="p-0 h-full flex flex-col">
         {/* Item Image */}
@@ -255,9 +285,13 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
                 <div className="relative">
                   <Button
                     onClick={handleAddToCart}
-                    disabled={!isAvailable}
+                    disabled={!canAddToCart}
                     size="sm"
-                    className="h-8 px-3 sm:h-9 sm:px-4 text-xs sm:text-sm transition-all duration-300 bg-[#EFF2F3] hover:bg-[#E0E3E4] text-[#053468] disabled:bg-gray-300 rounded-full flex-shrink-0"
+                    className={`h-8 px-3 sm:h-9 sm:px-4 text-xs sm:text-sm transition-all duration-300 rounded-full flex-shrink-0 ${
+                      canAddToCart
+                        ? "bg-[#EFF2F3] hover:bg-[#E0E3E4] text-[#053468]"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    }`}
                   >
                     <Plus className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                     أضف

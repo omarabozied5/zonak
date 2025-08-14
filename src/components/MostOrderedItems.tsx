@@ -1,5 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { Restaurant } from "@/types/types";
 import {
   useMostOrderedItems,
   MostOrderedItem,
@@ -12,12 +13,16 @@ interface MostOrderedItemsProps {
   userId: string;
   placeId: string | number; // Use string or number based on your API
   onAddToCart?: (item: MostOrderedItem) => void;
+  restaurant: Restaurant; // Add restaurant prop
+  restaurantName: string;
 }
 
 const MostOrderedItems: React.FC<MostOrderedItemsProps> = ({
   userId,
   placeId,
   onAddToCart,
+  restaurant,
+  restaurantName, // Add restaurant prop
 }) => {
   const { mostOrderedItems, loading, error, refetch } = useMostOrderedItems(
     userId,
@@ -142,7 +147,8 @@ const MostOrderedItems: React.FC<MostOrderedItemsProps> = ({
               key={item.id}
               item={item}
               index={index}
-              restaurantName={item.restaurant_name || ""}
+              restaurant={restaurant}
+              restaurantName={restaurantName || ""}
               placeId={placeId}
               merchantId={userId} // Using userId as merchantId since that's the pattern in your app
               categoryId={item.categories?.[0]?.id || 0}

@@ -28,7 +28,10 @@ const DEFAULT_COORDS = {
   lng: 39.501528887063987,
 };
 
-export const useSearch = () => {
+export const useSearch = (
+  latitude?: number | null,
+  longitude?: number | null
+) => {
   const [allRestaurants, setAllRestaurants] = useState<SearchResult[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,9 +76,20 @@ export const useSearch = () => {
     setError(null);
 
     try {
+      const coords = {
+        lat: latitude || DEFAULT_COORDS.lat,
+        lng: longitude || DEFAULT_COORDS.lng,
+      };
+      console.log("🌍 Location Debug:", {
+        userLatitude: latitude,
+        userLongitude: longitude,
+        finalCoords: coords,
+        isUsingUserLocation: !!(latitude && longitude),
+        isUsingDefaultCoords: !(latitude && longitude),
+      });
       const response = await apiService.fetchPreparedOrders(
-        DEFAULT_COORDS.lng,
-        DEFAULT_COORDS.lat,
+        coords.lng,
+        coords.lat,
         1
       );
 
@@ -99,7 +113,7 @@ export const useSearch = () => {
     } finally {
       setLoading(false);
     }
-  }, [transformToSearchResult, isSearchActive, loading]);
+  }, [transformToSearchResult, isSearchActive, loading, latitude, longitude]);
 
   // Memoized search function for better performance
   const searchFunction = useMemo(() => {

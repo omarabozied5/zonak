@@ -1,52 +1,5 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Coupon } from "../types/types";
-import { findCouponByCode } from "../lib/couponUtils";
-
-export const useCoupon = () => {
-  const [couponCode, setCouponCode] = useState<string>("");
-  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
-
-  const applyCoupon = useCallback((): void => {
-    if (!couponCode.trim()) {
-      toast.error("يرجى إدخال رمز الخصم");
-      return;
-    }
-
-    const coupon = findCouponByCode(couponCode);
-
-    if (!coupon) {
-      toast.error("رمز الخصم غير صحيح");
-      return;
-    }
-
-    if (appliedCoupon?.code === coupon.code) {
-      toast.error("تم تطبيق هذا الرمز بالفعل");
-      return;
-    }
-
-    setAppliedCoupon(coupon);
-    toast.success(
-      `تم تطبيق خصم ${coupon.discount}${
-        coupon.type === "percentage" ? "%" : " ر.س"
-      }`
-    );
-  }, [couponCode, appliedCoupon]);
-
-  const removeCoupon = useCallback((): void => {
-    setAppliedCoupon(null);
-    setCouponCode("");
-    toast.success("تم إلغاء رمز الخصم");
-  }, []);
-
-  return {
-    couponCode,
-    setCouponCode,
-    appliedCoupon,
-    applyCoupon,
-    removeCoupon,
-  };
-};
 
 export const usePaymentMethod = () => {
   const [paymentType, setPaymentType] = useState<number>(1); // Default to cash on delivery
