@@ -125,7 +125,7 @@ const Navigation = () => {
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                         const fallback = document.createElement("span");
-                        fallback.textContent = "زونك";
+                        fallback.textContent = "زوونك";
                         fallback.className =
                           "text-lg md:text-xl font-bold text-[#FFAA01]";
                         e.currentTarget.parentNode?.appendChild(fallback);

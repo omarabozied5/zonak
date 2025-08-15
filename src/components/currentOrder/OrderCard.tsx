@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Order } from "../../hooks/useOrderStore";
 import OrderHeader from "./OrderHeader";
 import OrderStatus from "./OrderStatus";
+import CountdownTimer from "./CountdownTimer";
 import CustomerInfo from "./CustomerInfo";
 import OrderSummary from "./OrderSummary";
 import OrderItems from "./OrderItems";
@@ -38,12 +39,15 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
       </CardHeader>
 
       <CardContent className="pt-0">
+        {/* Show order status */}
         <OrderStatus order={order} />
+
+        {/* Show countdown timer ONLY for preparing status */}
+        <CountdownTimer order={order} className="mb-4" />
 
         {isExpanded && (
           <div className="space-y-4 sm:space-y-6 animate-in slide-in-from-top-2 duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              {/* Remove user prop since CustomerInfo will get it from store */}
               <CustomerInfo order={order} />
               <OrderSummary order={order} />
             </div>
@@ -53,6 +57,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
           </div>
         )}
 
+        {/* Show action messages for non-preparing statuses */}
         <OrderActions order={order} />
       </CardContent>
     </Card>

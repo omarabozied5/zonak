@@ -113,7 +113,6 @@ const OrderPricing: React.FC<OrderPricingProps> = ({ order }) => {
             {calculatedTotal.toFixed(2)} ر.س
           </span>
         </div>
-        {/* Show backend total for comparison in development */}
       </div>
     </div>
   );

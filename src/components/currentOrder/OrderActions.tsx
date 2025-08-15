@@ -9,6 +9,11 @@ interface OrderActionsProps {
 const OrderActions: React.FC<OrderActionsProps> = ({ order }) => {
   const orderType = getOrderType(order);
 
+  // Only show action message if it's NOT preparing status (countdown handles that)
+  if (order.status === "preparing") {
+    return null;
+  }
+
   const renderStatusMessage = () => {
     switch (order.status) {
       case "pending":
@@ -25,15 +30,6 @@ const OrderActions: React.FC<OrderActionsProps> = ({ order }) => {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-center w-full">
             <p className="text-blue-800 font-medium text-sm sm:text-base">
               تم تأكيد طلبك وسيتم البدء في التحضير قريباً
-            </p>
-          </div>
-        );
-
-      case "preparing":
-        return (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 text-center w-full">
-            <p className="text-yellow-800 font-medium text-sm sm:text-base">
-              يرجى الانتظار حتى يصبح طلبك جاهزاً للاستلام
             </p>
           </div>
         );
@@ -95,9 +91,10 @@ const OrderActions: React.FC<OrderActionsProps> = ({ order }) => {
     }
   };
 
-  return (
-    <div className="flex justify-center mt-6">{renderStatusMessage()}</div>
-  );
+  const statusMessage = renderStatusMessage();
+  if (!statusMessage) return null;
+
+  return <div className="flex justify-center mt-6">{statusMessage}</div>;
 };
 
 export default OrderActions;
