@@ -106,47 +106,69 @@ export const apiService = {
       params.place_id = placeId;
     }
 
-    const response = await axiosInstance.get(`/menu/items/${userId}`, {
-      params,
-    });
-    return response.data;
-  },
-
-  fetchMenuItemsAlt: async (
-    merchantId: string | number,
-    latitude = 30.0444,
-    longitude = 31.2357
-  ): Promise<MenuResponse> => {
-    const response = await axiosInstance.get(`/merchants/${merchantId}/menu`, {
-      params: { lat: latitude, lang: longitude },
-    });
-    return response.data;
-  },
-
-  getSingleMenuItemFromAll: async (
-    itemId: string | number,
-    userId: string,
-    placeId?: string | number
-  ): Promise<ApiResponse<MenuItem>> => {
-    const menuData = await apiService.fetchMenuItems(userId, placeId);
-
-    if (!menuData?.data?.items) {
-      throw new Error("No menu items found");
-    }
-
-    const item = menuData.data.items.find(
-      (item) => item.id.toString() === itemId.toString()
+    console.log(`🔄 Making API call to /menu/items/${userId}`);
+    console.log(`📋 Parameters:`, params);
+    console.log(
+      `🏪 Request URL: ${BASE_URL}/menu/items/${userId}${
+        placeId ? `?place_id=${placeId}` : ""
+      }`
     );
 
-    if (!item) {
-      throw new Error(`Item with ID ${itemId} not found`);
-    }
+    try {
+      const response = await axiosInstance.get(`/menu/items/${userId}`, {
+        params,
+      });
 
-    return {
-      success: true,
-      message: "Item found successfully",
-      data: item,
-    };
+      console.log(`✅ API Response received:`, {
+        status: response.status,
+        dataKeys: Object.keys(response.data),
+        itemsCount:
+          response.data?.data?.items?.length ||
+          response.data?.items?.length ||
+          0,
+        hasCategories: !!(
+          response.data?.data?.categories || response.data?.categories
+        ),
+      });
+
+      // Validate response structure
+      if (!response.data) {
+        console.error("❌ No data in response");
+        throw new Error("No data received from server");
+      }
+
+      const menuData = response.data;
+
+      // Log structure for debugging
+      if (menuData.data) {
+        console.log("📊 Response structure: menuData.data exists");
+        console.log("📊 Items found:", menuData.data.items?.length || 0);
+      } else if (menuData.items) {
+        console.log("📊 Response structure: menuData.items exists");
+        console.log("📊 Items found:", menuData.items?.length || 0);
+      } else {
+        console.warn(
+          "⚠️ Unexpected response structure:",
+          Object.keys(menuData)
+        );
+      }
+
+      return menuData;
+    } catch (error) {
+      console.error(`❌ API Error for menu items:`, {
+        userId,
+        placeId,
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: axios.isAxiosError(error)
+          ? error.response?.status
+          : "No status",
+        responseData: axios.isAxiosError(error)
+          ? error.response?.data
+          : "No response data",
+      });
+
+      throw error;
+    }
   },
 
   fetchMostOrderedItems: async (

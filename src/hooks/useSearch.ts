@@ -24,8 +24,8 @@ interface SearchResult {
 }
 
 const DEFAULT_COORDS = {
-  lat: 24.455374838891599,
-  lng: 39.501528887063987,
+  lat: 24.470983061841046,
+  lng: 39.603155483668466,
 };
 
 export const useSearch = (

@@ -63,6 +63,28 @@ const ItemDetails = () => {
   const finalRestaurantName =
     isEditMode && editingItem ? editingItem.restaurantName : urlRestaurantName;
 
+  const isItemAvailable =
+    itemDetails?.is_available === true || itemDetails?.is_available === 1;
+
+  console.log("=== AVAILABILITY DEBUG ===");
+  console.log("itemDetails:", itemDetails);
+  console.log("itemDetails?.is_available:", itemDetails?.is_available);
+  console.log(
+    "typeof itemDetails?.is_available:",
+    typeof itemDetails?.is_available
+  );
+  console.log("isItemAvailable result:", isItemAvailable);
+  console.log("========================");
+
+  // Add this after itemDetails loads
+  useEffect(() => {
+    if (itemDetails) {
+      console.log("ITEM DETAILS - Item:", itemDetails.name);
+      console.log("ITEM DETAILS - is_available:", itemDetails.is_available);
+      console.log("ITEM DETAILS - typeof:", typeof itemDetails.is_available);
+      console.log("ITEM DETAILS - Full object:", itemDetails);
+    }
+  }, [itemDetails]);
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<
     Record<number, number>
@@ -275,17 +297,15 @@ const ItemDetails = () => {
   };
 
   const handleAddToCart = () => {
+    console.log("=== HANDLE ADD TO CART START ===");
+    console.log("isItemAvailable:", isItemAvailable);
+    console.log("isAuthenticated:", isAuthenticated);
+    console.log("canAddToCart():", canAddToCart());
     // Check authentication first
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
       return;
     }
-
-    // Check item availability - Support multiple formats
-    const isItemAvailable =
-      itemDetails?.is_available === 1 ||
-      itemDetails?.is_available === "1" ||
-      itemDetails?.is_available === true;
 
     if (!isItemAvailable) {
       toast.error("هذا العنصر غير متوفر حالياً");
@@ -404,10 +424,6 @@ const ItemDetails = () => {
   const images = itemDetails.images || [];
 
   // Check authentication and availability, plus required options
-  const isItemAvailable =
-    itemDetails.is_available === 1 ||
-    itemDetails.is_available === "1" ||
-    itemDetails.is_available === true;
 
   const canAddToCartFinal =
     isAuthenticated && isItemAvailable && canAddToCart();

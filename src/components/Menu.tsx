@@ -26,7 +26,8 @@ const Menu = ({
   categoryId,
   restaurant,
 }: MenuProps) => {
-  const { menuItems, loading, error } = useMenuItems(userId);
+  // Pass both userId and placeId to the hook
+  const { menuItems, loading, error } = useMenuItems(userId, placeId);
   const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -34,7 +35,15 @@ const Menu = ({
   const categories = useMemo(() => {
     const categorySet = new Set<string>(["الكل"]);
     menuItems.forEach((item) => {
-      item.categories?.forEach((cat) => categorySet.add(cat.name));
+      if (Array.isArray(item.categories)) {
+        item.categories.forEach((cat) => categorySet.add(cat.name));
+      } else if (
+        item.categories &&
+        typeof item.categories === "object" &&
+        "name" in item.categories
+      ) {
+        categorySet.add(item.categories.name);
+      }
     });
     return Array.from(categorySet);
   }, [menuItems]);
@@ -43,9 +52,18 @@ const Menu = ({
     let items = menuItems;
 
     if (selectedCategory !== "الكل") {
-      items = items.filter((item) =>
-        item.categories?.some((cat) => cat.name === selectedCategory)
-      );
+      items = items.filter((item) => {
+        if (Array.isArray(item.categories)) {
+          return item.categories.some((cat) => cat.name === selectedCategory);
+        } else if (
+          item.categories &&
+          typeof item.categories === "object" &&
+          "name" in item.categories
+        ) {
+          return item.categories.name === selectedCategory;
+        }
+        return false;
+      });
     }
 
     if (searchQuery.trim()) {
@@ -91,6 +109,11 @@ const Menu = ({
           خطأ في تحميل القائمة
         </p>
         <p className="text-gray-600 text-sm sm:text-base">{error}</p>
+        {!placeId && (
+          <p className="text-amber-600 text-sm mt-2">
+            تحذير: معرف المكان (placeId) غير متوفر
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -116,13 +139,41 @@ const Menu = ({
       </CardContent>
     </Card>
   );
+
+  // Enhanced logging with all props
   React.useEffect(() => {
     console.log("Menu component props:", {
       userId,
       restaurantName,
       placeId,
+      merchantId,
+      categoryId,
+      restaurantId: restaurant?.id,
     });
-  }, [userId, restaurantName, placeId]);
+
+    // Validation warnings
+    if (!userId) {
+      console.error("❌ userId is required for Menu component");
+    }
+    if (!placeId) {
+      console.warn("⚠️ placeId is missing - this may affect menu loading");
+    }
+    if (!merchantId) {
+      console.warn("⚠️ merchantId is missing");
+    }
+  }, [userId, restaurantName, placeId, merchantId, categoryId, restaurant]);
+
+  // Additional debug info
+  React.useEffect(() => {
+    console.log("Menu items loaded:", {
+      count: menuItems.length,
+      categories: categories.length,
+      filteredCount: filteredItems.length,
+      selectedCategory,
+      searchQuery,
+    });
+  }, [menuItems, categories, filteredItems, selectedCategory, searchQuery]);
+
   if (loading) return <LoadingState />;
   if (error) return <ErrorState />;
   if (menuItems.length === 0) return <EmptyState isFiltered={false} />;
@@ -229,12 +280,12 @@ const Menu = ({
               <MenuCard
                 key={item.id}
                 item={item}
+                restaurant={restaurant}
                 restaurantName={restaurantName}
                 viewMode={viewMode}
                 placeId={placeId}
                 merchantId={merchantId || userId}
-                categoryId={item.categories?.[0].id}
-                restaurant={restaurant}
+                categoryId={item.categoryId || categoryId}
               />
             ))}
           </div>

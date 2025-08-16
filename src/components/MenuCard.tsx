@@ -1,8 +1,7 @@
 import React from "react";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { MenuItem } from "@/hooks/useMenuItems";
-import { Restaurant } from "@/types/types";
+import { MenuItem, Restaurant } from "@/types/types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +13,7 @@ import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
 
 interface MenuCardProps {
   item: MenuItem;
-  restaurant: Restaurant; // Add restaurant prop
+  restaurant?: Restaurant; // Make restaurant optional with fallback
   restaurantName: string;
   viewMode?: "list" | "grid";
   placeId?: string | number;
@@ -24,7 +23,7 @@ interface MenuCardProps {
 
 const MenuCard = ({
   item,
-  restaurant, // New prop
+  restaurant,
   restaurantName,
   viewMode = "list",
   placeId,
@@ -37,11 +36,16 @@ const MenuCard = ({
   const cartStore = useCartStore(currentUserId);
   const { addItem, items } = cartStore;
 
-  // Get restaurant status
+  // Get restaurant status with fallback
   const restaurantStatus = useRestaurantStatus(restaurant);
 
   const hasOptions = item.options && item.options.length > 0;
-  const isItemAvailable = item.is_available === 1;
+  const isItemAvailable = item.is_available === true || item.is_available === 1;
+
+  // Add this in the MenuCard component
+  console.log("MENU CARD - Item:", item.name);
+  console.log("MENU CARD - is_available:", item.is_available);
+  console.log("MENU CARD - typeof:", typeof item.is_available);
 
   // Combined availability check
   const canAddToCart =
@@ -101,6 +105,10 @@ const MenuCard = ({
   };
 
   const handleViewDetails = () => {
+    if (!isItemAvailable) {
+      toast.error("هذا العنصر غير متوفر حالياً");
+      return;
+    }
     const searchParams = new URLSearchParams({
       placeId: placeId?.toString() || "",
       merchantId: merchantId?.toString() || "",
@@ -109,8 +117,8 @@ const MenuCard = ({
     navigate(`/item/${item.id}?${searchParams}`);
   };
 
-  const formatPrice = (price: number, newPrice?: number | boolean) => {
-    if (newPrice && typeof newPrice === "number" && newPrice < price) {
+  const formatPrice = (price: number, newPrice?: number | null) => {
+    if (newPrice && newPrice < price) {
       return (
         <div className="flex items-center gap-1 sm:gap-1.5">
           <span className="text-sm sm:text-base font-bold text-[#FFAA01]">
@@ -217,6 +225,7 @@ const MenuCard = ({
             <div className="flex gap-1">
               <Button
                 variant="ghost"
+                disabled={!isItemAvailable}
                 size="sm"
                 onClick={handleViewDetails}
                 className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100"
@@ -294,6 +303,7 @@ const MenuCard = ({
                   <Button
                     variant="ghost"
                     size="sm"
+                    disabled={!isItemAvailable}
                     onClick={handleViewDetails}
                     className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100"
                   >

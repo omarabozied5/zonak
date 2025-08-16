@@ -272,6 +272,7 @@ const RestaurantDetails: React.FC = () => {
           restaurant={restaurant}
           placeId={id}
           categoryId={menuItems[0]?.categories?.[0]?.id || 0}
+          restaurant={restaurant}
         />
       </div>
 

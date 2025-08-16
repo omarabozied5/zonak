@@ -46,10 +46,8 @@ const MostOrderedItemSlider: React.FC<SliderProps> = ({
 
     if (width >= 1536) newItemsVisible = itemsPerView.large; // 2xl
     else if (width >= 1280)
-      newItemsVisible = Math.min(
-        itemsPerView.large,
-        itemsPerView.desktop
-      ); // xl
+      newItemsVisible = Math.min(itemsPerView.large, itemsPerView.desktop);
+    // xl
     else if (width >= 1024) newItemsVisible = itemsPerView.desktop; // lg
     else if (width >= 768) newItemsVisible = itemsPerView.tablet; // md
     else if (width >= 640)
@@ -230,7 +228,7 @@ const MostOrderedItemSlider: React.FC<SliderProps> = ({
       {/* Progress Indicator */}
       {showProgress && maxSlides > 1 && (
         <div className="mt-3 sm:mt-4 lg:mt-6 text-center text-xs sm:text-sm text-[#053468]/70 font-medium">
-          عرض {startIndex + 1}-{endIndex} من {totalItems}
+          عرض {currentIndex + 1} من {maxSlides}
         </div>
       )}
 

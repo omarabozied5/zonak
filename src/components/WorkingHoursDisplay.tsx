@@ -23,188 +23,360 @@ interface WorkingHoursDisplayProps {
 }
 
 interface PlaceStatus {
-  status: "Open" | "Close" | "OpenAllDay" | "CloseAllDay";
-  until?: string;
-  text?: string;
-  color?: string;
+  isOpen: boolean;
+  description: string;
+  closeTime: string;
+  color: string;
 }
 
-// Time formatting function
-const formatTime = (time: string | null | Date): string => {
-  if (!time) return "12:00 ص";
+// Arabic day names mapping (matching Swift implementation)
+const daysArabic: { [key: number]: string } = {
+  1: "السبت",
+  2: "الأحد",
+  3: "الإثنين",
+  4: "الثلاثاء",
+  5: "الأربعاء",
+  6: "الخميس",
+  7: "الجمعة",
+};
 
-  let date: Date;
-  if (time instanceof Date) {
-    date = time;
-  } else {
-    if (time === "00:00:00") return "12:00 ص";
-    const [hour, minute] = time.split(":");
-    date = new Date();
-    date.setHours(+hour);
-    date.setMinutes(+minute);
-  }
+// Time formatting function (matching Swift formatTimeForDisplay)
+const formatTimeForDisplay = (timeString: string | null): string => {
+  if (!timeString) return "";
 
-  return new Intl.DateTimeFormat("ar-EG", {
+  const inputDate = new Date(`1970-01-01T${timeString}`);
+  if (isNaN(inputDate.getTime())) return timeString;
+
+  return new Intl.DateTimeFormat("en", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }).format(date);
+  }).format(inputDate);
 };
 
-// Simplified place status checker based on business rules
-const isPlaceOpenNow = (
-  workingHoursToday: WorkingHour | undefined,
-  currentTime: Date = new Date()
-): PlaceStatus => {
-  // If no working hours data
-  if (!workingHoursToday) {
-    return {
-      status: "CloseAllDay",
-      text: "مغلق",
-      color: "text-gray-500",
-    };
+// Convert time string to minutes (matching Swift implementation)
+const timeStringToMinutes = (timeString: string): number => {
+  if (!timeString) return 0;
+  const components = timeString.split(":");
+  if (components.length >= 2) {
+    const hours = parseInt(components[0]) || 0;
+    const minutes = parseInt(components[1]) || 0;
+    return hours * 60 + minutes;
+  }
+  return 0;
+};
+
+// Check if time is within period (matching Swift logic)
+const isTimeWithinPeriod = (
+  currentMinutes: number,
+  openMinutes: number,
+  closeMinutes: number
+): boolean => {
+  if (closeMinutes < openMinutes) {
+    // Period extends across midnight
+    return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+  } else {
+    // Regular period within same day
+    return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+  }
+};
+
+// Check previous day extended hours (EXACT Swift logic)
+const checkPreviousDayExtendedHours = (
+  hours: WorkingHour,
+  previousDayHours: WorkingHour,
+  currentMinutes: number
+): PlaceStatus | null => {
+  // EXACT Swift logic: Check second period first
+  if (
+    previousDayHours.is_second_period === 1 &&
+    previousDayHours.second_close_time &&
+    previousDayHours.second_open_time
+  ) {
+    const closeMinutes = timeStringToMinutes(
+      previousDayHours.second_close_time
+    );
+    const openMinutes = timeStringToMinutes(previousDayHours.second_open_time);
+
+    // CRITICAL: Only if crosses midnight AND current time < close
+    if (closeMinutes < openMinutes && currentMinutes < closeMinutes) {
+      // Check current day's is24H setting (defaults to true in Swift)
+      if (hours.is_24h ?? true) {
+        return {
+          isOpen: true,
+          description: "مفتوح . يفتح 24 ساعه",
+          closeTime: "",
+          color: "text-green-600",
+        };
+      } else {
+        return {
+          isOpen: true,
+          description: `مفتوح . ويغلق ${formatTimeForDisplay(
+            previousDayHours.second_close_time
+          )}`,
+          closeTime: previousDayHours.second_close_time,
+          color: "text-green-600",
+        };
+      }
+    }
+  }
+  // EXACT Swift: else if (not else) - only if no second period
+  else if (previousDayHours.close_time && previousDayHours.open_time) {
+    const closeMinutes = timeStringToMinutes(previousDayHours.close_time);
+    const openMinutes = timeStringToMinutes(previousDayHours.open_time);
+
+    if (closeMinutes < openMinutes && currentMinutes < closeMinutes) {
+      if (hours.is_24h ?? true) {
+        return {
+          isOpen: true,
+          description: "مفتوح . يفتح 24 ساعه",
+          closeTime: "",
+          color: "text-green-600",
+        };
+      } else {
+        return {
+          isOpen: true,
+          description: `مفتوح . ويغلق ${formatTimeForDisplay(
+            previousDayHours.close_time
+          )}`,
+          closeTime: previousDayHours.close_time,
+          color: "text-green-600",
+        };
+      }
+    }
   }
 
-  // Case 1: is_24h is true - restaurant is open 24 hours (ignore all other flags)
-  if (workingHoursToday.is_24h) {
+  return null;
+};
+
+// Check current day hours (EXACT Swift implementation)
+const checkCurrentDayHours = (
+  hours: WorkingHour,
+  currentMinutes: number
+): PlaceStatus | null => {
+  // CRITICAL: Swift defaults is24H to TRUE
+  if (hours.is_24h ?? true) {
     return {
-      status: "OpenAllDay",
-      text: "مفتوح 24 ساعة",
+      isOpen: true,
+      description: "مفتوح . يفتح 24 ساعه",
+      closeTime: "",
       color: "text-green-600",
     };
   }
 
-  // Case 2: is_24h is false - check is_closed
-  if (!workingHoursToday.is_24h) {
-    // If is_closed is true, restaurant is closed
-    if (
-      workingHoursToday.is_closed === "1" ||
-      workingHoursToday.is_closed_bool === true
-    ) {
+  if (hours.is_closed_bool ?? (false || hours.is_closed === "1")) {
+    return {
+      isOpen: false,
+      description: "مغلق . يغلق 24 ساعه",
+      closeTime: "",
+      color: "text-red-500",
+    };
+  }
+
+  const firstPeriodOpenMinutes = timeStringToMinutes(hours.open_time || "");
+
+  // If current time is before first opening time
+  if (currentMinutes < firstPeriodOpenMinutes) {
+    return {
+      isOpen: false,
+      description: `مغلق . ويفتح ${formatTimeForDisplay(hours.open_time)}`,
+      closeTime: "",
+      color: "text-red-500",
+    };
+  }
+
+  // Check first period
+  if (hours.open_time && hours.close_time) {
+    const openMinutes = timeStringToMinutes(hours.open_time);
+    const closeMinutes = timeStringToMinutes(hours.close_time);
+
+    if (isTimeWithinPeriod(currentMinutes, openMinutes, closeMinutes)) {
       return {
-        status: "CloseAllDay",
-        text: "مغلق",
-        color: "text-gray-500",
+        isOpen: true,
+        description: `مفتوح . ويغلق ${formatTimeForDisplay(hours.close_time)}`,
+        closeTime: hours.close_time,
+        color: "text-green-600",
       };
-    }
-
-    // If is_closed is false, check open/close times
-    const parseTime = (timeStr: string | null): Date | null => {
-      if (!timeStr || timeStr.trim() === "") return null;
-      const [h, m] = timeStr.split(":").map(Number);
-      const date = new Date(currentTime);
-      date.setHours(h, m || 0, 0, 0);
-      return date;
-    };
-
-    const isTimeBetween = (start: Date | null, end: Date | null): boolean => {
-      if (!start || !end) return false;
-      if (end < start) {
-        // Crosses midnight
-        return currentTime >= start || currentTime < end;
-      }
-      return currentTime >= start && currentTime < end;
-    };
-
-    // Case 3: Check if restaurant has second period (is_second_period = 1)
-    if (workingHoursToday.is_second_period === 1) {
-      const secondOpen = parseTime(workingHoursToday.second_open_time);
-      const secondClose = parseTime(workingHoursToday.second_close_time);
-
-      if (isTimeBetween(secondOpen, secondClose)) {
-        return {
-          status: "Open",
-          until: formatTime(secondClose!),
-          text: `مفتوح حتى ${formatTime(secondClose!)}`,
-          color: "text-green-600",
-        };
-      }
-
-      // If not in second period but has second period, check if we should show next opening
-      if (secondOpen && currentTime < secondOpen) {
-        return {
-          status: "Close",
-          until: formatTime(secondOpen),
-          text: `مغلق - يفتح ${formatTime(secondOpen)}`,
-          color: "text-red-500",
-        };
-      }
-    } else {
-      // Regular single period
-      const firstOpen = parseTime(workingHoursToday.open_time);
-      const firstClose = parseTime(workingHoursToday.close_time);
-
-      if (isTimeBetween(firstOpen, firstClose)) {
-        return {
-          status: "Open",
-          until: formatTime(firstClose!),
-          text: `مفتوح حتى ${formatTime(firstClose!)}`,
-          color: "text-green-600",
-        };
-      }
-
-      // If not open now, check if we should show next opening
-      if (firstOpen && currentTime < firstOpen) {
-        return {
-          status: "Close",
-          until: formatTime(firstOpen),
-          text: `مغلق - يفتح ${formatTime(firstOpen)}`,
-          color: "text-red-500",
-        };
-      }
     }
   }
 
-  // Default: closed
+  // Check second period
+  if (
+    hours.is_second_period === 1 &&
+    hours.second_open_time &&
+    hours.second_close_time
+  ) {
+    const openMinutes = timeStringToMinutes(hours.second_open_time);
+    const closeMinutes = timeStringToMinutes(hours.second_close_time);
+
+    if (isTimeWithinPeriod(currentMinutes, openMinutes, closeMinutes)) {
+      return {
+        isOpen: true,
+        description: `مفتوح . ويغلق ${formatTimeForDisplay(
+          hours.second_close_time
+        )}`,
+        closeTime: hours.second_close_time,
+        color: "text-green-600",
+      };
+    }
+  }
+
+  // If time is between first and second period
+  if (
+    hours.is_second_period === 1 &&
+    hours.close_time &&
+    hours.second_open_time
+  ) {
+    const firstCloseMinutes = timeStringToMinutes(hours.close_time);
+    const secondOpenMinutes = timeStringToMinutes(hours.second_open_time);
+
+    if (
+      currentMinutes > firstCloseMinutes &&
+      currentMinutes < secondOpenMinutes
+    ) {
+      return {
+        isOpen: false,
+        description: `مغلق . ويفتح ${formatTimeForDisplay(
+          hours.second_open_time
+        )}`,
+        closeTime: "",
+        color: "text-red-500",
+      };
+    }
+  }
+
+  return null;
+};
+
+// Get next opening time (matching Swift implementation)
+const getNextOpeningTime = (
+  currentDay: number,
+  allHours: WorkingHour[]
+): PlaceStatus => {
+  let nextOpenTime = "";
+  let daysUntilOpen = 0;
+
+  for (let i = 1; i <= 7; i++) {
+    const futureDayNumber = ((currentDay + i - 1) % 7) + 1;
+    const futureDay = allHours.find((h) => h.day === futureDayNumber);
+
+    if (futureDay && !futureDay.is_closed_bool && futureDay.is_closed !== "1") {
+      if (futureDay.is_24h) {
+        nextOpenTime = "00:00:00";
+      } else {
+        nextOpenTime = futureDay.open_time || "";
+      }
+      daysUntilOpen = i;
+      break;
+    }
+  }
+
+  let nextOpenDescription: string;
+  if (daysUntilOpen === 1) {
+    nextOpenDescription = ` غدًا ${formatTimeForDisplay(nextOpenTime)}`;
+  } else {
+    nextOpenDescription = ` بعد ${daysUntilOpen} أيام ${formatTimeForDisplay(
+      nextOpenTime
+    )}`;
+  }
+
   return {
-    status: "CloseAllDay",
-    text: "مغلق",
-    color: "text-gray-500",
+    isOpen: false,
+    description: `مغلق . يفتح${nextOpenDescription}`,
+    closeTime: "",
+    color: "text-red-500",
   };
 };
 
-// Get detailed working hours display for a day
-const getWorkingHourDisplay = (
-  dayData: WorkingHour | undefined
-): { text: string; color: string } => {
-  if (!dayData) return { text: "مغلق", color: "text-gray-500" };
+// Main working hours description function (matching Swift getWorkingHoursDescription)
+const getWorkingHoursDescription = (
+  hours: WorkingHour,
+  allHours: WorkingHour[]
+): PlaceStatus => {
+  const currentTime = new Date();
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
 
-  // Check if 24 hours first (ignore all other flags)
-  if (dayData.is_24h) {
-    return { text: "مفتوح 24 ساعة", color: "text-green-600" };
+  if (!hours.day) {
+    return {
+      isOpen: true,
+      description: "في حاله التجهيز",
+      closeTime: "",
+      color: "text-gray-500",
+    };
   }
 
-  // Check if explicitly closed
-  if (dayData.is_closed === "1" || dayData.is_closed_bool === true) {
-    return { text: "مغلق", color: "text-gray-500" };
-  }
+  // Check extended hours from previous day
+  const previousDay = hours.day === 1 ? 7 : hours.day - 1;
+  const previousDayHours = allHours.find((h) => h.day === previousDay);
 
-  // Build time display based on periods
-  const periods: string[] = [];
-
-  if (dayData.is_second_period === 1) {
-    // Show second period times
-    if (dayData.second_open_time && dayData.second_close_time) {
-      periods.push(
-        `${formatTime(dayData.second_open_time)} - ${formatTime(
-          dayData.second_close_time
-        )}`
-      );
-    }
-  } else {
-    // Show regular period times
-    if (dayData.open_time && dayData.close_time) {
-      periods.push(
-        `${formatTime(dayData.open_time)} - ${formatTime(dayData.close_time)}`
-      );
+  if (previousDayHours) {
+    const previousDayStatus = checkPreviousDayExtendedHours(
+      hours,
+      previousDayHours,
+      currentMinutes
+    );
+    if (previousDayStatus) {
+      return previousDayStatus;
     }
   }
 
-  if (periods.length > 0) {
-    return { text: periods.join(" • "), color: "text-gray-700" };
+  // Check current day hours
+  const currentDayStatus = checkCurrentDayHours(hours, currentMinutes);
+  if (currentDayStatus) {
+    return currentDayStatus;
   }
 
-  return { text: "مغلق", color: "text-gray-500" };
+  // If time is outside all periods, show next opening time
+  return getNextOpeningTime(hours.day, allHours);
+};
+
+// Get simple working hours display for dropdown (EXACT Swift logic)
+const getSimpleWorkingHoursDisplay = (
+  hours: WorkingHour
+): { isSecond: boolean; openTime: string; secondOpenTime: string } => {
+  // CRITICAL: Swift defaults is24H to TRUE
+  if (hours.is_24h ?? true) {
+    return {
+      isSecond: false,
+      openTime: "مفتوح طوال اليوم",
+      secondOpenTime: "",
+    };
+  }
+
+  if (hours.is_closed_bool ?? (false || hours.is_closed === "1")) {
+    return {
+      isSecond: false,
+      openTime: "مغلق طوال اليوم",
+      secondOpenTime: "",
+    };
+  }
+
+  let openTimeText = "";
+  if (hours.open_time && hours.close_time) {
+    openTimeText = `${formatTimeForDisplay(
+      hours.open_time
+    )} - ${formatTimeForDisplay(hours.close_time)}`;
+  }
+
+  if (hours.is_second_period === 1) {
+    let secondOpenTimeText = "";
+    if (hours.second_open_time && hours.second_close_time) {
+      secondOpenTimeText = `${formatTimeForDisplay(
+        hours.second_open_time
+      )} - ${formatTimeForDisplay(hours.second_close_time)}`;
+      return {
+        isSecond: true,
+        openTime: openTimeText,
+        secondOpenTime: secondOpenTimeText,
+      };
+    }
+  }
+
+  return {
+    isSecond: false,
+    openTime: openTimeText,
+    secondOpenTime: "",
+  };
 };
 
 const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
@@ -272,7 +444,16 @@ const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
   // Get today's hours for status calculation
   const todayAPIDay = convertJSDayToAPIDay(today);
   const todayHours = workingHours.find((d) => d.day === todayAPIDay);
-  const currentStatus = isPlaceOpenNow(todayHours);
+
+  // Use the Swift-matching logic to get current status
+  const currentStatus = todayHours
+    ? getWorkingHoursDescription(todayHours, workingHours)
+    : {
+        isOpen: false,
+        description: "مغلق",
+        closeTime: "",
+        color: "text-red-500",
+      };
 
   return (
     <div className="w-full bg-white" dir="rtl">
@@ -292,21 +473,14 @@ const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
           <div className="flex items-center gap-2 flex-1">
             <div
               className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                currentStatus.status === "Open" ||
-                currentStatus.status === "OpenAllDay"
-                  ? "bg-green-400"
-                  : "bg-red-400"
+                currentStatus.isOpen ? "bg-green-400" : "bg-red-400"
               }`}
             >
               <Clock className="h-3 w-3 text-white" />
             </div>
             <div className="flex-1">
-              <span
-                className={`font-medium text-sm ${
-                  currentStatus.color || "text-gray-700"
-                }`}
-              >
-                {currentStatus.text || "غير محدد"}
+              <span className={`font-medium text-sm ${currentStatus.color}`}>
+                {currentStatus.description}
               </span>
             </div>
           </div>
@@ -330,8 +504,23 @@ const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
               {dayNames.map((dayName, index) => {
                 const apiDay = convertJSDayToAPIDay(index);
                 const dayData = workingHours.find((d) => d.day === apiDay);
-                const dayDisplay = getWorkingHourDisplay(dayData);
                 const isToday = index === today;
+
+                let displayText = "مغلق";
+                let textColor = "text-gray-500";
+
+                if (dayData) {
+                  const simpleDisplay = getSimpleWorkingHoursDisplay(dayData);
+                  if (simpleDisplay.isSecond && simpleDisplay.secondOpenTime) {
+                    displayText = `${simpleDisplay.openTime} • ${simpleDisplay.secondOpenTime}`;
+                    textColor = "text-gray-700";
+                  } else if (simpleDisplay.openTime) {
+                    displayText = simpleDisplay.openTime;
+                    textColor = simpleDisplay.openTime.includes("مفتوح")
+                      ? "text-green-600"
+                      : "text-gray-700";
+                  }
+                }
 
                 return (
                   <div
@@ -354,8 +543,8 @@ const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
                         </span>
                       )}
                     </div>
-                    <span className={`text-sm ${dayDisplay.color}`}>
-                      {dayDisplay.text}
+                    <span className={`text-sm ${textColor}`}>
+                      {displayText}
                     </span>
                   </div>
                 );
