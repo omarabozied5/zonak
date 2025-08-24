@@ -1,57 +1,22 @@
 import React from "react";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import RestaurantBadge from "./ResturantBadge";
-import { Restaurant } from "@/types/types";
+import BackButton from "../ui/BackButton";
 
 interface CartHeaderProps {
-  userName: string;
-  onGoBack: () => void;
-  primaryRestaurant?: {
-    merchantId: string | number;
-    name: string;
-    placeId: string;
-  } | null;
+  onBack: () => void;
 }
 
-const CartHeader: React.FC<CartHeaderProps> = ({
-  userName,
-  onGoBack,
-  primaryRestaurant,
-}) => {
-  return (
-    <div className="mb-6 sm:mb-8">
-      {/* Back Button and Title */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onGoBack}
-          className="border-[#FFAA01]/30 hover:bg-[#FFAA01]/10"
-          aria-label="العودة للصفحة السابقة"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#053468]">
-            سلة التسوق
-          </h1>
-          <p className="text-gray-600 text-sm sm:text-base">
-            مرحباً {userName}، راجع طلبك قبل المتابعة للدفع
-          </p>
-        </div>
-      </div>
-
-      {/* Restaurant Badge */}
-      {primaryRestaurant && (
-        <RestaurantBadge
-          merchantId={primaryRestaurant.merchantId}
-          restaurantName={primaryRestaurant.name}
-          placeId={primaryRestaurant.placeId}
-        />
-      )}
+const CartHeader: React.FC<CartHeaderProps> = React.memo(({ onBack }) => (
+  <div className="relative flex items-center justify-center h-20 bg-white border-b">
+    {/* Back Button on the right edge */}
+    <div className="absolute right-4">
+      <BackButton />
     </div>
-  );
-};
+
+    {/* Centered Title */}
+    <h1 className="text-lg sm:text-xl font-bold text-black">السلة</h1>
+  </div>
+));
+
+CartHeader.displayName = "CartCheckoutHeader";
 
 export default CartHeader;

@@ -1,13 +1,35 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { User, Clock, Home, ShoppingCart, LogOut, Menu, X } from "lucide-react";
+import {
+  User,
+  Clock,
+  Home,
+  ShoppingCart,
+  LogOut,
+  Menu,
+  X,
+  Search,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useCartStore } from "@/stores/useCartStore";
+import { useOrderStore } from "@/hooks/useOrderStore"; // Add this import
 import LoginModal from "./LoginModal";
+import SearchBar from "./SearchBar";
 import { toast } from "sonner";
 
-const Navigation = () => {
+// Add interface for search props
+interface NavigationProps {
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
+  searchPlaceholder?: string;
+}
+
+const Navigation = ({
+  searchQuery = "",
+  onSearchChange,
+  searchPlaceholder = "ابحث عن مطاعم",
+}: NavigationProps) => {
   const location = useLocation();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -17,8 +39,15 @@ const Navigation = () => {
   const userId = user?.id || null;
   const cartStore = useCartStore(userId);
 
+  // Add orders store using existing useOrderStore
+  const orderStore = useOrderStore(userId?.toString() || null);
+
   const navItems = [
-    { name: "الطلبات الحالية", path: "/current-orders", icon: Clock },
+    {
+      name: "الطلبات الحالية",
+      path: "/current-orders",
+      icon: Clock,
+    },
   ];
 
   const handleLogout = () => {
@@ -34,6 +63,9 @@ const Navigation = () => {
   // Get cart items count properly
   const cartItemsCount = cartStore.getTotalItems();
 
+  // Get current orders count using existing store method
+  const currentOrdersCount = orderStore.getActiveOrdersCount();
+
   const NavLink = ({ item, onClick = () => {}, className = "" }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
@@ -42,13 +74,25 @@ const Navigation = () => {
       <Link
         to={item.path}
         onClick={onClick}
-        className={`flex items-center space-x-2 space-x-reverse px-3 md:px-4 py-2 md:py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+        className={`relative flex items-center space-x-2 space-x-reverse px-3 md:px-4 py-2 md:py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
           isActive
             ? "text-[#FFAA01] bg-[#FFAA01]/10 shadow-sm"
             : "text-gray-700 hover:text-[#FFAA01] hover:bg-[#FFAA01]/5"
         } ${className}`}
       >
-        <Icon className="h-4 w-4 md:h-4 md:w-4" />
+        <div className="relative inline-block">
+          <Icon className="h-4 w-4 md:h-4 md:w-4" />
+          {/* Add badge for current orders */}
+          {item.path === "/current-orders" && currentOrdersCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 bg-white text-[#FFD14A] 
+                     text-[10px] rounded-full h-4 w-4 
+                     flex items-center justify-center font-bold shadow"
+            >
+              {currentOrdersCount}
+            </span>
+          )}
+        </div>
         <span>{item.name}</span>
       </Link>
     );
@@ -67,10 +111,14 @@ const Navigation = () => {
             : "text-gray-700 hover:text-[#FFAA01] hover:bg-[#FFAA01]/5"
         } ${className}`}
       >
-        <div className="relative">
-          <ShoppingCart className="h-4 w-4 md:h-4 md:w-4" />
+        <div className="relative inline-block">
+          <ShoppingCart className="h-6 w-6" />
           {cartItemsCount > 0 && (
-            <span className="absolute -top-2 -right-2 bg-[#FFAA01] text-white text-xs rounded-full h-4 w-4 md:h-5 md:w-5 flex items-center justify-center font-bold shadow-sm">
+            <span
+              className="absolute -top-1 -right-1 bg-white text-[#FFD14A] 
+                     text-[10px] rounded-full h-4 w-4 
+                     flex items-center justify-center font-bold shadow"
+            >
               {cartItemsCount}
             </span>
           )}
@@ -80,33 +128,114 @@ const Navigation = () => {
     );
   };
 
-  const MobileIconButton = ({ to, isActive, children, className = "" }) => (
-    <Link
-      to={to}
-      className={`relative p-2 rounded-lg transition-all duration-200 ${
-        isActive
-          ? "text-[#FFAA01] bg-[#FFAA01]/10"
-          : "text-gray-700 hover:text-[#FFAA01] hover:bg-[#FFAA01]/5"
-      } ${className}`}
-    >
-      {children}
-    </Link>
+  // Mobile navigation icons with custom images
+  const MobileNavIcons = () => (
+    <div className="flex items-center space-x-2 space-x-reverse md:hidden">
+      <Link
+        to="/cart"
+        className={`relative p-2 rounded-lg transition-all duration-200 ${
+          location.pathname === "/cart"
+            ? "bg-[#FFAA01]/10"
+            : "hover:bg-[#FFAA01]/5"
+        }`}
+      >
+        <div className="relative">
+          <img
+            src="/shopping-bag.png"
+            alt="Cart"
+            className="w-5 h-5"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              const fallback = document.createElement("div");
+              fallback.innerHTML =
+                '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="m2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>';
+              e.currentTarget.parentNode?.appendChild(fallback);
+            }}
+          />
+          {cartItemsCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-white text-[#FBD252] text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold shadow-sm border border-gray-200">
+              {cartItemsCount}
+            </span>
+          )}
+        </div>
+      </Link>
+
+      <Link
+        to="/current-orders"
+        className={`relative p-2 rounded-lg transition-all duration-200 ${
+          location.pathname === "/current-orders"
+            ? "bg-[#FFAA01]/10"
+            : "hover:bg-[#FFAA01]/5"
+        }`}
+      >
+        <div className="relative">
+          <img
+            src="/currentOrder.png"
+            alt="Current Orders"
+            className="w-5 h-5"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              const fallback = document.createElement("div");
+              fallback.innerHTML =
+                '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>';
+              e.currentTarget.parentNode?.appendChild(fallback);
+            }}
+          />
+          {/* Add badge for mobile current orders icon */}
+          {currentOrdersCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-white text-[#FBD252] text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold shadow-sm border border-gray-200">
+              {currentOrdersCount}
+            </span>
+          )}
+        </div>
+      </Link>
+    </div>
   );
+
+  // Check if we're on home page
+  const isHomePage = location.pathname === "/";
 
   return (
     <>
-      <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50 backdrop-blur-md bg-white/95">
+      <nav className="bg-[#FFD14A] shadow-sm border-b border-gray-100 sticky top-0 z-50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-          <div className="flex justify-between items-center h-14 md:h-16">
-            {/* Logo - Now acts as Home button */}
-            <div className="flex items-center flex-shrink-0">
-              <Link
-                to="/"
-                className="flex items-center space-x-2 space-x-reverse"
-              >
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-2xl flex items-center justify-center">
+          {/* Main navigation row */}
+          <div
+            className={`flex justify-between items-center ${
+              isHomePage ? "h-16 md:h-16" : "h-20 md:h-20"
+            }`}
+          >
+            {/* Back Button and Logo */}
+            <div className="flex items-center flex-shrink-0 space-x-3 space-x-reverse">
+              {/* Back Button - Only show when not on home page */}
+              {!isHomePage && (
+                <button
+                  onClick={() => window.history.back()}
+                  className="p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
+                  aria-label="Go back"
+                >
+                  <svg
+                    className="w-5 h-5 text-gray-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              )}
+
+              {/* Logo - Now acts as Home button */}
+              <Link to="/" className="flex items-center">
+                <div className="w-14 h-15 md:w-15 md:h-15 rounded-2xl flex items-center justify-center">
                   <img
-                    src="/zonak.png"
+                    src="/newLogo.png"
                     alt="Zonak Icon"
                     className="w-full h-full object-contain"
                     onError={(e) => {
@@ -114,66 +243,38 @@ const Navigation = () => {
                     }}
                   />
                 </div>
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold text-[#FFAA01]">
-                    <img
-                      src="/public/logo.png"
-                      width="40"
-                      height="auto"
-                      alt="Logo"
-                      className="md:w-[50px]"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                        const fallback = document.createElement("span");
-                        fallback.textContent = "زوونك";
-                        fallback.className =
-                          "text-lg md:text-xl font-bold text-[#FFAA01]";
-                        e.currentTarget.parentNode?.appendChild(fallback);
-                      }}
-                    />
-                  </h1>
-                  <p className="text-xs font-bold text-gray-500 hidden sm:block">
-                    أفضل المأكولات العربية
-                  </p>
-                </div>
               </Link>
+
+              {/* City/Location indicator - Only show on home page */}
+              {isHomePage && (
+                <div className="hidden md:flex items-center text-gray-700 mr-4">
+                  <svg
+                    className="w-4 h-4 ml-2"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                  </svg>
+                  <span className="text-sm font-medium">المدينة المنورة</span>
+                </div>
+              )}
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-4 lg:space-x-6 space-x-reverse">
-              <NavLink item={{ name: "الرئيسية", path: "/", icon: Home }} />
-              {navItems.map((item) => (
-                <NavLink key={item.path} item={item} />
-              ))}
-              <CartLink />
-            </div>
+            {/* Desktop Navigation - Only show when not on home page */}
+            {!isHomePage && (
+              <div className="hidden md:flex items-center space-x-4 lg:space-x-6 space-x-reverse">
+                <NavLink item={{ name: "الرئيسية", path: "/", icon: Home }} />
+                {navItems.map((item) => (
+                  <NavLink key={item.path} item={item} />
+                ))}
+                <CartLink />
+              </div>
+            )}
 
             {/* Mobile Navigation Icons + Menu Button */}
             <div className="flex items-center space-x-2 md:space-x-3 space-x-reverse">
-              {/* Mobile Current Orders & Cart Icons - Always visible */}
-              <div className="flex items-center space-x-2 space-x-reverse md:hidden">
-                <MobileIconButton
-                  to="/current-orders"
-                  isActive={location.pathname === "/current-orders"}
-                >
-                  <Clock className="h-5 w-5" />
-                </MobileIconButton>
-
-                <MobileIconButton
-                  to="/cart"
-                  isActive={location.pathname === "/cart"}
-                  className="relative"
-                >
-                  <div className="relative">
-                    <ShoppingCart className="h-5 w-5" />
-                    {cartItemsCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-[#FFAA01] text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold shadow-sm">
-                        {cartItemsCount}
-                      </span>
-                    )}
-                  </div>
-                </MobileIconButton>
-              </div>
+              {/* Mobile Current Orders & Cart Icons */}
+              <MobileNavIcons />
 
               {/* Desktop User Actions */}
               {isAuthenticated ? (
@@ -193,7 +294,7 @@ const Navigation = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleLogout}
-                    className="flex items-center space-x-1 space-x-reverse border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-sm px-2 lg:px-3"
+                    className="flex items-center space-x-1 space-x-reverse border-gray-200 text-gray-600 hover:bg-red-50 hover:text-yellow-5 hover:border-red-200 text-sm px-2 lg:px-3"
                   >
                     <LogOut className="h-3 w-3 lg:h-4 lg:w-4" />
                     <span className="hidden lg:inline">خروج</span>
@@ -219,33 +320,45 @@ const Navigation = () => {
                 </div>
               )}
 
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden p-2"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                {isMobileMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </Button>
+              {/* Mobile Menu Button - Show ONLY on home page */}
+              {isHomePage && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="md:hidden p-2 hover:bg-[#white]/20 text-[#FBD252]"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                >
+                  {isMobileMenuOpen ? (
+                    <X className="h-5 w-5" />
+                  ) : (
+                    <Menu className="h-5 w-5 text-white" />
+                  )}
+                </Button>
+              )}
             </div>
           </div>
+
+          {/* Search Bar Row - Only show on home page, below the main navigation */}
+          {isHomePage && (
+            <div className="pb-0">
+              <SearchBar
+                value={searchQuery}
+                onChange={onSearchChange || (() => {})}
+                placeholder={searchPlaceholder}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Mobile Menu - Only contains Auth functionality */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-md">
+        {/* Mobile Menu - Show on home page when menu is open */}
+        {isMobileMenuOpen && isHomePage && (
+          <div className="md:hidden border-t border-gray-100 bg-[#FFD14A]/95 backdrop-blur-md">
             <div className="px-3 pt-2 pb-3">
-              {/* Mobile Auth Section */}
               <div className="pt-3">
                 {isAuthenticated ? (
-                  <>
-                    <div className="flex items-center space-x-3 space-x-reverse px-4 py-3 bg-gray-50 rounded-xl mb-2">
-                      <div className="w-8 h-8 bg-[#FFAA01] rounded-full flex items-center justify-center">
+                  <div className="flex items-center justify-between space-x-3 space-x-reverse px-4 py-3 bg-gray-50 rounded-xl">
+                    <div className="flex items-center space-x-3 space-x-reverse">
+                      <div className="w-8 h-8 bg-[#F7BD01] rounded-full flex items-center justify-center">
                         <User className="h-4 w-4 text-white" />
                       </div>
                       <span className="text-sm font-medium text-gray-700 truncate">
@@ -257,27 +370,28 @@ const Navigation = () => {
                     </div>
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => {
                         handleLogout();
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full flex items-center justify-center space-x-2 space-x-reverse border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                      className="flex items-center space-x-1 space-x-reverse border-gray-200 text-gray-600 hover:bg-red-50 hover:text-yellow-600 hover:border-red-200 px-3 py-1"
                     >
-                      <LogOut className="h-4 w-4" />
-                      <span>تسجيل الخروج</span>
+                      <LogOut className="h-3 w-3" />
+                      <span className="text-xs">خروج</span>
                     </Button>
-                  </>
+                  </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="flex space-x-2 space-x-reverse">
                     <Button
                       variant="outline"
                       onClick={() => handleAuthAction(true)}
-                      className="w-full border-[#FFAA01] text-[#FFAA01] hover:bg-[#FFAA01] hover:text-white"
+                      className="flex-1 border-[#FFAA01] text-[#FFAA01] hover:bg-[#FFAA01] hover:text-white"
                     >
                       تسجيل الدخول
                     </Button>
                     <Button
-                      className="w-full bg-gradient-to-r from-[#FFAA01] to-yellow-500 text-white hover:from-[#FFAA01]/90 hover:to-yellow-500/90 shadow-lg"
+                      className="flex-1 bg-gradient-to-r from-[#FFAA01] to-yellow-500 text-white hover:from-[#FFAA01]/90 hover:to-yellow-500/90 shadow-lg"
                       onClick={() => handleAuthAction(true)}
                     >
                       إنشاء حساب

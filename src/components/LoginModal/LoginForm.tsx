@@ -80,48 +80,77 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-[#053468] to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <LogIn className="w-8 h-8 text-white" />
+        <div className="w-16 h-16  rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <img src="login.png" />
         </div>
-        <h2 className="text-2xl font-bold text-[#053468] mb-2">
-          مرحباً بك في زونك
-        </h2>
+        <h2 className="text-2xl font-bold text-black mb-2">إبدأ مع زوونك </h2>
         <p className="text-gray-600 text-sm">ادخل بياناتك لتسجيل الدخول</p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Phone Field */}
+
         <FormField
           label="رقم الجوال"
-          icon={<Phone className="w-4 h-4" />}
           error={
             validationState.phone.touched && !validationState.phone.isValid
               ? validationState.phone.message
               : undefined
           }
         >
-          <Input
-            type="tel"
-            value={phone}
-            onChange={(e) => handlePhoneChange(e.target.value)}
-            onBlur={handlePhoneBlur}
-            onKeyDown={handleKeyDown}
-            className={cn(
-              "text-right transition-colors",
-              validationState.phone.touched && !validationState.phone.isValid
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                : "border-gray-300 focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-            )}
-            disabled={isLoading}
-            autoComplete="tel"
-          />
+          <div className="flex flex-row-reverse w-full gap-2">
+            {/* Country Selector (flag only) */}
+            <div className="flex items-center justify-center w-[65px] h-[49px] rounded-md border border-[#d8dadc]">
+              <svg
+                className="w-3 h-3 text-gray-500 ml-2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+              <img
+                src="/saudiArabia.png" // replace with your flag asset
+                alt="SA"
+                className="w-6 h-6 object-cover"
+              />
+            </div>
+
+            {/* Phone Number Input with +966 prefix */}
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-black text-[16px] font-medium select-none">
+                +966
+              </span>
+              <Input
+                type="tel"
+                value={phone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                onBlur={handlePhoneBlur}
+                onKeyDown={handleKeyDown}
+                placeholder="051 234 5678"
+                className={cn(
+                  "h-[49px] pr-14 text-center text-[16px] rounded-md border border-[#d8dadc] placeholder:text-[#c8c8c8]",
+                  validationState.phone.touched &&
+                    !validationState.phone.isValid
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                    : "focus:border-[#FFAA01] focus:ring-[#FFAA01]"
+                )}
+                disabled={isLoading}
+                autoComplete="tel"
+              />
+            </div>
+          </div>
         </FormField>
 
         {/* Password Field */}
         <FormField
           label="كلمة المرور"
-          icon={<Lock className="w-4 h-4" />}
           error={
             validationState.password.touched &&
             !validationState.password.isValid
@@ -167,7 +196,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <Button
           type="submit"
           disabled={isLoading || !isFormValid}
-          className="w-full bg-[#FFAA01] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed h-12 text-base font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+          className="w-full bg-[#FBD252] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed h-12 text-base font-medium transition-all duration-200 shadow-md hover:shadow-lg"
         >
           {isLoading ? (
             <span className="flex items-center gap-2">
@@ -176,7 +205,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </span>
           ) : (
             <>
-              تسجيل الدخول
+              إستمرار
               <LogIn className="w-4 h-4 mr-2" />
             </>
           )}

@@ -1,38 +1,45 @@
 import React from "react";
-import { ShoppingBag, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { ShoppingCart, ArrowLeft } from "lucide-react";
 
-interface EmptyCartStateProps {
+interface CartEmptyStateProps {
   onExploreRestaurants: () => void;
 }
 
-const EmptyCartState: React.FC<EmptyCartStateProps> = ({
+const CartEmptyState: React.FC<CartEmptyStateProps> = ({
   onExploreRestaurants,
 }) => {
   return (
-    <Card className="text-center py-8 sm:py-12 border-[#FFAA01]/20">
-      <CardContent>
-        <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-[#FFAA01] to-[#053468] rounded-full flex items-center justify-center mx-auto mb-4">
-          <ShoppingBag className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
+    <div className="px-4 py-12 text-center">
+      <div className="max-w-sm mx-auto">
+        {/* Empty Cart Icon */}
+        <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+          <ShoppingCart className="w-12 h-12 text-gray-400" />
         </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-[#053468] mb-2">
-          السلة فارغة
-        </h2>
-        <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
-          لم تقم بإضافة أي أصناف بعد، ابدأ بتصفح المطاعم المتاحة
+
+        {/* Empty State Message */}
+        <h2 className="text-xl font-bold text-gray-900 mb-3">السلة فارغة</h2>
+        <p className="text-gray-600 mb-8 leading-relaxed">
+          لم تقم بإضافة أي عناصر إلى السلة بعد.
+          <br />
+          تصفح المطاعم واكتشف أشهى الأطباق!
         </p>
-        <Button
-          className="bg-gradient-to-r from-[#FFAA01] to-[#FFD700] hover:from-[#FF9900] hover:to-[#FFAA01] text-[#053468] font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+
+        {/* CTA Button */}
+        <button
           onClick={onExploreRestaurants}
-          aria-label="استكشاف المطاعم المتاحة"
+          className="w-full bg-[#fbd252] hover:bg-[#f9c52b] text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          استكشف المطاعم
-        </Button>
-      </CardContent>
-    </Card>
+          <span>تصفح المطاعم</span>
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+
+        {/* Additional Info */}
+        <div className="mt-8 text-sm text-gray-500">
+          <p>💡 نصيحة: يمكنك البحث عن مطعمك المفضل أو تصفح الفئات المختلفة</p>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default EmptyCartState;
+export default CartEmptyState;

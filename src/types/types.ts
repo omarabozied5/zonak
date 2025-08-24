@@ -147,6 +147,39 @@ export interface Restaurant {
   place_category: PlaceCategory;
   user: User;
 }
+// types/offers.ts
+
+export interface ValidOffersItem {
+  id: number;
+  offer_type: number;
+  discount?: number | null;
+  offer_details?: string | null;
+  end_date: string;
+  product_name?: string | null;
+  old_price?: number | null;
+  new_price?: number | null;
+  place_id: number;
+  user_id: number;
+  offer_image?: string | null;
+  main_offer: boolean;
+  is_offer_verified?: string;
+  start_date?: string;
+  main_offer_order?: number;
+  insertdate?: string;
+  places?: number[];
+}
+
+// Constants for offer types
+export const OFFER_TYPE_PRICE = 0;
+export const OFFER_TYPE_DISCOUNT = 1;
+export const OFFER_TYPE_OFFER = 3;
+export const OFFER_CASHBACK = 4;
+
+export interface OfferTextContent {
+  main: string;
+  sub: string;
+  badge: string;
+}
 
 // ===== API Response Types =====
 export interface ApiResponse<T = unknown> {

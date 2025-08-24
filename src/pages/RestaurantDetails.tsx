@@ -17,7 +17,8 @@ import { MenuItem } from "../hooks/useMenuItems";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Clock, AlertCircle } from "lucide-react";
 import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
-
+import OffersSection from "@/components/PlaceDetails/offer/OffersSection";
+import { ValidOffersItem } from "../types/types";
 // Interface for comprehensive restaurant data
 interface RestaurantData {
   restaurant: Restaurant;
@@ -126,6 +127,19 @@ const RestaurantDetails: React.FC = () => {
       setLoading(false);
     }
   }, [id]);
+  const handleOfferClick = useCallback((offer: ValidOffersItem) => {
+    console.log("تم النقر على العرض:", offer);
+    // Handle offer click - you can navigate to a specific page,
+    // add to cart, or show offer details modal
+    // Example: navigate(`/offer/${offer.id}`);
+  }, []);
+
+  // Handler for view all offers
+  const handleViewAllOffers = useCallback(() => {
+    console.log("عرض جميع العروض");
+    // Navigate to offers page or show offers modal
+    // Example: navigate(`/restaurant/${id}/offers`);
+  }, [id]);
 
   useEffect(() => {
     fetchRestaurantData();
@@ -220,9 +234,7 @@ const RestaurantDetails: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
       <Navigation />
-
-      {/* Back Button */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-3 sm:pt-4">
+      {/* <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-3 sm:pt-4">
         <Button
           onClick={handleBack}
           variant="outline"
@@ -231,30 +243,41 @@ const RestaurantDetails: React.FC = () => {
           <ArrowLeft className="h-4 w-4 ml-2" />
           العودة للرئيسية
         </Button>
-      </div>
-
+      </div> */}
       {/* Restaurant Image Slider */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
+      {/* <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
         <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
           <ImageSlider
             images={restaurant.slider_images || []}
             restaurantName={restaurant.merchant_name}
           />
         </div>
-      </div>
-
+      </div> */}
       {/* Restaurant Information - Pass all data */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
+      <div className="">
         <RestaurantInfo
           restaurant={restaurant}
           rating={rating}
           branches={branches}
         />
       </div>
+
+      {/* <div className="h-[113px]" /> */}
       <RestaurantStatusBanner restaurant={restaurant} />
 
+      {restaurant.valid_offers && restaurant.valid_offers.length > 0 && (
+        <div className="p-3">
+          <OffersSection
+            offers={restaurant.valid_offers}
+            onOfferClick={handleOfferClick}
+            onViewAllClick={handleViewAllOffers}
+            maxDisplayCount={3} // Show max 3 offers in restaurant details
+            showOnlyValid={true} // Only show valid offers
+          />{" "}
+        </div>
+      )}
       {/* Most Ordered Items */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
+      <div className="mx-0">
         <MostOrderedItems
           userId={restaurant.user_id.toString()}
           placeId={id}
@@ -262,9 +285,8 @@ const RestaurantDetails: React.FC = () => {
           restaurantName={restaurant.merchant_name}
         />
       </div>
-
       {/* Menu */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
+      <div className="max-w-7xl mx-auto px-0 sm:px-4 lg:px-8 mb-6 sm:mb-8">
         <Menu
           userId={restaurant.user_id.toString()}
           merchantId={restaurant.user_id}
@@ -275,10 +297,8 @@ const RestaurantDetails: React.FC = () => {
           restaurant={restaurant}
         />
       </div>
-
       {/* Floating Cart */}
       <FloatingCart />
-
       {/* Login Modal */}
       {showLoginModal && (
         <LoginModal

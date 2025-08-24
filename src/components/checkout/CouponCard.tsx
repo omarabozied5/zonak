@@ -1,103 +1,89 @@
 import React from "react";
-import { CreditCard, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Plus } from "lucide-react";
 import { ValidatedCoupon } from "../../lib/couponUtils";
 
 interface CouponCardProps {
+  appliedCoupon: ValidatedCoupon | null;
   couponCode: string;
   setCouponCode: (code: string) => void;
-  appliedCoupon: ValidatedCoupon | null;
   applyCoupon: () => Promise<void>;
   removeCoupon: () => void;
   isValidating: boolean;
 }
 
-const CouponCard: React.FC<CouponCardProps> = React.memo(
-  ({
-    couponCode,
-    setCouponCode,
-    appliedCoupon,
-    applyCoupon,
-    removeCoupon,
-    isValidating,
-  }) => (
-    <Card className="border-[#FFAA01]/20">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <CreditCard className="h-5 w-5 text-[#FFAA01]" />
-          <span>رمز الخصم</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            value={couponCode}
-            onChange={(e) => setCouponCode(e.target.value)}
-            placeholder="أدخل رمز الخصم"
-            className="flex-1 focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-            disabled={!!appliedCoupon || isValidating}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !appliedCoupon && !isValidating) {
-                applyCoupon();
-              }
-            }}
-          />
-          <Button
-            onClick={applyCoupon}
-            disabled={!!appliedCoupon || isValidating || !couponCode.trim()}
-            className="bg-[#FFAA01] hover:bg-[#FFAA01]/90 text-white min-w-[80px]"
-          >
-            {isValidating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                التحقق
-              </>
-            ) : (
-              "تطبيق"
-            )}
-          </Button>
-        </div>
+const CouponCard: React.FC<CouponCardProps> = ({
+  appliedCoupon,
+  couponCode,
+  setCouponCode,
+  applyCoupon,
+  removeCoupon,
+  isValidating,
+}) => {
+  return (
+    <div>
+      <h2 className="text-sm font-bold text-gray-900 mb-4 text-right">
+        القسائم
+      </h2>
 
-        {appliedCoupon && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-800">
-                تم تطبيق رمز الخصم: {appliedCoupon.code}
-              </p>
-              <p className="text-xs text-green-600">
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+        {appliedCoupon ? (
+          <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-3 flex items-center gap-3 min-w-[120px] flex-shrink-0">
+            <div className="text-center">
+              <div className="text-base font-bold text-gray-900">
+                {appliedCoupon.code}
+              </div>
+              <div className="text-xs text-gray-700">
                 خصم {appliedCoupon.discount_value}
                 {appliedCoupon.discount_type === "percentage" ? "%" : " ر.س"}
-              </p>
-              {appliedCoupon.minimum_order_value &&
-                parseFloat(appliedCoupon.minimum_order_value) > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    الحد الأدنى للطلب:{" "}
-                    {parseFloat(appliedCoupon.minimum_order_value).toFixed(2)}{" "}
-                    ر.س
-                  </p>
-                )}
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
+            <div className="h-8 border-r-2 border-dashed border-yellow-400"></div>
+            <button
               onClick={removeCoupon}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded"
             >
               إلغاء
-            </Button>
+            </button>
+          </div>
+        ) : (
+          <div
+            className="bg-gray-100 rounded-lg p-3 flex items-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors min-w-[120px] flex-shrink-0"
+            onClick={applyCoupon}
+          >
+            <Plus className="w-4 h-4 text-gray-500" />
+            <span className="text-xs text-gray-700">إضافة قسيمة</span>
           </div>
         )}
+      </div>
 
-        <div className="text-xs text-gray-500">
-          <p>أدخل رمز الخصم الخاص بك للحصول على خصم إضافي</p>
+      {/* Hidden coupon input for functionality */}
+      {!appliedCoupon && (
+        <div className="mt-3">
+          <div className="flex gap-2">
+            <input
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
+              placeholder="أدخل رمز الخصم"
+              className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:border-yellow-400 focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !isValidating && couponCode.trim()) {
+                  applyCoupon();
+                }
+              }}
+              disabled={isValidating}
+            />
+            <button
+              onClick={applyCoupon}
+              disabled={isValidating || !couponCode.trim()}
+              className="px-4 py-2 bg-yellow-400 text-black rounded-lg text-sm font-medium hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isValidating ? "جاري التحقق..." : "تطبيق"}
+            </button>
+          </div>
         </div>
-      </CardContent>
-    </Card>
-  )
-);
-
-CouponCard.displayName = "CouponCard";
+      )}
+    </div>
+  );
+};
 
 export default CouponCard;

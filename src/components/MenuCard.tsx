@@ -1,21 +1,21 @@
+"use client";
+
 import React from "react";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { MenuItem, Restaurant } from "@/types/types";
+import type { MenuItem, Restaurant } from "@/types/types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Eye, Clock } from "lucide-react";
+import { Plus, Clock, Minus } from "lucide-react";
 import { createCartItem } from "@/lib/cartUtils";
 import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
 
 interface MenuCardProps {
   item: MenuItem;
-  restaurant?: Restaurant; // Make restaurant optional with fallback
+  restaurant?: Restaurant;
   restaurantName: string;
-  viewMode?: "list" | "grid";
   placeId?: string | number;
   merchantId?: string | number;
   categoryId: number;
@@ -25,7 +25,6 @@ const MenuCard = ({
   item,
   restaurant,
   restaurantName,
-  viewMode = "list",
   placeId,
   merchantId,
   categoryId,
@@ -34,24 +33,16 @@ const MenuCard = ({
   const { isAuthenticated } = useAuthStore();
   const currentUserId = useAuthStore((state) => state.getUserId());
   const cartStore = useCartStore(currentUserId);
-  const { addItem, items } = cartStore;
+  const { addItem, removeItem, items } = cartStore;
 
-  // Get restaurant status with fallback
   const restaurantStatus = useRestaurantStatus(restaurant);
 
   const hasOptions = item.options && item.options.length > 0;
   const isItemAvailable = item.is_available === true || item.is_available === 1;
 
-  // Add this in the MenuCard component
-  console.log("MENU CARD - Item:", item.name);
-  console.log("MENU CARD - is_available:", item.is_available);
-  console.log("MENU CARD - typeof:", typeof item.is_available);
-
-  // Combined availability check
   const canAddToCart =
     isAuthenticated && isItemAvailable && restaurantStatus.canOrder;
 
-  // Calculate total quantity for this menu item
   const itemQuantity = React.useMemo(() => {
     if (!isAuthenticated) return 0;
 
@@ -64,19 +55,14 @@ const MenuCard = ({
   }, [items, item.id, isAuthenticated]);
 
   const handleAddToCart = () => {
-    // Check authentication first
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
       return;
     }
-
-    // Check restaurant status
     if (!restaurantStatus.canOrder) {
       toast.error(restaurantStatus.statusMessage);
       return;
     }
-
-    // Check item availability
     if (!isItemAvailable) {
       toast.error("هذا العنصر غير متوفر حالياً");
       return;
@@ -104,56 +90,59 @@ const MenuCard = ({
     toast.success(`تم إضافة ${item.name} إلى السلة`);
   };
 
-  const handleViewDetails = () => {
-    if (!isItemAvailable) {
-      toast.error("هذا العنصر غير متوفر حالياً");
-      return;
-    }
-    const searchParams = new URLSearchParams({
-      placeId: placeId?.toString() || "",
-      merchantId: merchantId?.toString() || "",
-      restaurantName: restaurantName,
+  const handleIncreaseQuantity = () => {
+    handleAddToCart();
+  };
+
+  const handleDecreaseQuantity = () => {
+    if (!isAuthenticated || itemQuantity === 0) return;
+
+    const cartItem = items.find((cartItem) => {
+      const baseItemId = cartItem.id.split("-")[0];
+      return baseItemId === item.id.toString();
     });
-    navigate(`/item/${item.id}?${searchParams}`);
+
+    if (cartItem) {
+      if (cartItem.quantity > 1) {
+        const updatedItem = { ...cartItem, quantity: cartItem.quantity - 1 };
+        removeItem(cartItem.id);
+        addItem(updatedItem);
+        toast.success(`تم تقليل كمية ${item.name}`);
+      } else {
+        removeItem(cartItem.id);
+        toast.success(`تم حذف ${item.name} من السلة`);
+      }
+    }
   };
 
   const formatPrice = (price: number, newPrice?: number | null) => {
     if (newPrice && newPrice < price) {
       return (
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          <span className="text-sm sm:text-base font-bold text-[#FFAA01]">
-            {newPrice} ريال
+        <div className="flex items-center gap-2">
+          <span className="text-base sm:text-lg font-bold text-[#F7BD01]">
+            {newPrice} ر.س
           </span>
-          <span className="text-xs text-gray-400 line-through">
-            {price} ريال
+          <span className="text-sm text-gray-400 line-through">
+            {price} ر.س
           </span>
         </div>
       );
     }
     return (
-      <span className="text-sm sm:text-base font-bold text-[#FFAA01]">
-        {price} ريال
+      <span className="text-base sm:text-lg font-bold text-[#F7BD01]">
+        {price} ر.س
       </span>
     );
   };
 
-  const QuantityBadge = () => {
-    if (!isAuthenticated || itemQuantity === 0) return null;
-
-    return (
-      <div className="absolute -top-2 -right-4 z-20">
-        <div className="relative">
-          <Badge className="bg-white hover:bg-[#053468] text-black font-bold min-w-[20px] h-6 flex items-center justify-center px-1.5 rounded-full border-2 border-white shadow-lg transform transition-all duration-200">
-            <span className="text-xs font-extrabold">x{itemQuantity}</span>
-          </Badge>
-          <div className="absolute inset-0 bg-[#053468] rounded-full animate-ping opacity-20"></div>
-        </div>
-      </div>
-    );
-  };
-
-  // Status indicator for unavailable items
   const getStatusBadge = () => {
+    if (!isAuthenticated) {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+          يجب تسجيل الدخول
+        </Badge>
+      );
+    }
     if (!isItemAvailable) {
       return (
         <Badge variant="destructive" className="text-xs">
@@ -161,7 +150,6 @@ const MenuCard = ({
         </Badge>
       );
     }
-
     if (!restaurantStatus.canOrder) {
       return (
         <Badge
@@ -176,166 +164,93 @@ const MenuCard = ({
         </Badge>
       );
     }
-
     return null;
   };
 
-  const GridView = () => (
-    <Card
-      className={`group relative overflow-hidden border transition-all duration-300 hover:shadow-lg ${
-        canAddToCart
-          ? "border-blue-200 hover:border-[#053468]"
-          : "border-gray-200 opacity-75"
-      } ${itemQuantity > 0 ? "ring-2 ring-[#FFAA01]/20" : ""}`}
-    >
-      <div className="aspect-square relative overflow-hidden">
-        <img
-          src={item.images?.[0]?.image_url || "/api/placeholder/400/300"}
-          alt={item.name}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
-        {/* Status overlay */}
-        <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all duration-300">
+  return (
+    <div className="bg-white rounded-sm shadow-none   mb-1 overflow-hidden">
+      <div className="flex items-start p-4" dir="rtl">
+        {/* Image */}
+        <div className="w-[82px] h-[82px] flex-shrink-0 ml-4 relative overflow-hidden rounded-xl">
+          <img
+            src={item.images?.[0]?.image_url || "/api/placeholder/400/300"}
+            alt={item.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
           {!canAddToCart && (
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-xl">
               {getStatusBadge()}
             </div>
           )}
         </div>
-      </div>
 
-      <CardContent className="p-3 sm:p-4">
-        <div className="space-y-2">
-          <h3 className="font-semibold text-sm sm:text-base text-gray-900 line-clamp-2 leading-tight">
-            {item.name}
-          </h3>
+        {/* Content */}
+        <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+          {/* Title + Description */}
+          <div className="mb-2">
+            <h3 className="font-semibold text-base sm:text-lg text-gray-900 leading-tight mb-1">
+              {item.name}
+            </h3>
+            {item.description && (
+              <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                {item.description}
+              </p>
+            )}
+          </div>
 
-          {item.description && (
-            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
-              {item.description}
-            </p>
-          )}
-
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex-1">
+          {/* Price + Controls row */}
+          <div className="flex justify-between items-center mt-3">
+            {/* Price on right */}
+            <div className="flex-shrink-0 text-right">
               {formatPrice(item.price, item.new_price)}
             </div>
 
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                disabled={!isItemAvailable}
-                size="sm"
-                onClick={handleViewDetails}
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100"
-              >
-                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-
-              <div className="relative">
+            {/* Controls on left */}
+            <div className="flex items-center gap-2">
+              {isAuthenticated && itemQuantity > 0 ? (
+                <div className="flex items-center bg-gray-50 rounded-lg border">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-r-lg"
+                    onClick={handleDecreaseQuantity}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="font-semibold text-sm min-w-[32px] text-center px-2">
+                    {itemQuantity}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-l-lg"
+                    onClick={handleIncreaseQuantity}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
                 <Button
                   onClick={handleAddToCart}
                   disabled={!canAddToCart}
                   size="sm"
-                  className={`h-7 px-2 sm:h-8 sm:px-3 text-xs sm:text-sm transition-all duration-300 ${
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                     canAddToCart
-                      ? "bg-[#EFF2F3] hover:bg-[#E0E3E4] text-[#053468]"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      ? "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-200"
                   }`}
                 >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                  <Plus className="h-4 w-4 ml-1" />
                   أضف
                 </Button>
-                <QuantityBadge />
-              </div>
+              )}
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
-
-  const ListView = () => (
-    <Card
-      className={`group overflow-hidden border transition-all duration-300 hover:shadow-md ${
-        canAddToCart
-          ? "border-blue-200 hover:border-[#053468]"
-          : "border-gray-200 opacity-75"
-      } ${itemQuantity > 0 ? "ring-2 ring-[#FFAA01]/20" : ""}`}
-    >
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex gap-3 sm:gap-4">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex-shrink-0 relative overflow-hidden rounded-lg">
-            <img
-              src={item.images?.[0]?.image_url || "/api/placeholder/400/300"}
-              alt={item.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-            {!canAddToCart && (
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                {getStatusBadge()}
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm sm:text-base lg:text-lg text-gray-900 line-clamp-2 mb-1">
-                  {item.name}
-                </h3>
-
-                {item.description && (
-                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 sm:line-clamp-3">
-                    {item.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between sm:flex-col sm:items-end sm:justify-start gap-2">
-                <div className="whitespace-nowrap">
-                  {formatPrice(item.price, item.new_price)}
-                </div>
-
-                <div className="flex gap-1 sm:gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={!isItemAvailable}
-                    onClick={handleViewDetails}
-                    className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-gray-100"
-                  >
-                    <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-
-                  <div className="relative">
-                    <Button
-                      onClick={handleAddToCart}
-                      disabled={!canAddToCart}
-                      size="sm"
-                      className={`h-7 px-2 sm:h-8 sm:px-3 text-xs sm:text-sm transition-all duration-300 ${
-                        canAddToCart
-                          ? "bg-[#EFF2F3] hover:bg-[#E0E3E4] text-[#053468]"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-                      أضف
-                    </Button>
-                    <QuantityBadge />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  return viewMode === "grid" ? <GridView /> : <ListView />;
 };
 
 export default MenuCard;

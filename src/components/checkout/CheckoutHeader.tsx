@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import BackButton from "../ui/BackButton";
 
 interface CheckoutHeaderProps {
   onBack: () => void;
@@ -8,22 +9,14 @@ interface CheckoutHeaderProps {
 
 const CheckoutHeader: React.FC<CheckoutHeaderProps> = React.memo(
   ({ onBack }) => (
-    <div className="flex items-center mb-6 sm:mb-8">
-      <Button
-        variant="ghost"
-        onClick={onBack}
-        className="mr-2 sm:mr-4 p-2 hover:bg-[#FFAA01]/10"
-      >
-        <ArrowRight className="h-5 w-5" />
-      </Button>
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#053468]">
-          تنفيذ الطلب
-        </h1>
-        <p className="text-gray-600 text-sm sm:text-base">
-          أكمل بياناتك لتأكيد الطلب
-        </p>
+    <div className="relative flex items-center justify-center  h-20 bg-white border-b">
+      {/* Back Button on the right edge */}
+      <div className="absolute right-4">
+        <BackButton />
       </div>
+
+      {/* Centered Title */}
+      <h1 className="text-lg sm:text-xl font-bold text-black">إتمام الطلب</h1>
     </div>
   )
 );

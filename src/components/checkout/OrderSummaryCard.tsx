@@ -1,89 +1,84 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronDown, Plus } from "lucide-react";
 import { CartItem } from "../../types/types";
-import OrderItem from "./OrderItem";
-import PriceBreakdown from "./PriceBreakdown";
-import EstimatedTime from "./EstimatedTime";
-import { ValidatedCoupon } from "../../lib/couponUtils";
 
 interface OrderSummaryCardProps {
   items: CartItem[];
-  totalPrice: number;
-  discountAmount: number;
-  totalItemDiscounts?: number;
-  originalTotalPrice?: number;
-  total: number;
-  handleSubmitOrder: () => void;
-  isProcessing: boolean;
-  paymentType?: number;
-  appliedCoupon: ValidatedCoupon | null;
+  restaurant?: {
+    title?: string;
+    title_ar?: string;
+    merchant_name?: string;
+    user?: {
+      profile_image?: string;
+    };
+  } | null;
 }
 
-const OrderSummaryCard: React.FC<OrderSummaryCardProps> = React.memo(
-  ({
-    items,
-    totalPrice,
-    appliedCoupon,
-    discountAmount,
-    total,
-    totalItemDiscounts = 0,
-    originalTotalPrice = 0,
-    handleSubmitOrder,
-    isProcessing,
-    paymentType = 1,
-  }) => {
-    const getButtonText = () => {
-      if (isProcessing) {
-        return "جاري معالجة الطلب...";
-      }
+const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({
+  items,
+  restaurant,
+}) => {
+  console.log("OrderSummaryCard - restaurant prop:", restaurant);
+  console.log(
+    "OrderSummaryCard - profile_image:",
+    restaurant?.user?.profile_image
+  );
 
-      if (paymentType === 0) {
-        return `ادفع الآن - ${total.toFixed(2)} ر.س`;
-      } else {
-        return `تأكيد الطلب - ${total.toFixed(2)} ر.س`;
-      }
-    };
+  const profileImage = restaurant?.user?.profile_image || null;
+  console.log("OrderSummaryCard - final profileImage:", profileImage);
+  const firstItem = items[0];
 
-    return (
-      <Card className="border-[#FFAA01]/20 lg:sticky lg:top-24">
-        <CardHeader>
-          <CardTitle className="text-lg">ملخص الطلب</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Items List */}
-          <div className="space-y-3 max-h-48 sm:max-h-60 overflow-y-auto">
-            {items.map((item) => (
-              <OrderItem key={item.id} item={item} />
-            ))}
+  return (
+    <div>
+      <h2 className="text-sm font-bold text-gray-900 mb-4 text-right">
+        ملخص الطلب
+      </h2>
+
+      <div className="bg-white rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt={firstItem?.restaurantName || "مطعم"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    target.nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold ${
+                  profileImage ? "hidden" : ""
+                }`}
+              >
+                {firstItem?.restaurantName?.charAt(0) || "م"}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {restaurant?.merchant_name || restaurant?.title_ar || "مطعم"}
+              </div>
+              <div className="text-xs text-gray-500">{items.length} منتجات</div>
+            </div>
           </div>
+          <ChevronDown className="w-4 h-4 text-gray-500" />
+        </div>
+      </div>
 
-          {/* Enhanced Price Breakdown with Item Discounts */}
-          <PriceBreakdown
-            totalPrice={totalPrice}
-            appliedCoupon={appliedCoupon}
-            discountAmount={discountAmount}
-            total={total}
-            totalItemDiscounts={totalItemDiscounts}
-            originalTotalPrice={originalTotalPrice}
-          />
-
-          <EstimatedTime />
-
-          {/* Confirm Button */}
-          <Button
-            className="w-full bg-gradient-to-r from-[#FFAA01] to-[#FFAA01]/90 hover:from-[#FFAA01]/90 hover:to-[#FFAA01]/80 text-white text-base sm:text-lg py-3 rounded-xl hover:shadow-lg transition-all duration-300"
-            onClick={handleSubmitOrder}
-            disabled={isProcessing}
-          >
-            {getButtonText()}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-);
-
-OrderSummaryCard.displayName = "OrderSummaryCard";
+      {/* <div className="flex justify-center">
+        <div className="bg-gray-100 rounded-full px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors">
+          <Plus className="w-3 h-3 text-gray-700" />
+          <span className="text-xs font-medium text-gray-700">
+            إضافة منتجات
+          </span>
+        </div>
+      </div> */}
+    </div>
+  );
+};
 
 export default OrderSummaryCard;

@@ -7,12 +7,16 @@ interface RestaurantBadgeProps {
   merchantId: string | number;
   restaurantName: string;
   placeId: string;
+  user: {
+    profile_image: string | string[]; // Support both string and array
+  };
 }
 
 const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
   merchantId,
   restaurantName,
   placeId,
+  user,
 }) => {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,12 +24,13 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
 
   useEffect(() => {
     const fetchRestaurantDetails = async () => {
-      // Debug logging
       console.log("RestaurantBadge - Debug Info:", {
         merchantId,
         restaurantName,
         placeId,
         placeIdType: typeof placeId,
+        userProfileImages: user?.profile_image,
+        userProfileImageType: typeof user?.profile_image,
       });
 
       if (!placeId || placeId === "0" || placeId === "") {
@@ -40,7 +45,6 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
         const response = await apiService.fetchRestaurantDetails(placeId);
         console.log("RestaurantBadge - API Response:", response);
 
-        // Fix: Check for status 200 instead of success property
         if ((response.success || response.status === 200) && response.data) {
           setRestaurant(response.data);
           console.log("RestaurantBadge - Restaurant data set:", response.data);
@@ -56,6 +60,7 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
           placeId,
           merchantId,
           restaurantName,
+          user,
         });
       } finally {
         setLoading(false);
@@ -63,70 +68,93 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
     };
 
     fetchRestaurantDetails();
-  }, [placeId, merchantId, restaurantName]);
+  }, [placeId, merchantId, restaurantName, user]);
 
-  // Get restaurant image - similar approach to ImageSlider
+  // FIXED: Properly handle both string and array profile_image formats
   const validImages = useMemo(() => {
-    if (!restaurant) return [];
+    const normalizeToArray = (
+      images: string | string[] | undefined
+    ): string[] => {
+      if (!images) return [];
+      return Array.isArray(images) ? images : [images];
+    };
 
-    const allImages = [
-      ...(restaurant.slider_images || []),
-      ...(restaurant.menu_images || []),
-    ];
+    // Get images from API-fetched restaurant data
+    const restaurantImages = normalizeToArray(restaurant?.user?.profile_image);
 
-    return allImages.filter((img) => img && img.trim() !== "");
-  }, [restaurant]);
+    // Get images from user prop passed from parent
+    const userImages = normalizeToArray(user?.profile_image);
+
+    // Combine both sources, preferring restaurant API data
+    const allImages = [...restaurantImages, ...userImages];
+
+    // Filter out empty/invalid images
+    const filtered = allImages.filter((img) => img && img.trim() !== "");
+
+    console.log("RestaurantBadge - Image processing:", {
+      restaurantRawImages: restaurant?.user?.profile_image,
+      userRawImages: user?.profile_image,
+      restaurantImages,
+      userImages,
+      allImages,
+      filtered,
+    });
+
+    return filtered;
+  }, [restaurant, user]);
 
   const restaurantImage =
     validImages.length > 0 && !imageError ? validImages[0] : null;
 
   const handleImageError = useCallback(() => {
+    console.log("RestaurantBadge - Image failed to load:", restaurantImage);
     setImageError(true);
-  }, []);
-  console.log("RestaurantBadge received:", {
-    merchantId,
-    restaurantName,
-    placeId,
-    placeIdType: typeof placeId,
+  }, [restaurantImage]);
+
+  console.log("RestaurantBadge - Final render state:", {
+    restaurantImage,
+    validImages,
+    imageError,
+    loading,
   });
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-[#FFAA01]/20 p-4 mb-6">
-      <div className="flex items-center gap-4">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative z-10">
+      <div className="flex items-center gap-3">
         {/* Restaurant Image/Icon */}
-        <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-[#FFAA01]/10 to-[#053468]/10 flex items-center justify-center relative">
+        <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center relative">
           {loading ? (
-            <div className="w-8 h-8 border-2 border-[#FFAA01] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-6 h-6 border-2 border-[#FBD252] border-t-transparent rounded-full animate-spin"></div>
           ) : restaurantImage ? (
             <img
               src={restaurantImage}
               alt={restaurantName}
-              className="w-full h-full object-cover transition-all duration-300"
+              className="w-full h-full object-cover"
               onError={handleImageError}
               loading="eager"
+              onLoad={() =>
+                console.log(
+                  "RestaurantBadge - Image loaded successfully:",
+                  restaurantImage
+                )
+              }
             />
           ) : (
-            // Fallback with decorative background similar to ImageSlider
-            <div className="w-full h-full bg-gradient-to-br from-[#FFAA01] to-[#FFD700] flex items-center justify-center relative overflow-hidden">
-              {/* Decorative elements */}
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-1 left-1 w-4 h-4 border border-white rounded-full animate-pulse"></div>
-                <div className="absolute bottom-1 right-1 w-3 h-3 border border-white rounded-full animate-pulse delay-1000"></div>
-              </div>
-              <Store className="w-8 h-8 sm:w-10 sm:h-10 text-white relative z-10" />
+            <div className="w-full h-full bg-[#FBD252] flex items-center justify-center">
+              <Store className="w-6 h-6 text-white" />
             </div>
           )}
         </div>
 
         {/* Restaurant Info */}
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-xl font-bold text-[#053468] truncate">
+          <h2 className="text-base font-semibold text-gray-900 truncate">
             {restaurantName}
           </h2>
 
           {restaurant && (
-            <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-              <MapPin className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">
                 {restaurant.address_ar ||
                   restaurant.address ||
@@ -136,18 +164,18 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
           )}
 
           {restaurant && restaurant.distance && (
-            <div className="mt-1 text-xs text-[#FFAA01] font-semibold">
+            <div className="mt-1 text-xs text-[#FBD252] font-medium">
               المسافة: {restaurant.distance.toFixed(1)} كم
             </div>
           )}
         </div>
 
         {/* Status Badge */}
-        {/* <div className="flex-shrink-0">
-          <div className="bg-gradient-to-r from-[#FFAA01] to-[#FFD700] text-[#053468] px-3 py-1.5 rounded-full text-xs font-semibold shadow-md">
+        <div className="flex-shrink-0">
+          <div className="bg-[#FBD252] text-black px-3 py-1 rounded-full text-xs font-medium">
             طلبك جاهز
           </div>
-        </div> */}
+        </div>
       </div>
     </div>
   );

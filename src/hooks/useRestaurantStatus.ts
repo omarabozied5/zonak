@@ -45,7 +45,8 @@ export const useRestaurantStatus = (
 
     // Convert JS day (0=Sunday) to API day format (7=Sunday, 1=Monday, etc.)
     const convertJSDayToAPIDay = (jsDay: number): number => {
-      return jsDay === 0 ? 7 : jsDay;
+      const mapping = [2, 3, 4, 5, 6, 7, 1]; // Index by JS day, value is API day
+      return mapping[jsDay];
     };
 
     const todayAPIDay = convertJSDayToAPIDay(today);
@@ -55,19 +56,19 @@ export const useRestaurantStatus = (
       (hour: WorkingHour) => hour.day === todayAPIDay
     );
 
-    if (!todayHours) {
+    if (todayHours.is_24h === true) {
       return {
-        isOpen: false,
+        isOpen: true,
         isBusy: false,
-        canOrder: false,
-        statusMessage: "مغلق اليوم",
-        statusColor: "text-red-500",
-        reasonClosed: "closed_today",
+        canOrder: true,
+        statusMessage: "مفتوح 24 ساعة",
+        statusColor: "text-green-600",
+        reasonClosed: null,
       };
     }
 
-    // Case 1: If is_24h is true - restaurant is open 24 hours (ignore everything else)
-    if (todayHours.is_24h === true) {
+    // Case 2: is_24h is false - check is_closed
+    if (todayHours.is_closed === "1" || todayHours.is_closed_bool === true) {
       return {
         isOpen: true,
         isBusy: false,

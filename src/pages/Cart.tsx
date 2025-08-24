@@ -1,20 +1,25 @@
-import React, { useEffect } from "react";
+// Updated Cart.tsx with Checkout-style UI
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navigation from "@/components/Navigation";
+import { Plus } from "lucide-react";
 import { useCartStore, CartItem as StoreCartItem } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useCartValidation } from "@/hooks/useCartValidation";
-import { useCartSummary } from "@/hooks/useCartSummary"; // Now returns EnhancedCartSummary
+import { useCartSummary } from "@/hooks/useCartSummary";
 import { toast } from "sonner";
 
-// Import refactored components
-import CartHeader from "@/components/Cart/CartHeader"; // Enhanced version
-import CartItemComponent from "@/components/Cart/CartItem";
-import OrderSummary from "@/components/Cart/OrderSummury";
-import EmptyCartState from "@/components/Cart/EmptyCartState";
-import { CartItem } from "../types/types";
+// Import new cart components with checkout styling
+import CartCheckoutHeader from "@/components/Cart/CartHeader";
+import CartItemsList from "@/components/Cart/CartItemList";
+import CartPriceBreakdown from "@/components/Cart/CartPriceBreakdown";
+import CartCTAButton from "@/components/Cart/CartCTAButton";
+import CartEmptyState from "@/components/Cart/EmptyCartState";
+import CheckoutRestaurantHeader from "../components/checkout/CheckoutRestaurantHeader";
 
-// Import new utility functions
+import { CartItem, Restaurant } from "../types/types";
+import { apiService } from "@/services/apiService";
+
+// Import utility functions
 import {
   calculateTotalItemDiscounts,
   calculateOriginalTotal,
@@ -47,13 +52,36 @@ const Cart = () => {
       : undefined,
   }));
 
-  // Get cart summary and validation (now includes primaryRestaurant)
+  // Get cart summary and validation
   const cartSummary = useCartSummary(convertedItems);
   const cartValidation = useCartValidation(convertedItems);
 
   // Calculate discount information using utility functions
   const totalItemDiscounts = calculateTotalItemDiscounts(convertedItems);
   const originalTotalPrice = calculateOriginalTotal(convertedItems);
+
+  // Restaurant state for header
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+
+  // Fetch restaurant details for header
+  useEffect(() => {
+    const fetchRestaurantDetails = async () => {
+      if (items.length > 0 && items[0].placeId) {
+        try {
+          const response = await apiService.fetchRestaurantDetails(
+            items[0].placeId
+          );
+          if (response.message === "success" && response.data) {
+            setRestaurant(response.data);
+          }
+        } catch (error) {
+          console.error("Error fetching restaurant details:", error);
+        }
+      }
+    };
+
+    fetchRestaurantDetails();
+  }, [items]);
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -152,53 +180,73 @@ const Cart = () => {
     }
   }, [totalItemDiscounts, originalTotalPrice, totalPrice]);
 
+  // If cart is empty, show empty state
+  if (cartSummary.isEmpty) {
+    return (
+      <div className="min-h-screen bg-gray-50" dir="rtl">
+        <div className="max-w-sm mx-auto bg-gray-50">
+          <CartCheckoutHeader onBack={handleGoBack} />
+          <CartEmptyState onExploreRestaurants={handleExploreRestaurants} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FFAA01]/10 to-white">
-      <Navigation />
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      <div className="max-w-sm mx-auto bg-gray-50">
+        <CartCheckoutHeader onBack={handleGoBack} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Enhanced Header with Restaurant Info */}
-        <CartHeader
-          userName={user.first_name}
-          onGoBack={handleGoBack}
-          primaryRestaurant={cartSummary.primaryRestaurant}
+        <div className="px-4 py-6 space-y-6 pb-24">
+          {/* Restaurant Header */}
+          {items.length > 0 && (
+            <CheckoutRestaurantHeader
+              merchantId={items[0].restaurantId || ""}
+              restaurantName={items[0].restaurantName || ""}
+              placeId={items[0].placeId || ""}
+              user={{
+                profile_image: restaurant?.user?.profile_image || "",
+              }}
+            />
+          )}
+
+          {items.length > 0 && (
+            <div className="flex justify-center">
+              <div
+                className="bg-gray-100 rounded-full px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() => navigate(`/restaurant/${items[0].placeId}`)}
+              >
+                <Plus className="w-3 h-3 text-gray-700" />
+                <span className="text-xs font-medium text-gray-700">
+                  إضافة منتجات
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Cart Items List */}
+          <CartItemsList
+            items={convertedItems}
+            onQuantityUpdate={handleQuantityUpdate}
+            onRemoveItem={handleRemoveItem}
+            onEditItem={handleEditItem}
+            hasCustomizations={hasCustomizations}
+          />
+
+          {/* Price Breakdown */}
+          <CartPriceBreakdown
+            totalPrice={totalPrice}
+            totalItemDiscounts={totalItemDiscounts}
+            itemCount={convertedItems.length}
+          />
+        </div>
+
+        {/* Fixed Bottom CTA Button */}
+        <CartCTAButton
+          total={totalPrice}
+          isDisabled={isCheckoutDisabled}
+          onProceedToCheckout={handleProceedToCheckout}
         />
-
-        {/* Cart Content */}
-        {cartSummary.isEmpty ? (
-          <EmptyCartState onExploreRestaurants={handleExploreRestaurants} />
-        ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-            {/* Cart Items */}
-            <div className="xl:col-span-2 space-y-4">
-              {convertedItems.map((item: CartItem) => (
-                <CartItemComponent
-                  key={item.id}
-                  item={item}
-                  onQuantityUpdate={handleQuantityUpdate}
-                  onRemoveItem={handleRemoveItem}
-                  onEditItem={handleEditItem}
-                  hasCustomizations={hasCustomizations}
-                />
-              ))}
-            </div>
-
-            {/* Order Summary with Discount Information */}
-            <div className="xl:col-span-1">
-              <OrderSummary
-                totalItems={cartSummary.totalItems}
-                totalPrice={cartSummary.totalPrice}
-                totalItemDiscounts={totalItemDiscounts}
-                originalTotalPrice={originalTotalPrice}
-                restaurantCount={cartSummary.restaurantCount}
-                hasMultipleRestaurants={cartSummary.hasMultipleRestaurants}
-                onProceedToCheckout={handleProceedToCheckout}
-                isCheckoutDisabled={isCheckoutDisabled}
-                isEmpty={cartSummary.isEmpty}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

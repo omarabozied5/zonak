@@ -29,17 +29,6 @@ interface PlaceStatus {
   color: string;
 }
 
-// Arabic day names mapping (matching Swift implementation)
-const daysArabic: { [key: number]: string } = {
-  1: "السبت",
-  2: "الأحد",
-  3: "الإثنين",
-  4: "الثلاثاء",
-  5: "الأربعاء",
-  6: "الخميس",
-  7: "الجمعة",
-};
-
 // Time formatting function (matching Swift formatTimeForDisplay)
 const formatTimeForDisplay = (timeString: string | null): string => {
   if (!timeString) return "";
@@ -87,7 +76,7 @@ const checkPreviousDayExtendedHours = (
   previousDayHours: WorkingHour,
   currentMinutes: number
 ): PlaceStatus | null => {
-  // EXACT Swift logic: Check second period first
+  // Check second period first (EXACT Swift if condition)
   if (
     previousDayHours.is_second_period === 1 &&
     previousDayHours.second_close_time &&
@@ -98,9 +87,7 @@ const checkPreviousDayExtendedHours = (
     );
     const openMinutes = timeStringToMinutes(previousDayHours.second_open_time);
 
-    // CRITICAL: Only if crosses midnight AND current time < close
     if (closeMinutes < openMinutes && currentMinutes < closeMinutes) {
-      // Check current day's is24H setting (defaults to true in Swift)
       if (hours.is_24h ?? true) {
         return {
           isOpen: true,
@@ -120,7 +107,7 @@ const checkPreviousDayExtendedHours = (
       }
     }
   }
-  // EXACT Swift: else if (not else) - only if no second period
+  // EXACT Swift: else if - only check first period if no second period
   else if (previousDayHours.close_time && previousDayHours.open_time) {
     const closeMinutes = timeStringToMinutes(previousDayHours.close_time);
     const openMinutes = timeStringToMinutes(previousDayHours.open_time);
@@ -154,7 +141,7 @@ const checkCurrentDayHours = (
   hours: WorkingHour,
   currentMinutes: number
 ): PlaceStatus | null => {
-  // CRITICAL: Swift defaults is24H to TRUE
+  // Check 24h first (Swift defaults to TRUE)
   if (hours.is_24h ?? true) {
     return {
       isOpen: true,
@@ -164,6 +151,7 @@ const checkCurrentDayHours = (
     };
   }
 
+  // Check if closed (EXACT Swift logic)
   if (hours.is_closed_bool ?? (false || hours.is_closed === "1")) {
     return {
       isOpen: false,
@@ -173,7 +161,7 @@ const checkCurrentDayHours = (
     };
   }
 
-  const firstPeriodOpenMinutes = timeStringToMinutes(hours.open_time || "");
+  const firstPeriodOpenMinutes = timeStringToMinutes(hours.open_time ?? "");
 
   // If current time is before first opening time
   if (currentMinutes < firstPeriodOpenMinutes) {
@@ -248,7 +236,7 @@ const checkCurrentDayHours = (
   return null;
 };
 
-// Get next opening time (matching Swift implementation)
+// Get next opening time (EXACT Swift implementation)
 const getNextOpeningTime = (
   currentDay: number,
   allHours: WorkingHour[]
@@ -260,11 +248,15 @@ const getNextOpeningTime = (
     const futureDayNumber = ((currentDay + i - 1) % 7) + 1;
     const futureDay = allHours.find((h) => h.day === futureDayNumber);
 
-    if (futureDay && !futureDay.is_closed_bool && futureDay.is_closed !== "1") {
-      if (futureDay.is_24h) {
+    if (
+      futureDay &&
+      !(futureDay.is_closed_bool ?? false) &&
+      futureDay.is_closed !== "1"
+    ) {
+      if (futureDay.is_24h ?? false) {
         nextOpenTime = "00:00:00";
       } else {
-        nextOpenTime = futureDay.open_time || "";
+        nextOpenTime = futureDay.open_time ?? "";
       }
       daysUntilOpen = i;
       break;
@@ -285,6 +277,58 @@ const getNextOpeningTime = (
     description: `مغلق . يفتح${nextOpenDescription}`,
     closeTime: "",
     color: "text-red-500",
+  };
+};
+
+// Get simple working hours display for dropdown (EXACT Swift logic)
+const getSimpleWorkingHoursDisplay = (
+  hours: WorkingHour
+): { isSecond: boolean; openTime: string; secondOpenTime: string } => {
+  // CRITICAL: Check closed status FIRST before 24h check
+  if (hours.is_closed_bool ?? (false || hours.is_closed === "1")) {
+    return {
+      isSecond: false,
+      openTime: "مغلق طوال اليوم",
+      secondOpenTime: "",
+    };
+  }
+
+  // Then check 24h status
+  if (hours.is_24h ?? true) {
+    return {
+      isSecond: false,
+      openTime: "مفتوح طوال اليوم",
+      secondOpenTime: "",
+    };
+  }
+
+  let openTimeText = "";
+  if (hours.open_time && hours.close_time) {
+    // EXACT Swift format: close time first, then dash, then open time
+    openTimeText = `${formatTimeForDisplay(
+      hours.close_time
+    )} - ${formatTimeForDisplay(hours.open_time)}`;
+  }
+
+  if (hours.is_second_period === 1) {
+    let secondOpenTimeText = "";
+    if (hours.second_open_time && hours.second_close_time) {
+      // EXACT Swift format: close time first, then dash, then open time
+      secondOpenTimeText = `${formatTimeForDisplay(
+        hours.second_close_time
+      )} - ${formatTimeForDisplay(hours.second_open_time)}`;
+      return {
+        isSecond: true,
+        openTime: openTimeText,
+        secondOpenTime: secondOpenTimeText,
+      };
+    }
+  }
+
+  return {
+    isSecond: false,
+    openTime: openTimeText,
+    secondOpenTime: "",
   };
 };
 
@@ -330,69 +374,21 @@ const getWorkingHoursDescription = (
   return getNextOpeningTime(hours.day, allHours);
 };
 
-// Get simple working hours display for dropdown (EXACT Swift logic)
-const getSimpleWorkingHoursDisplay = (
-  hours: WorkingHour
-): { isSecond: boolean; openTime: string; secondOpenTime: string } => {
-  // CRITICAL: Swift defaults is24H to TRUE
-  if (hours.is_24h ?? true) {
-    return {
-      isSecond: false,
-      openTime: "مفتوح طوال اليوم",
-      secondOpenTime: "",
-    };
-  }
-
-  if (hours.is_closed_bool ?? (false || hours.is_closed === "1")) {
-    return {
-      isSecond: false,
-      openTime: "مغلق طوال اليوم",
-      secondOpenTime: "",
-    };
-  }
-
-  let openTimeText = "";
-  if (hours.open_time && hours.close_time) {
-    openTimeText = `${formatTimeForDisplay(
-      hours.open_time
-    )} - ${formatTimeForDisplay(hours.close_time)}`;
-  }
-
-  if (hours.is_second_period === 1) {
-    let secondOpenTimeText = "";
-    if (hours.second_open_time && hours.second_close_time) {
-      secondOpenTimeText = `${formatTimeForDisplay(
-        hours.second_open_time
-      )} - ${formatTimeForDisplay(hours.second_close_time)}`;
-      return {
-        isSecond: true,
-        openTime: openTimeText,
-        secondOpenTime: secondOpenTimeText,
-      };
-    }
-  }
-
-  return {
-    isSecond: false,
-    openTime: openTimeText,
-    secondOpenTime: "",
-  };
-};
-
 const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
   restaurant,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
 
+  // Day names for display (Sunday to Saturday) - Index 0 = Sunday
   const dayNames = [
-    "الأحد",
-    "الاثنين",
-    "الثلاثاء",
-    "الأربعاء",
-    "الخميس",
-    "الجمعة",
-    "السبت",
+    "الأحد", // 0 = Sunday
+    "الاثنين", // 1 = Monday
+    "الثلاثاء", // 2 = Tuesday
+    "الأربعاء", // 3 = Wednesday
+    "الخميس", // 4 = Thursday
+    "الجمعة", // 5 = Friday
+    "السبت", // 6 = Saturday
   ];
 
   const today = new Date().getDay();
@@ -436,9 +432,13 @@ const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
     }
   };
 
-  // Convert JS day (0=Sunday) to API day format (7=Sunday, 1=Monday, etc.)
+  // Convert JS day to API day format
+  // Based on your data: day 4 = Tuesday, day 5 = Wednesday are closed
+  // JS: Sunday=0, Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6
+  // API: Saturday=1, Sunday=2, Monday=3, Tuesday=4, Wednesday=5, Thursday=6, Friday=7
   const convertJSDayToAPIDay = (jsDay: number): number => {
-    return jsDay === 0 ? 7 : jsDay;
+    const mapping = [2, 3, 4, 5, 6, 7, 1]; // [Sunday->2, Monday->3, Tuesday->4, Wednesday->5, Thursday->6, Friday->7, Saturday->1]
+    return mapping[jsDay];
   };
 
   // Get today's hours for status calculation
@@ -518,6 +518,8 @@ const WorkingHoursDisplay: React.FC<WorkingHoursDisplayProps> = ({
                     displayText = simpleDisplay.openTime;
                     textColor = simpleDisplay.openTime.includes("مفتوح")
                       ? "text-green-600"
+                      : simpleDisplay.openTime.includes("مغلق")
+                      ? "text-red-500"
                       : "text-gray-700";
                   }
                 }

@@ -3,56 +3,52 @@ import { ValidatedCoupon } from "../../lib/couponUtils";
 
 interface PriceBreakdownProps {
   totalPrice: number;
-  appliedCoupon: ValidatedCoupon | null;
-  discountAmount: number;
+  totalItemDiscounts: number;
+  couponDiscountAmount: number;
   total: number;
-  totalItemDiscounts?: number;
+  itemCount: number;
 }
 
-const PriceBreakdown: React.FC<PriceBreakdownProps> = React.memo(
-  ({
-    totalPrice,
-    appliedCoupon,
-    discountAmount,
-    total,
-    totalItemDiscounts = 0,
-  }) => (
-    <div className="border-t border-[#FFAA01]/20 pt-4 space-y-2">
-      <div className="flex justify-between text-gray-600 text-sm">
-        <span>المجموع الفرعي</span>
-        <span>{totalPrice.toFixed(2)} ر.س</span>
+const PriceBreakdown: React.FC<PriceBreakdownProps> = ({
+  totalPrice,
+  totalItemDiscounts,
+  couponDiscountAmount,
+  total,
+  itemCount,
+}) => {
+  const hasAnyDiscount = totalItemDiscounts > 0 || couponDiscountAmount > 0;
+
+  return (
+    <div className="bg-white rounded-lg p-4 space-y-3">
+      <div className="flex justify-between text-sm">
+        <span className="text-gray-600">قيمة السلة</span>
+        <span className="text-gray-900">{totalPrice.toFixed(2)} ر.س</span>
       </div>
 
-      {totalItemDiscounts > 0 && (
-        <div className="flex justify-between text-green-600 text-sm">
-          <span>خصم الأصناف</span>
-          <span>-{totalItemDiscounts.toFixed(2)} ر.س</span>
+      {hasAnyDiscount && (
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">الخصم</span>
+          <span className="text-gray-900">
+            -{(totalItemDiscounts + couponDiscountAmount).toFixed(2)} ر.س
+          </span>
         </div>
       )}
 
-      {appliedCoupon && discountAmount > 0 && (
-        <div className="flex justify-between text-green-600 text-sm">
-          <span>الخصم ({appliedCoupon.code})</span>
-          <span>-{discountAmount.toFixed(2)} ر.س</span>
-        </div>
-      )}
-
-      <div className="flex justify-between text-base sm:text-lg font-bold pt-2 border-t border-[#FFAA01]/20">
-        <span>المجموع الكلي</span>
-        <span className="text-[#FFAA01]">{total.toFixed(2)} ر.س</span>
+      <div className="border-t pt-3 flex justify-between">
+        <span className="text-gray-600">
+          إجمالي الطلب{" "}
+          <span className="text-xs text-gray-400">({itemCount} عناصر)</span>
+        </span>
+        <span className="text-lg font-bold text-gray-900">
+          {total.toFixed(2)} ر.س
+        </span>
       </div>
 
-      {/* Show total savings if any */}
-      {(totalItemDiscounts > 0 || discountAmount > 0) && (
-        <div className="flex justify-between text-green-600 text-sm font-medium pt-1">
-          <span>إجمالي التوفير</span>
-          <span>{(totalItemDiscounts + discountAmount).toFixed(2)} ر.س</span>
-        </div>
-      )}
+      <div className="text-xs text-gray-400 text-right">
+        جميع الأسعار تشمل ضريبة القيمة المضافة 15%
+      </div>
     </div>
-  )
-);
-
-PriceBreakdown.displayName = "PriceBreakdown";
+  );
+};
 
 export default PriceBreakdown;

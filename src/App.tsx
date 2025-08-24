@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import ItemDetails from "./pages/ItemDetails";
 import CurrentOrders from "./pages/CurrentOrders";
 import FailedPaymentRedirect from "./components/PaymentFailureHandler";
+import PaymentWrapper from "./components/PaymentWrapper";
 
 const queryClient = new QueryClient();
 
@@ -61,30 +62,38 @@ const App = () => {
           className="sm:right-4 right-2 sm:bottom-4 bottom-2"
         />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/restaurant/:id" element={<RestaurantDetails />} />
-            <Route path="/item/:itemId" element={<ItemDetails />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/current-orders" element={<CurrentOrders />} />
+          <PaymentWrapper>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/restaurant/:id" element={<RestaurantDetails />} />
+              <Route path="/item/:itemId" element={<ItemDetails />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/current-orders" element={<CurrentOrders />} />
 
-            {/* Payment callback routes */}
-            <Route
-              path="/payment/success/:token"
-              element={<PaymentSuccess />}
-            />
-            <Route path="/payment/failed/:token" element={<PaymentFailed />} />
-            <Route path="/failed/payment/:token" element={<PaymentFailed />} />
-            <Route
-              path="/success/payment/:token"
-              element={<PaymentSuccess />}
-            />
+              {/* Payment callback routes */}
+              <Route
+                path="/payment/success/:token"
+                element={<PaymentSuccess />}
+              />
+              <Route
+                path="/payment/failed/:token"
+                element={<PaymentFailed />}
+              />
+              <Route
+                path="/failed/payment/:token"
+                element={<PaymentFailed />}
+              />
+              <Route
+                path="/success/payment/:token"
+                element={<PaymentSuccess />}
+              />
 
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </PaymentWrapper>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

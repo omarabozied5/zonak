@@ -71,8 +71,8 @@ export const apiService = {
   // PUBLIC ENDPOINTS - No authentication required
 
   fetchPreparedOrders: async (
-    longitude = 31.2357,
-    latitude = 30.0444,
+    longitude = 39.603155483668466,
+    latitude = 24.470983061841046,
     page = 1
   ): Promise<ApiResponse<unknown>> => {
     const response = await axiosInstance.get("/places/all/prepared/orders", {

@@ -1,8 +1,7 @@
-// Updated Checkout.tsx with restoration functionality
+// Updated Checkout.tsx with separated components
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import Navigation from "@/components/Navigation";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useOrderStore } from "@/hooks/useOrderStore";
@@ -10,22 +9,24 @@ import { usePaymentStore } from "@/stores/usePaymentStore";
 
 // Components
 import CheckoutHeader from "../components/checkout/CheckoutHeader";
-import ContactInfoCard from "../components/checkout/ContactInfoCard";
 import CouponCard from "../components/checkout/CouponCard";
-import PaymentMethodCard from "../components/checkout/PaymentMethodCard";
 import OrderSummaryCard from "../components/checkout/OrderSummaryCard";
+import PriceBreakdown from "../components/checkout/PriceBreakdown";
+import PaymentMethodCard from "../components/checkout/PaymentMethodCard";
+import LoyaltyBanner from "../components/checkout/LoyaltyBanner";
+import CheckoutCTAButton from "../components/checkout/CheckoutCTAButton";
 
 // Hooks and Utils
 import { useCoupon } from "../hooks/useCoupon";
 import { useFormValidation } from "../hooks/useCheckout";
-import { useCheckoutRestoration } from "../hooks/useCheckoutRestoration"; // New hook
+import { useCheckoutRestoration } from "../hooks/useCheckoutRestoration";
 import { calculateDiscountAmount } from "../lib/couponUtils";
 import {
   calculateTotalItemDiscounts,
   calculateOriginalTotal,
 } from "../lib/cartUtils";
 import { apiService, buildOrderPayload } from "../services/apiService";
-import { OrderResponse, CartItem } from "../types/types";
+import { OrderResponse, CartItem, User, Restaurant } from "../types/types";
 
 interface OrderValidation {
   isValid: boolean;
@@ -45,8 +46,12 @@ const Checkout: React.FC = () => {
   const paymentStore = usePaymentStore();
 
   const [notes, setNotes] = useState<string>("");
+  const [isLoadingRestaurant, setIsLoadingRestaurant] =
+    useState<boolean>(false);
+
   const [paymentType, setPaymentType] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
 
   // Get placeId from first item for coupon validation
   const placeId = items.length > 0 ? items[0].placeId : "";
@@ -55,7 +60,7 @@ const Checkout: React.FC = () => {
     couponCode,
     setCouponCode,
     appliedCoupon,
-    setAppliedCoupon, // Add this method to useCoupon hook
+    setAppliedCoupon,
     applyCoupon,
     removeCoupon,
     isValidating,
@@ -81,6 +86,35 @@ const Checkout: React.FC = () => {
   );
   const total = totalPrice - couponDiscountAmount;
 
+  useEffect(() => {
+    const fetchRestaurantDetails = async () => {
+      if (items.length > 0 && items[0].placeId) {
+        try {
+          const response = await apiService.fetchRestaurantDetails(
+            items[0].placeId
+          );
+          console.log("API response:", response);
+          console.log("User data:", response.data?.user);
+          console.log("Profile image:", response.data?.user?.profile_image);
+          if (response.message === "success" && response.data) {
+            console.log("Calling setRestaurant with:", response.data); // Add this
+            setRestaurant(response.data);
+            console.log("setRestaurant called"); // Add this
+          }
+        } catch (error) {
+          console.error("Error fetching restaurant details:", error);
+        }
+      }
+    };
+
+    fetchRestaurantDetails();
+  }, [items]);
+
+  // Add this useEffect to monitor restaurant state changes
+  useEffect(() => {
+    console.log("Restaurant state changed to:", restaurant);
+  }, [restaurant]);
+
   // Apply restored state when available
   useEffect(() => {
     if (isRestoring) {
@@ -88,7 +122,7 @@ const Checkout: React.FC = () => {
         setNotes,
         setPaymentType,
         setCouponCode,
-        setAppliedCoupon || (() => {}) // Fallback if setAppliedCoupon not available
+        setAppliedCoupon || (() => {})
       );
     }
   }, [isRestoring, applyRestoredState]);
@@ -210,7 +244,7 @@ const Checkout: React.FC = () => {
     try {
       // Create comprehensive checkout data snapshot
       const checkoutData = {
-        items: [...items], // Deep copy of items
+        items: [...items],
         totalPrice,
         appliedCoupon,
         couponDiscountAmount,
@@ -223,7 +257,6 @@ const Checkout: React.FC = () => {
           paymentType,
           couponCode: appliedCoupon?.code || couponCode,
         },
-        // Additional metadata for restoration
         timestamp: Date.now(),
         restaurantInfo: {
           placeId: placeId!,
@@ -234,7 +267,6 @@ const Checkout: React.FC = () => {
 
       console.log("Building order payload...");
 
-      // Build the order payload with coupon information
       const orderPayload = buildOrderPayload(
         items,
         placeId!,
@@ -250,7 +282,6 @@ const Checkout: React.FC = () => {
         JSON.stringify(orderPayload, null, 2)
       );
 
-      // Submit order to backend
       const response: OrderResponse = await apiService.submitOrder(
         orderPayload
       );
@@ -262,46 +293,38 @@ const Checkout: React.FC = () => {
           response.order_id || response.data?.order_id || response.data?.id;
 
         if (paymentType === 0 && orderId) {
-          // ONLINE PAYMENT - Preserve state before redirecting
           try {
             const paymentResponse = await apiService.getPaymentUrl(orderId);
 
             if (paymentResponse.data) {
-              // ✅ CRITICAL: Store checkout state BEFORE opening payment URL
               paymentStore.initiatePay(
                 checkoutData,
                 orderId.toString(),
                 paymentResponse.data
               );
 
-              // Save additional form state
               paymentStore.updateCheckoutFormState({
                 notes,
                 paymentType,
                 couponCode: appliedCoupon?.code || couponCode,
               });
 
-              // Mark that user is leaving app for payment
               paymentStore.markLeftAppForPayment();
 
-              // Show success message
               toast.success("تم إنشاء الطلب! جاري توجيهك لصفحة الدفع...", {
                 duration: 3000,
               });
 
-              // ⚠️ IMPORTANT: Don't clear cart here - only clear after successful payment
               console.log(
                 "💳 Redirecting to payment URL:",
                 paymentResponse.data
               );
 
-              // Add a small delay to ensure state is saved
               setTimeout(() => {
-                // Open payment URL in same window
                 window.location.href = paymentResponse.data;
               }, 1000);
 
-              return; // Don't continue with success flow
+              return;
             }
           } catch (paymentError) {
             console.error("Payment URL error:", paymentError);
@@ -309,11 +332,9 @@ const Checkout: React.FC = () => {
             return;
           }
         } else {
-          // CASH ON DELIVERY - Clear cart immediately
           clearCart();
           toast.success(response.message || "تم تأكيد طلبك بنجاح!");
 
-          // Navigate to current orders
           navigate("/current-orders", {
             state: {
               orderId: orderId,
@@ -332,7 +353,6 @@ const Checkout: React.FC = () => {
           });
         }
 
-        // Refresh orders in background
         setTimeout(() => {
           orderStore.fetchCurrentOrders().catch((error) => {
             console.error("Background order refresh failed:", error);
@@ -351,55 +371,83 @@ const Checkout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FFAA01]/5 to-white">
-      <Navigation />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      <div className="max-w-sm mx-auto bg-gray-50">
         <CheckoutHeader onBack={handleBack} />
 
         {/* Show restoration indicator */}
         {isRestoring && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg mx-4">
             <p className="text-blue-700 text-sm">
               🔄 جاري استعادة بيانات الطلب السابق...
             </p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-          {/* Forms Section */}
-          <div className="xl:col-span-2 space-y-6">
-            <ContactInfoCard user={user} notes={notes} setNotes={setNotes} />
-            <CouponCard
-              couponCode={couponCode}
-              setCouponCode={setCouponCode}
-              appliedCoupon={appliedCoupon}
-              applyCoupon={applyCoupon}
-              removeCoupon={removeCoupon}
-              isValidating={isValidating}
-            />
-            <PaymentMethodCard
-              paymentType={paymentType}
-              setPaymentType={setPaymentType}
-            />
-          </div>
+        <div className="px-4 py-6 space-y-6 pb-24">
+          {/* العروض Section */}
 
-          {/* Order Summary */}
-          <div className="xl:col-span-1">
-            <OrderSummaryCard
-              items={items}
-              totalPrice={totalPrice}
-              appliedCoupon={appliedCoupon}
-              discountAmount={couponDiscountAmount}
-              total={total}
-              totalItemDiscounts={totalItemDiscounts}
-              originalTotalPrice={originalTotalPrice}
-              handleSubmitOrder={handleSubmitOrder}
-              isProcessing={isProcessing}
-              paymentType={paymentType}
-            />
-          </div>
+          {/* القسائم Section */}
+          <CouponCard
+            appliedCoupon={appliedCoupon}
+            couponCode={couponCode}
+            setCouponCode={setCouponCode}
+            applyCoupon={applyCoupon}
+            removeCoupon={removeCoupon}
+            isValidating={isValidating}
+          />
+
+          {/* ملخص الطلب Section */}
+          {console.log(
+            "About to render OrderSummaryCard with restaurant:",
+            restaurant
+          )}
+
+          {isLoadingRestaurant ? (
+            <div className="bg-white rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
+                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <OrderSummaryCard items={items} restaurant={restaurant} />
+          )}
+
+          {/* Price Breakdown */}
+          <PriceBreakdown
+            totalPrice={totalPrice}
+            totalItemDiscounts={totalItemDiscounts}
+            couponDiscountAmount={couponDiscountAmount}
+            total={total}
+            itemCount={items.length}
+          />
+
+          {/* طريقة الدفع Section */}
+          <PaymentMethodCard
+            paymentType={paymentType}
+            setPaymentType={setPaymentType}
+            total={total}
+          />
+
+          {/* Loyalty Points Banner */}
+          <LoyaltyBanner
+            totalSavings={totalItemDiscounts + couponDiscountAmount}
+          />
         </div>
+
+        {/* Fixed Bottom CTA Button */}
+        <CheckoutCTAButton
+          total={total}
+          isProcessing={isProcessing}
+          onSubmit={handleSubmitOrder}
+        />
       </div>
     </div>
   );
