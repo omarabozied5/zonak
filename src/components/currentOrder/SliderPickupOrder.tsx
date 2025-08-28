@@ -34,119 +34,120 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
   const statusIndex = getStatusIndex(status);
 
   // Colors based on design
-  const activeColor =
-    statusIndex === -1
-      ? "#ff3d1f" // Red for cancelled/rejected
-      : "#fbd252"; // Yellow for normal states from design
-
+  const activeColor = statusIndex === -1 ? "#ff3d1f" : "#fbd252";
   const inactiveColor = "#d9d9d9";
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full ${className}`} dir="rtl">
       {/* Progress circles and connecting lines */}
-      <div className="relative flex items-center justify-between px-4 mb-2">
-        {/* Step 1: تأكيد المتجر */}
-        <div className="relative flex items-center">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center relative z-10"
+      <div className="relative w-full">
+        {/* Background line */}
+        <div className="absolute top-[14px] right-[14px] left-[14px] h-px bg-[#d9d9d9]" />
+        
+        {/* Active progress line segments */}
+        {statusIndex >= 1 && (
+          <div 
+            className="absolute top-[14px] h-px bg-[#fbd252]"
             style={{
-              backgroundColor:
-                statusIndex === -1 || statusIndex >= 1
-                  ? activeColor
-                  : inactiveColor,
-            }}
-          >
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor:
-                  statusIndex === -1 || statusIndex >= 1 ? "white" : "#999",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Step 2: تجهيز */}
-        <div className="relative flex items-center">
-          <div
-            className="absolute right-7 w-16 sm:w-20 md:w-24 h-px"
-            style={{
-              backgroundColor: statusIndex >= 2 ? activeColor : inactiveColor,
+              right: '118px',
+              width: statusIndex === 1 ? '0px' : 
+                     statusIndex === 2 ? '104px' :
+                     statusIndex === 3 ? '208px' : '312px'
             }}
           />
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center relative z-10"
-            style={{
-              backgroundColor: statusIndex >= 2 ? activeColor : inactiveColor,
-            }}
-          >
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: statusIndex >= 2 ? "white" : "#999",
-              }}
-            />
-          </div>
-        </div>
+        )}
 
-        {/* Step 3: جاهز */}
-        <div className="relative flex items-center">
-          <div
-            className="absolute right-7 w-16 sm:w-20 md:w-24 h-px"
-            style={{
-              backgroundColor: statusIndex >= 3 ? activeColor : inactiveColor,
-            }}
-          />
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center relative z-10"
-            style={{
-              backgroundColor: statusIndex >= 3 ? activeColor : inactiveColor,
-            }}
-          >
+        {/* Step circles */}
+        <div className="flex justify-between items-center relative px-[14px]">
+          {/* Step 1: تأكيد المتجر */}
+          <div className="relative">
             <div
-              className="w-3 h-3 rounded-full"
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
               style={{
-                backgroundColor: statusIndex >= 3 ? "white" : "#999",
+                backgroundColor: statusIndex === -1 || statusIndex >= 1 ? activeColor : "white",
+                borderColor: statusIndex === -1 || statusIndex >= 1 ? activeColor : inactiveColor,
               }}
-            />
+            >
+              <img 
+                src="/true.png" 
+                alt="check" 
+                className="w-4 h-4" 
+                style={{
+                  filter: statusIndex === -1 || statusIndex >= 1 ? "none" : "grayscale(100%)",
+                }}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Step 4: تم الإستلام */}
-        <div className="relative flex items-center">
-          <div
-            className="absolute right-7 w-16 sm:w-20 md:w-24 h-px"
-            style={{
-              backgroundColor: statusIndex >= 4 ? activeColor : inactiveColor,
-            }}
-          />
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center relative z-10"
-            style={{
-              backgroundColor: statusIndex >= 4 ? activeColor : inactiveColor,
-            }}
-          >
+          {/* Step 2: تجهيز */}
+          <div className="relative">
             <div
-              className="w-3 h-3 rounded-full"
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
               style={{
-                backgroundColor: statusIndex >= 4 ? "white" : "#999",
+                backgroundColor: statusIndex >= 2 ? activeColor : "white",
+                borderColor: statusIndex >= 2 ? activeColor : inactiveColor,
               }}
-            />
+            >
+              <img 
+                src="/prepare.png" 
+                alt="prepare" 
+                className="w-4 h-4" 
+                style={{
+                  filter: statusIndex >= 2 ? "none" : "grayscale(100%)",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Step 3: جاهز */}
+          <div className="relative">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
+              style={{
+                backgroundColor: statusIndex >= 3 ? activeColor : "white",
+                borderColor: statusIndex >= 3 ? activeColor : inactiveColor,
+              }}
+            >
+              <img 
+                src="/ready.png" 
+                alt="ready" 
+                className="w-4 h-4" 
+                style={{
+                  filter: statusIndex >= 3 ? "none" : "grayscale(100%)",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Step 4: تم الإستلام */}
+          <div className="relative">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
+              style={{
+                backgroundColor: statusIndex >= 4 ? activeColor : "white",
+                borderColor: statusIndex >= 4 ? activeColor : inactiveColor,
+              }}
+            >
+              <img 
+                src="/done.png" 
+                alt="done" 
+                className="w-4 h-4" 
+                style={{
+                  filter: statusIndex >= 4 ? "none" : "grayscale(100%)",
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Status labels */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex justify-between items-center mt-2 px-1">
         <div className="flex-1 text-center">
           <span
-            className="text-xs font-medium leading-4"
+            className="text-[10px] font-medium leading-[15.732px] font-['Bahij_TheSansArabic']"
             style={{
-              color:
-                statusIndex === -1 || statusIndex >= 1
-                  ? activeColor
-                  : inactiveColor,
-              fontFamily: "Bahij TheSansArabic, -apple-system, sans-serif",
+              color: statusIndex === -1 || statusIndex >= 1 ? activeColor : inactiveColor,
             }}
           >
             {statusIndex === -1
@@ -159,10 +160,9 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
 
         <div className="flex-1 text-center">
           <span
-            className="text-xs font-medium leading-4"
+            className="text-[10px] font-medium leading-[15.732px] font-['Bahij_TheSansArabic']"
             style={{
               color: statusIndex >= 2 ? activeColor : inactiveColor,
-              fontFamily: "Bahij TheSansArabic, -apple-system, sans-serif",
             }}
           >
             {data[1]}
@@ -171,10 +171,9 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
 
         <div className="flex-1 text-center">
           <span
-            className="text-xs font-medium leading-4"
+            className="text-[10px] font-medium leading-[15.732px] font-['Bahij_TheSansArabic']"
             style={{
               color: statusIndex >= 3 ? activeColor : inactiveColor,
-              fontFamily: "Bahij TheSansArabic, -apple-system, sans-serif",
             }}
           >
             {data[2]}
@@ -183,10 +182,9 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
 
         <div className="flex-1 text-center">
           <span
-            className="text-xs font-medium leading-4"
+            className="text-[10px] font-medium leading-[15.732px] font-['Bahij_TheSansArabic']"
             style={{
               color: statusIndex >= 4 ? activeColor : inactiveColor,
-              fontFamily: "Bahij TheSansArabic, -apple-system, sans-serif",
             }}
           >
             {data[3]}
