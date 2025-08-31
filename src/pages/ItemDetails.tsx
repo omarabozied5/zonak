@@ -1,4 +1,4 @@
-// Updated ItemDetails.tsx - Complete file with new ConfirmationDialog
+// Updated ItemDetails.tsx - Complete RTL layout matching the image
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -7,7 +7,7 @@ import {
   useSearchParams,
   useLocation,
 } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { X } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import FloatingCart from "@/components/FloatingCart";
 import { Button } from "@/components/ui/button";
@@ -66,25 +66,6 @@ const ItemDetails = () => {
   const isItemAvailable =
     itemDetails?.is_available === true || itemDetails?.is_available === 1;
 
-  console.log("=== AVAILABILITY DEBUG ===");
-  console.log("itemDetails:", itemDetails);
-  console.log("itemDetails?.is_available:", itemDetails?.is_available);
-  console.log(
-    "typeof itemDetails?.is_available:",
-    typeof itemDetails?.is_available
-  );
-  console.log("isItemAvailable result:", isItemAvailable);
-  console.log("========================");
-
-  // Add this after itemDetails loads
-  useEffect(() => {
-    if (itemDetails) {
-      console.log("ITEM DETAILS - Item:", itemDetails.name);
-      console.log("ITEM DETAILS - is_available:", itemDetails.is_available);
-      console.log("ITEM DETAILS - typeof:", typeof itemDetails.is_available);
-      console.log("ITEM DETAILS - Full object:", itemDetails);
-    }
-  }, [itemDetails]);
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<
     Record<number, number>
@@ -135,10 +116,9 @@ const ItemDetails = () => {
 
   // Check if user has made changes (only for non-edit mode)
   const hasUnsavedChanges = useCallback(() => {
-    if (isEditMode) return false; // Don't check for edit mode
+    if (isEditMode) return false;
     if (!itemDetails) return false;
 
-    // Check if any selections have been made
     const hasSelectedOptions = Object.keys(selectedOptions).length > 0;
     const hasSelectedOptional = selectedOptional.length > 0;
     const hasNotes = notes.trim().length > 0;
@@ -216,6 +196,27 @@ const ItemDetails = () => {
     });
 
     return total * quantity;
+  };
+
+  const calculateOptionsTotal = () => {
+    if (!itemDetails) return 0;
+    let optionsTotal = 0;
+
+    Object.values(selectedOptions).forEach((optionId) => {
+      const option = itemDetails.optionGroups
+        ?.flatMap((group) => group.options)
+        .find((opt) => opt.id === optionId);
+      if (option) optionsTotal += option.price;
+    });
+
+    selectedOptional.forEach((optionId) => {
+      const option = itemDetails.optionGroups
+        ?.flatMap((group) => group.options)
+        .find((opt) => opt.id === optionId);
+      if (option) optionsTotal += option.price;
+    });
+
+    return optionsTotal * quantity;
   };
 
   const canAddToCart = () => {
@@ -297,10 +298,6 @@ const ItemDetails = () => {
   };
 
   const handleAddToCart = () => {
-    console.log("=== HANDLE ADD TO CART START ===");
-    console.log("isItemAvailable:", isItemAvailable);
-    console.log("isAuthenticated:", isAuthenticated);
-    console.log("canAddToCart():", canAddToCart());
     // Check authentication first
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
@@ -397,7 +394,7 @@ const ItemDetails = () => {
     } else {
       addItem(cartItem);
       toast.success(`تم إضافة ${itemDetails!.name} إلى السلة`);
-      navigate(-1); // Go back to restaurant details page
+      navigate(-1);
     }
   };
 
@@ -422,35 +419,39 @@ const ItemDetails = () => {
   }
 
   const images = itemDetails.images || [];
-
-  // Check authentication and availability, plus required options
-
-  const canAddToCartFinal =
-    isAuthenticated && isItemAvailable && canAddToCart();
+  const canAddToCartFinal = isAuthenticated && isItemAvailable && canAddToCart();
+  const basePrice = itemDetails.price * quantity;
+  const optionsPrice = calculateOptionsTotal();
+  const totalPrice = calculateTotalPrice();
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      <Navigation />
+    <div className="min-h-screen bg-white" dir="rtl">
+      {/* Hide Navigation for mobile-first design */}
+      <div className="hidden lg:block">
+        <Navigation />
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {/* Back Button */}
-        <Button
-          variant="ghost"
-          onClick={() =>
-            handleNavigation(() => navigate(isEditMode ? "/cart" : -1))
-          }
-          className="mb-4 sm:mb-6 hover:bg-[#FFAA01]/10 text-[#053468] font-medium"
-        >
-          <ArrowRight className="h-5 w-5 ml-2" />
-          {isEditMode ? "العودة للسلة" : "العودة"}
-        </Button>
-
+      {/* Main Content Container */}
+      <div className="relative max-w-md mx-auto bg-white min-h-screen">
+        
         {/* Edit Mode Indicator */}
         <EditModeIndicator isEditMode={isEditMode} />
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-          {/* Image Section */}
-          <div className="space-y-4">
+        {/* Header Section with Image */}
+        <div className="relative">
+          {/* Close Button - Top Right for RTL */}
+          <Button
+            variant="ghost"
+            onClick={() =>
+              handleNavigation(() => navigate(isEditMode ? "/cart" : -1))
+            }
+            className="absolute top-4 right-4 z-20 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white rounded-full"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+
+          {/* Image */}
+          <div className="aspect-[4/3] bg-gray-200 relative overflow-hidden">
             <ImageSection
               images={images}
               itemName={itemDetails.name}
@@ -460,48 +461,63 @@ const ItemDetails = () => {
               isCombo={itemDetails.is_combo === 1}
               isItemActive={isItemAvailable}
             />
-
-            <ItemInfo
-              name={itemDetails.name}
-              description={itemDetails.description}
-              categories={itemDetails.categories}
-              price={itemDetails.price}
-              newPrice={itemDetails.new_price}
-              hasOffer={itemDetails.has_offer}
-            />
           </div>
+        </div>
 
-          {/* Options Section */}
-          <div className="space-y-4 sm:space-y-6">
-            {/* Option Groups */}
-            <OptionGroups
-              optionGroups={itemDetails.optionGroups}
-              selectedOptions={selectedOptions}
-              selectedOptional={selectedOptional}
-              handleRequiredOptionChange={handleRequiredOptionChange}
-              handleOptionalOptionChange={handleOptionalOptionChange}
-            />
+        {/* Item Title and Description */}
+        <div className="px-6 py-4 bg-white">
+          <h1 className="text-xl font-bold text-gray-900 mb-2 text-center">
+            {itemDetails.name}
+          </h1>
+          <p className="text-sm text-gray-600 leading-relaxed text-center mb-2">
+            {itemDetails.description}
+          </p>
+          {/* Nutritional info - only show if available */}
+          {itemDetails.description && itemDetails.description.includes("Carbs") && (
+            <div className="text-xs text-gray-500 text-center">
+              {itemDetails.description.split(" - ").slice(-1)[0]}
+            </div>
+          )}
+        </div>
 
-            {/* Notes */}
-            <NotesSection notes={notes} setNotes={setNotes} />
+        {/* Options Section */}
+        <div className="px-6 space-y-6">
+          <OptionGroups
+            optionGroups={itemDetails.optionGroups}
+            selectedOptions={selectedOptions}
+            selectedOptional={selectedOptional}
+            handleRequiredOptionChange={handleRequiredOptionChange}
+            handleOptionalOptionChange={handleOptionalOptionChange}
+          />
 
-            {/* Quantity and Add to Cart */}
-            <QuantityCartSection
-              quantity={quantity}
-              setQuantity={setQuantity}
-              totalPrice={calculateTotalPrice()}
-              isEditMode={isEditMode}
-              canAddToCartFinal={canAddToCartFinal}
-              isItemActive={isItemAvailable}
-              canAddToCart={canAddToCart}
-              handleAddToCart={handleAddToCart}
-              isAuthenticated={isAuthenticated}
-            />
-          </div>
+          {/* Notes Section */}
+          <NotesSection notes={notes} setNotes={setNotes} />
+        </div>
+
+        {/* Bottom padding for fixed cart */}
+        <div className="h-72"></div>
+      </div>
+
+      {/* Fixed Bottom Cart Section */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+        <div className="max-w-md mx-auto p-6">
+          <QuantityCartSection
+            quantity={quantity}
+            setQuantity={setQuantity}
+            basePrice={basePrice}
+            optionsPrice={optionsPrice}
+            totalPrice={totalPrice}
+            isEditMode={isEditMode}
+            canAddToCartFinal={canAddToCartFinal}
+            isItemActive={isItemAvailable}
+            canAddToCart={canAddToCart}
+            handleAddToCart={handleAddToCart}
+            isAuthenticated={isAuthenticated}
+          />
         </div>
       </div>
 
-      {/* Updated Confirmation Dialog */}
+      {/* Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={showUnsavedDialog}
         onConfirm={confirmUnsavedChanges}

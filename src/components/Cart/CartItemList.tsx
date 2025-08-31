@@ -1,13 +1,14 @@
 import React from "react";
 import { Plus, Minus, Edit2, Trash2 } from "lucide-react";
 import { CartItem } from "../../types/types";
+import CartItemOptions from "./CartItemOptions";
 
 interface CartItemsListProps {
   items: CartItem[];
   onQuantityUpdate: (itemId: string, newQuantity: number) => void;
   onRemoveItem: (itemId: string) => void;
   onEditItem: (item: CartItem) => void;
-  hasCustomizations: (itemId: string) => boolean;
+  hasCustomizations: (item: CartItem) => boolean; // Updated to accept CartItem instead of string
 }
 
 const CartItemsList: React.FC<CartItemsListProps> = ({
@@ -17,6 +18,28 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
   onEditItem,
   hasCustomizations,
 }) => {
+  
+  // Helper function to check if item has customizable options
+  const itemHasCustomizations = (item: CartItem): boolean => {
+    // Check if item is marked as customizable
+    if (item.isCustomizable) return true;
+    
+    // Check if item has any selected options that make it customizable
+    if (item.selectedOptions) {
+      const hasRequiredOptions = item.selectedOptions.requiredOptions && 
+        Object.keys(item.selectedOptions.requiredOptions).length > 0;
+      const hasOptionalOptions = item.selectedOptions.optionalOptions && 
+        item.selectedOptions.optionalOptions.length > 0;
+      const hasNotes = item.selectedOptions.notes && 
+        item.selectedOptions.notes.trim().length > 0;
+      const hasSize = item.selectedOptions.size;
+      
+      return !!(hasRequiredOptions || hasOptionalOptions || hasNotes || hasSize);
+    }
+    
+    // Fallback to passed function (though signature needs to be updated)
+    return hasCustomizations(item);
+  };
   return (
     <div>
       <h2 className="text-sm font-bold text-gray-900 mb-4 text-right">
@@ -29,7 +52,7 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
           const totalDiscount = (item.discountAmount || 0) * item.quantity;
           const totalOriginalPrice =
             (item.originalPrice || item.price) * item.quantity;
-          const canEdit = hasCustomizations(item.id);
+          const canEdit = itemHasCustomizations(item);
 
           return (
             <div key={item.id} className="p-4">
@@ -68,27 +91,8 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
                 </div>
               </div>
 
-              {/* Customizations */}
-              {item.selectedOptions && (
-                <div className="mb-3 text-xs text-gray-600 space-y-1">
-                  {item.selectedOptions.requiredOptions?.map(
-                    (optionId, index) => (
-                      <div key={index} className="flex items-center gap-1">
-                        <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                        <span>خيار مطلوب: {optionId}</span>
-                      </div>
-                    )
-                  )}
-                  {item.selectedOptions.optionalOptions?.map(
-                    (optionId, index) => (
-                      <div key={index} className="flex items-center gap-1">
-                        <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                        <span>خيار إضافي: {optionId}</span>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
+              {/* Customizations - Use dedicated component */}
+              <CartItemOptions item={item} className="mb-3" />
 
               {/* Actions */}
               <div className="flex items-center justify-between">

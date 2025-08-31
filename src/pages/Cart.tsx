@@ -1,4 +1,4 @@
-// Updated Cart.tsx with Checkout-style UI
+// Updated Cart.tsx with Checkout-style UI and Fixed Edit Functionality
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
@@ -104,9 +104,16 @@ const Cart = () => {
     navigate("/");
   };
 
+  // Fixed edit item handler with proper customization check
   const handleEditItem = (item: CartItem): void => {
     try {
-      const baseItemId = item.id.split("-")[0];
+      // Check if item can be edited (has customizations)
+      if (!itemHasCustomizations(item)) {
+        toast.error("هذا العنصر لا يحتوي على خيارات قابلة للتعديل");
+        return;
+      }
+
+      const baseItemId = item.productId || item.id.split("-")[0];
       setEditingItem(item.id);
 
       // Preserve restaurant information in edit navigation
@@ -121,6 +128,28 @@ const Cart = () => {
       console.error("Error editing item:", error);
       toast.error("حدث خطأ أثناء تعديل الصنف");
     }
+  };
+
+  // Helper function to check if item has customizations
+  const itemHasCustomizations = (item: CartItem): boolean => {
+    // Check if item is marked as customizable
+    if (item.isCustomizable) return true;
+    
+    // Check if item has any selected options that make it customizable
+    if (item.selectedOptions) {
+      const hasRequiredOptions = item.selectedOptions.requiredOptions && 
+        Object.keys(item.selectedOptions.requiredOptions).length > 0;
+      const hasOptionalOptions = item.selectedOptions.optionalOptions && 
+        item.selectedOptions.optionalOptions.length > 0;
+      const hasNotes = item.selectedOptions.notes && 
+        item.selectedOptions.notes.trim().length > 0;
+      const hasSize = item.selectedOptions.size;
+      
+      return !!(hasRequiredOptions || hasOptionalOptions || hasNotes || hasSize);
+    }
+    
+    // Fallback to store's hasCustomizations function
+    return hasCustomizations(item);
   };
 
   const handleQuantityUpdate = (itemId: string, newQuantity: number): void => {
@@ -230,7 +259,7 @@ const Cart = () => {
             onQuantityUpdate={handleQuantityUpdate}
             onRemoveItem={handleRemoveItem}
             onEditItem={handleEditItem}
-            hasCustomizations={hasCustomizations}
+            hasCustomizations={itemHasCustomizations}
           />
 
           {/* Price Breakdown */}

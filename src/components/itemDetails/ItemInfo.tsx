@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MenuItemCategory } from "../../types/types";
 
@@ -10,6 +11,7 @@ interface ItemInfoProps {
   price: number;
   newPrice?: number | string;
   hasOffer: boolean;
+  onClose?: () => void;
 }
 
 const ItemInfo: React.FC<ItemInfoProps> = ({
@@ -19,43 +21,59 @@ const ItemInfo: React.FC<ItemInfoProps> = ({
   price,
   newPrice,
   hasOffer,
+  onClose,
 }) => {
   return (
-    <Card className="shadow-lg border-0">
-      <CardContent className="p-4 sm:p-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-[#053468] mb-3">
-          {name}
-        </h1>
-        <p className="text-gray-600 mb-4 leading-relaxed text-sm sm:text-base">
+    <div className="bg-white rounded-lg">
+      {/* Header with close button */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-gray-900 text-center">
+            {name}
+          </h1>
+        </div>
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {/* Description */}
+        <p className="text-gray-600 text-sm leading-relaxed text-center">
           {description}
         </p>
 
+        {/* Nutritional Info (if available in description) */}
+        {description && description.includes("Carbs") && (
+          <div className="text-xs text-gray-500 text-center">
+            {description.split(" - ").slice(-1)[0]}
+          </div>
+        )}
+
+        {/* Categories */}
         {categories?.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 justify-center">
             {categories.map((category) => (
               <Badge
                 key={category.id}
                 variant="outline"
-                className="border-[#053468]/20 bg-[#053468]/5 text-[#053468] text-xs sm:text-sm"
+                className="border-gray-200 bg-gray-50 text-gray-600 text-xs"
               >
                 {category.name}
               </Badge>
             ))}
           </div>
         )}
-
-        <div className="flex items-center gap-3">
-          <div className="text-2xl sm:text-3xl font-bold text-[#FFAA01]">
-            {hasOffer ? newPrice : price} ر.س
-          </div>
-          {hasOffer && (
-            <div className="text-base sm:text-lg text-gray-400 line-through">
-              {price} ر.س
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
