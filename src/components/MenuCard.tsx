@@ -1,16 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { MenuItem, Restaurant } from "@/types/types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, Minus } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { createCartItem } from "@/lib/cartUtils";
 import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
+import LoginModal from "@/components/LoginModal";
 
 interface MenuCardProps {
   item: MenuItem;
@@ -34,6 +34,7 @@ const MenuCard = ({
   const currentUserId = useAuthStore((state) => state.getUserId());
   const cartStore = useCartStore(currentUserId);
   const { addItem, removeItem, items } = cartStore;
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const restaurantStatus = useRestaurantStatus(restaurant);
 
@@ -57,6 +58,7 @@ const MenuCard = ({
   const handleAddToCart = () => {
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
+      setShowLoginModal(true);
       return;
     }
     if (!restaurantStatus.canOrder) {
@@ -135,121 +137,92 @@ const MenuCard = ({
     );
   };
 
-  const getStatusBadge = () => {
-    if (!isAuthenticated) {
-      return (
-        <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-          يجب تسجيل الدخول
-        </Badge>
-      );
-    }
-    if (!isItemAvailable) {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          غير متوفر
-        </Badge>
-      );
-    }
-    if (!restaurantStatus.canOrder) {
-      return (
-        <Badge
-          className={`text-xs ${
-            restaurantStatus.reasonClosed === "busy"
-              ? "bg-amber-100 text-amber-800 border-amber-200"
-              : "bg-red-100 text-red-800 border-red-200"
-          }`}
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          {restaurantStatus.reasonClosed === "busy" ? "مشغول" : "مغلق"}
-        </Badge>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className="bg-white rounded-sm shadow-none   mb-1 overflow-hidden">
-      <div className="flex items-start p-4" dir="rtl">
-        {/* Image */}
-        <div className="w-[82px] h-[82px] flex-shrink-0 ml-4 relative overflow-hidden rounded-xl">
-          <img
-            src={item.images?.[0]?.image_url || "/api/placeholder/400/300"}
-            alt={item.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-          {!canAddToCart && (
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-xl">
-              {getStatusBadge()}
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
-          {/* Title + Description */}
-          <div className="mb-2">
-            <h3 className="font-semibold text-base sm:text-lg text-gray-900 leading-tight mb-1">
-              {item.name}
-            </h3>
-            {item.description && (
-              <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                {item.description}
-              </p>
-            )}
+    <>
+      <div className="bg-white rounded-sm shadow-none mb-1 overflow-hidden">
+        <div className="flex items-start p-4" dir="rtl">
+          {/* Image */}
+          <div className="w-[82px] h-[82px] flex-shrink-0 ml-4 relative overflow-hidden rounded-xl">
+            <img
+              src={item.images?.[0]?.image_url || "/api/placeholder/400/300"}
+              alt={item.name}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           </div>
 
-          {/* Price + Controls row */}
-          <div className="flex justify-between items-center mt-3">
-            {/* Price on right */}
-            <div className="flex-shrink-0 text-right">
-              {formatPrice(item.price, item.new_price)}
+          {/* Content */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+            {/* Title + Description */}
+            <div className="mb-2">
+              <h3 className="font-semibold text-base sm:text-lg text-gray-900 leading-tight mb-1">
+                {item.name}
+              </h3>
+              {item.description && (
+                <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                  {item.description}
+                </p>
+              )}
             </div>
 
-            {/* Controls on left */}
-            <div className="flex items-center gap-2">
-              {isAuthenticated && itemQuantity > 0 ? (
-                <div className="flex items-center bg-gray-50 rounded-lg border">
+            {/* Price + Controls row */}
+            <div className="flex justify-between items-center mt-3">
+              {/* Price on right */}
+              <div className="flex-shrink-0 text-right">
+                {formatPrice(item.price, item.new_price)}
+              </div>
+
+              {/* Controls on left */}
+              <div className="flex items-center gap-2">
+                {isAuthenticated && itemQuantity > 0 ? (
+                  <div className="flex items-center bg-gray-50 rounded-lg border">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-r-lg"
+                      onClick={handleDecreaseQuantity}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="font-semibold text-sm min-w-[32px] text-center px-2">
+                      {itemQuantity}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-l-lg"
+                      onClick={handleIncreaseQuantity}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
                   <Button
-                    variant="ghost"
+                    onClick={handleAddToCart}
                     size="sm"
-                    className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-r-lg"
-                    onClick={handleDecreaseQuantity}
+                    className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Plus className="h-4 w-4 ml-1" />
+                    أضف
                   </Button>
-                  <span className="font-semibold text-sm min-w-[32px] text-center px-2">
-                    {itemQuantity}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-l-lg"
-                    onClick={handleIncreaseQuantity}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  onClick={handleAddToCart}
-                  disabled={!canAddToCart}
-                  size="sm"
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    canAddToCart
-                      ? "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-200"
-                  }`}
-                >
-                  <Plus className="h-4 w-4 ml-1" />
-                  أضف
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          // After successful login, you might want to add the item automatically
+          // handleAddToCart();
+        }}
+      />
+    </>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Order } from "../../hooks/useOrderStore";
@@ -8,8 +8,7 @@ import OrderItems from "./OrderItems";
 import OrderPricing from "./OrderPricing";
 import OrderActions from "./OrderActions";
 import SliderPickupOrder from "./SliderPickupOrder";
-import {Restaurant} from "../../types/types";
-import { useEffect } from "react";
+import { Restaurant } from "../../types/types";
 import { apiService } from "@/services/apiService";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -23,32 +22,78 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAllItems, setShowAllItems] = useState(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-    const { user, isAuthenticated } = useAuthStore();
-  
+  const [imageError, setImageError] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const { user, isAuthenticated } = useAuthStore();
 
   const cartStore = useCartStore(user?.id || null);
-      const {
-        items,
-      } = cartStore;
+  const { items } = cartStore;
 
-    useEffect(() => {
-        const fetchRestaurantDetails = async () => {
-          if (items.length > 0 && items[0].placeId) {
-            try {
-              const response = await apiService.fetchRestaurantDetails(
-                items[0].placeId
-              );
-              if (response.message === "success" && response.data) {
-                setRestaurant(response.data);
-              }
-            } catch (error) {
-              console.error("Error fetching restaurant details:", error);
-            }
+  // Update current time every second for countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchRestaurantDetails = async () => {
+      if (items.length > 0 && items[0].placeId) {
+        try {
+          const response = await apiService.fetchRestaurantDetails(
+            items[0].placeId
+          );
+          if (response.message === "success" && response.data) {
+            setRestaurant(response.data);
           }
-        };
-    
-        fetchRestaurantDetails();
-      }, [items]);
+        } catch (error) {
+          console.error("Error fetching restaurant details:", error);
+        }
+      }
+    };
+
+    fetchRestaurantDetails();
+  }, [items]);
+
+  // Calculate remaining time with live countdown
+  const calculateRemainingTime = () => {
+    if (order.status !== "preparing") {
+      return { minutes: 0, seconds: 0, hasTime: false };
+    }
+
+    let targetTime: Date;
+    const now = currentTime;
+
+    // Try different time sources
+    if (order.time_to_ready && order.preparing_at) {
+      // Use time_to_ready from preparing_at
+      const preparingTime = new Date(order.preparing_at);
+      const minutesToAdd =
+        typeof order.time_to_ready === "string"
+          ? parseInt(order.time_to_ready)
+          : order.time_to_ready;
+      targetTime = new Date(preparingTime.getTime() + minutesToAdd * 60 * 1000);
+    } else if (order.remaining_time > 0) {
+      // Use remaining_time (this might be outdated though)
+      targetTime = new Date(now.getTime() + order.remaining_time * 60 * 1000);
+    } else {
+      return { minutes: 0, seconds: 0, hasTime: false };
+    }
+
+    const timeDifference = targetTime.getTime() - now.getTime();
+
+    if (timeDifference <= 0) {
+      return { minutes: 0, seconds: 0, hasTime: true };
+    }
+
+    const totalSeconds = Math.floor(timeDifference / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return { minutes, seconds, hasTime: true };
+  };
 
   // Determine delivery type
   const isDelivery = order.delivery_cost > 0 || order.car_delivery_cost > 0;
@@ -60,20 +105,52 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
     return "إستلام من الفرع";
   };
 
-  // Calculate remaining time for countdown
-  const getRemainingTimeText = () => {
-    if (order.status === "preparing" && order.remaining_time > 1) {
-      const minutes = Math.floor(order.remaining_time);
-      const seconds = Math.floor((order.remaining_time % 1) * 60);
-      return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")} دقيقة`;
+  // Get countdown text
+  const getCountdownText = () => {
+    const timeData = calculateRemainingTime();
+
+    if (!timeData.hasTime) {
+      return "لحظات";
     }
-    return "لحظات";
+
+    if (timeData.minutes === 0 && timeData.seconds === 0) {
+      return "لحظات";
+    }
+
+    return `${timeData.minutes.toString().padStart(2, "0")}:${timeData.seconds
+      .toString()
+      .padStart(2, "0")} دقيقة`;
   };
 
-  const shouldShowTimer = order.status === "preparing" || (isDelivery && order.status === "ready");
+  const shouldShowTimer =
+    order.status === "preparing" || (isDelivery && order.status === "ready");
 
-  const itemsToShow = showAllItems || isExpanded ? order.orderitems : order.orderitems.slice(0, 3);
+  const itemsToShow =
+    showAllItems || isExpanded
+      ? order.orderitems
+      : order.orderitems.slice(0, 3);
   const hasMoreItems = order.orderitems.length > 3;
+
+  // Get the logo URL with fallback priority
+  const getLogoUrl = () => {
+    // Priority 1: Restaurant data from API fetch
+    if (restaurant?.user?.profile_image && !imageError) {
+      return restaurant.user.profile_image;
+    }
+
+    // Priority 2: Order place logo
+    if (order.place?.logo && !imageError) {
+      return order.place.logo;
+    }
+
+    return null;
+  };
+
+  const logoUrl = getLogoUrl();
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
 
   return (
     <div className="w-full" dir="rtl">
@@ -82,11 +159,9 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
           {/* Main Content */}
           <div className="px-[35px] pt-[18px] pb-6">
             {/* Header Row - Restaurant Logo and Order Info */}
-            <div className="flex items-center  mb-4">
+            <div className="flex items-center mb-4">
               {/* Left Side - Order Info */}
               <div className="flex items-center gap-3 flex-1">
-                {/* Restaurant Logo */}
-                
                 {/* Order Type and Number */}
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold text-[#1d1e20] font-['Bahij_TheSansArabic']">
@@ -101,8 +176,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
 
               {/* Right Side - Restaurant Name and Expand Button */}
               <div className="flex flex-col items-end gap-2">
-                
-                <button
+                {/* <button
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="flex flex-col items-center gap-1"
                 >
@@ -113,42 +187,49 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
                       <ChevronUp className="h-5 w-5 text-[#1d1e20]" />
                     )}
                   </div>
-                </button>
-                
-                <div 
-                  className="w-10 h-10 rounded-full bg-gray-200 bg-cover bg-center border border-white flex-shrink-0 overflow-hidden"
-                  style={{
-                    backgroundImage: restaurant?.user?.profile_image ? `url(${order.place.logo})` : 'none'
-                  }}
-                >
-                  {!order.place?.logo && (
+                </button> */}
+
+                {/* Restaurant Logo with improved error handling */}
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden border border-gray-300">
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt={order.place?.merchant_name || "Restaurant"}
+                      className="w-full h-full object-cover"
+                      onError={handleImageError}
+                      onLoad={() => setImageError(false)}
+                    />
+                  ) : (
                     <div className="w-full h-full bg-gray-300 flex items-center justify-center">
                       <span className="text-xs text-gray-600">🏪</span>
                     </div>
                   )}
                 </div>
+
                 <span className="text-[11px] font-semibold text-[#1d1e20] font-['Bahij_TheSansArabic']">
                   {order.place?.merchant_name || order.place?.title}
                 </span>
-                
               </div>
             </div>
 
             {/* Order Items */}
             <div className="space-y-1 mb-6">
               {itemsToShow.map((item, index) => (
-                <div key={index} className="flex justify-start items-center py-0.5">
-                  <span className="text-[11px] font-medium text-[#1d1e20] font-['Bahij_TheSansArabic'] ml-3  ">
+                <div
+                  key={index}
+                  className="flex justify-start items-center py-0.5"
+                >
+                  <span className="text-[11px] font-medium text-[#1d1e20] font-['Bahij_TheSansArabic'] ml-3">
                     {item.item_name}
                   </span>
-                  <span className="text-[11px] font-medium text-[#6f7274] font-['Bahij_TheSansArabic']  flex-shrink-0">
+                  <span className="text-[11px] font-medium text-[#6f7274] font-['Bahij_TheSansArabic'] flex-shrink-0">
                     X {item.quantity}
                   </span>
                 </div>
               ))}
-              
+
               {hasMoreItems && !showAllItems && !isExpanded && (
-                <button 
+                <button
                   onClick={() => setShowAllItems(true)}
                   className="flex justify-between items-center py-0.5 w-full hover:bg-gray-50"
                 >
@@ -167,7 +248,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
               <SliderPickupOrder status={order.status} />
             </div>
 
-            {/* Timer Section */}
+            {/* Timer Section - Now with working countdown */}
             {shouldShowTimer && (
               <div className="text-center mb-[30px]">
                 <div className="text-[10px] font-medium font-['Bahij_TheSansArabic'] leading-4">
@@ -175,9 +256,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
                     {isDelivery ? "متوقع يصل" : "متوقع يجهز"}
                   </span>
                   <span className="text-[#fbd252]"> خلال : </span>
-                  <span className="text-[#6f7274]">
-                    {getRemainingTimeText()}
-                  </span>
+                  <span className="text-[#6f7274]">{getCountdownText()}</span>
                 </div>
               </div>
             )}
@@ -195,8 +274,9 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
                   {order.total_price.toFixed(2)} ريال
                 </span>
               </div>
-              
-              {(order.status === "on_the_way" || order.status === "waiting_customer") && (
+
+              {(order.status === "on_the_way" ||
+                order.status === "waiting_customer") && (
                 <div className="flex items-center gap-1">
                   <span className="text-[11px] font-medium text-[#9b9b9b] font-['Bahij_TheSansArabic']">
                     تتبع الطلب
@@ -225,76 +305,5 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
     </div>
   );
 };
-
-// Loading State Component
-const LoadingStateComponent: React.FC = () => (
-  <div className="space-y-2">
-    {Array.from({ length: 3 }).map((_, index) => (
-      <OrderCardSkeleton key={index} />
-    ))}
-  </div>
-);
-
-// Loading Skeleton for order cards
-const OrderCardSkeleton: React.FC = () => (
-  <Card className="w-full bg-white rounded-[20px] border-0 shadow-none overflow-hidden">
-    <CardContent className="p-[35px]">
-      <div className="animate-pulse">
-        {/* Header skeleton */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-200 rounded-full" />
-            <div className="space-y-1">
-              <div className="h-3 bg-gray-200 rounded w-24" />
-              <div className="h-2.5 bg-gray-200 rounded w-32" />
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-5 h-5 bg-gray-200 rounded" />
-            <div className="h-2.5 bg-gray-200 rounded w-16" />
-          </div>
-        </div>
-
-        {/* Items skeleton */}
-        <div className="space-y-1 mb-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex justify-between py-0.5">
-              <div className="h-3 bg-gray-200 rounded w-32" />
-              <div className="h-3 bg-gray-200 rounded w-8" />
-            </div>
-          ))}
-        </div>
-
-        {/* Progress slider skeleton */}
-        <div className="relative mb-4">
-          <div className="flex justify-between items-center px-[14px]">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="w-7 h-7 bg-gray-200 rounded-full" />
-            ))}
-          </div>
-          <div className="flex justify-between mt-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-2 bg-gray-200 rounded w-12" />
-            ))}
-          </div>
-        </div>
-
-        {/* Timer skeleton */}
-        <div className="text-center mb-[30px]">
-          <div className="h-3 bg-gray-200 rounded w-32 mx-auto" />
-        </div>
-
-        {/* Divider */}
-        <div className="w-full h-px bg-gray-200 mb-[15px]" />
-
-        {/* Bottom row skeleton */}
-        <div className="flex justify-between">
-          <div className="h-3 bg-gray-200 rounded w-24" />
-          <div className="h-3 bg-gray-200 rounded w-16" />
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 export default OrderCard;

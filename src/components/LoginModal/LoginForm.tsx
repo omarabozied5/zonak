@@ -81,7 +81,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* Header */}
       <div className="text-center">
         <div className="w-16 h-16  rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <img src="login.png" />
+          <img src="/login.png" />
         </div>
         <h2 className="text-2xl font-bold text-black mb-2">إبدأ مع زوونك </h2>
         <p className="text-gray-600 text-sm">ادخل بياناتك لتسجيل الدخول</p>

@@ -1,5 +1,4 @@
-import React from "react";
-import { Clock } from "lucide-react";
+import React, { useState } from "react";
 import { MostOrderedItem } from "@/hooks/useMostOrderedItems";
 import { Restaurant } from "@/types/types";
 import { useCartStore } from "@/stores/useCartStore";
@@ -8,6 +7,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { createCartItem } from "@/lib/cartUtils";
 import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
+import LoginModal from "@/components/LoginModal";
 
 interface MostOrderedItemCardProps {
   item: MostOrderedItem;
@@ -31,6 +31,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
   onAddToCart,
 }) => {
   const navigate = useNavigate();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const { isAuthenticated } = useAuthStore();
   const currentUserId = useAuthStore((state) => state.getUserId());
@@ -63,6 +64,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
     // Check authentication first
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
+      setShowLoginModal(true);
       return;
     }
 
@@ -144,132 +146,114 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
     );
   };
 
-  // Status indicator overlay
-  const StatusOverlay = () => {
-    if (canAddToCart) return null;
-
-    return (
-      <div className="absolute inset-0 bg-black/40 z-10 flex items-center justify-center rounded-lg">
-        <div className="bg-red-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-          {!isAuthenticated
-            ? "يجب تسجيل الدخول"
-            : !isItemAvailable
-            ? "غير متوفر"
-            : restaurantStatus.reasonClosed === "busy"
-            ? "المطعم مشغول"
-            : "المطعم مغلق"}
-          <Clock className="h-3 w-3" />
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="flex-1 flex flex-col items-center pb-2">
-      {/* Item Image with Controls */}
-      <div className="relative w-[84px] h-[84px] mb-2">
-        <div className="w-full h-full bg-gray-100 rounded-lg overflow-hidden">
-          {getItemImage(item) ? (
-            <img
-              src={getItemImage(item)!}
-              alt={item.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = "none";
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl opacity-60">
-              {item.is_combo === 1 ? "🍽️" : "🍴"}
+    <>
+      <div className="flex-1 flex flex-col items-center pb-2">
+        {/* Item Image with Controls */}
+        <div className="relative w-[84px] h-[84px] mb-2">
+          <div className="w-full h-full bg-gray-100 rounded-lg overflow-hidden">
+            {getItemImage(item) ? (
+              <img
+                src={getItemImage(item)!}
+                alt={item.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-2xl opacity-60">
+                {item.is_combo === 1 ? "🍽️" : "🍴"}
+              </div>
+            )}
+
+            {/* Quantity Controls */}
+            <div className="absolute bottom-1 left-2 right-1 z-20">
+              {itemQuantity === 0 && (
+                // Case 1: Only big + button
+                <div className="absolute bottom-0 right-0 z-20">
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-8 h-8 bg-white rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-all hover:bg-gray-50"
+                  >
+                    <span className="text-base font-bold text-black">+</span>
+                  </button>
+                </div>
+              )}
+
+              {itemQuantity === 1 && (
+                // Case 3: delete | qty | +
+                <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
+                  >
+                    <span className="text-base font-bold text-black">+</span>
+                  </button>
+
+                  <span className="text-sm font-bold text-black text-center">
+                    {itemQuantity}
+                  </span>
+                  <button
+                    onClick={handleRemoveFromCart}
+                    className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
+                  >
+                    <img src="/delete.png" alt="delete" className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+
+              {itemQuantity > 1 && (
+                // Case 2: - | qty | +
+                <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
+                  >
+                    <span className="text-base font-bold text-black">+</span>
+                  </button>
+
+                  <span className="text-sm font-bold text-black text-center">
+                    {itemQuantity}
+                  </span>
+                  <button
+                    onClick={handleRemoveFromCart}
+                    className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
+                  >
+                    <span className="text-base font-bold text-black">−</span>
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Status Overlay */}
-          <StatusOverlay />
+        {/* Item Info (name + price) */}
+        <div className="w-full px-1 flex flex-col items-start">
+          {/* Item Name */}
+          <p className="text-sm font-bold text-black leading-tight line-clamp-2 text-right">
+            {item.name}
+          </p>
 
-          {/* Quantity Controls */}
-          <div className="absolute bottom-1 left-2 right-1  z-20">
-            {itemQuantity === 0 && (
-              // Case 1: Only big + button
-              <div className="absolute bottom-0 right-0 z-20">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={!canAddToCart}
-                  className={`w-8 h-8 bg-white rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-all ${
-                    canAddToCart
-                      ? "hover:bg-gray-50"
-                      : "opacity-50 cursor-not-allowed"
-                  }`}
-                >
-                  <span className="text-base font-bold text-black">+</span>
-                </button>
-              </div>
-            )}
-
-            {itemQuantity === 1 && (
-              // Case 3: delete | qty | +
-              <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={!canAddToCart}
-                  className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
-                >
-                  <span className="text-base font-bold text-black">+</span>
-                </button>
-
-                <span className="text-sm font-bold text-black text-center">
-                  {itemQuantity}
-                </span>
-                <button
-                  onClick={handleRemoveFromCart}
-                  className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
-                >
-                  <img src="/delete.png" alt="delete" className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-
-            {itemQuantity > 1 && (
-              // Case 2: - | qty | +
-              <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={!canAddToCart}
-                  className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
-                >
-                  <span className="text-base font-bold text-black">+</span>
-                </button>
-
-                <span className="text-sm font-bold text-black text-center">
-                  {itemQuantity}
-                </span>
-                <button
-                  onClick={handleRemoveFromCart}
-                  className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
-                >
-                  <span className="text-base font-bold text-black">−</span>
-                </button>
-              </div>
-            )}
+          {/* Item Price */}
+          <div className="text-right text-sm font-medium text-gray-800">
+            {formatPrice(item.price, item.new_price)}
           </div>
         </div>
       </div>
 
-      {/* Item Name */}
-      {/* Item Info (name + price) */}
-      <div className="w-full px-1 flex flex-col items-start">
-        {/* Item Name */}
-        <p className="text-sm font-bold text-black leading-tight line-clamp-2 text-right">
-          {item.name}
-        </p>
-
-        {/* Item Price */}
-        <div className="text-right text-sm font-medium text-gray-800">
-          {formatPrice(item.price, item.new_price)}
-        </div>
-      </div>
-    </div>
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          // After successful login, you might want to add the item automatically
+          // handleAddToCart();
+        }}
+      />
+    </>
   );
 };
 

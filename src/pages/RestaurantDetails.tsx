@@ -1,24 +1,25 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Navigation from "@/components/Navigation";
-import { Button } from "@/components/ui/button";
-import LoginModal from "@/components/LoginModal";
-import Menu from "@/components/Menu";
-import FloatingCart from "@/components/FloatingCart";
-import MostOrderedItems from "@/components/MostOrderedItems";
-import { apiService, dataHelpers } from "@/services/apiService";
-import { useCartStore } from "@/stores/useCartStore";
+import Navigation from "../components/Navigation";
+import { Button } from "../components/ui/button";
+import LoginModal from "../components/LoginModal";
+import Menu from "../components/Menu";
+import FloatingCart from "../components/FloatingCart";
+import MostOrderedItems from "../components/MostOrderedItems";
+import { apiService, dataHelpers } from "../services/apiService";
+import { useCartStore } from "../stores/useCartStore";
 import { ArrowLeft } from "lucide-react";
 import { Restaurant, CartItem } from "../types/types";
 import { ErrorState, LoadingState } from "../components/ErrorLoadingStates";
 import ImageSlider from "../components/ImageSlider";
 import RestaurantInfo from "../components/ResturantInfo";
 import { MenuItem } from "../hooks/useMenuItems";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { Clock, AlertCircle } from "lucide-react";
-import { useRestaurantStatus } from "@/hooks/useRestaurantStatus";
-import OffersSection from "@/components/PlaceDetails/offer/OffersSection";
+import { useRestaurantStatus } from "../hooks/useRestaurantStatus";
+import OffersSection from "../components/PlaceDetails/offer/OffersSection";
 import { ValidOffersItem } from "../types/types";
+
 // Interface for comprehensive restaurant data
 interface RestaurantData {
   restaurant: Restaurant;
@@ -127,7 +128,9 @@ const RestaurantDetails: React.FC = () => {
       setLoading(false);
     }
   }, [id]);
-  const handleOfferClick = useCallback((offer: ValidOffersItem) => {
+
+  // Handler for offer click
+  const handleOfferClick = useCallback((offer: ValidOffer) => {
     console.log("تم النقر على العرض:", offer);
     // Handle offer click - you can navigate to a specific page,
     // add to cart, or show offer details modal
@@ -145,22 +148,6 @@ const RestaurantDetails: React.FC = () => {
     fetchRestaurantData();
   }, [fetchRestaurantData]);
 
-  // const handleAddToCart = useCallback(
-  //   (item: CartItem) => {
-  //     if (!restaurantData?.restaurant) return;
-  //     addItem({
-  //       id: item.id,
-  //       name: item.name,
-  //       price: item.new_price || item.price,
-  //       image: item.images?.[0]?.image_url || "",
-  //       restaurantId: restaurantData.restaurant.user_id.toString(),
-  //       restaurantName: restaurantData.restaurant.merchant_name,
-  //       quantity: 1,
-  //     });
-  //   },
-  //   [restaurantData, addItem]
-  // );
-
   const handleRetry = useCallback(() => {
     fetchRestaurantData();
   }, [fetchRestaurantData]);
@@ -169,29 +156,7 @@ const RestaurantDetails: React.FC = () => {
     navigate("/");
   }, [navigate]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
-        <Navigation />
-        <LoadingState />
-      </div>
-    );
-  }
-
-  if (error || !restaurantData?.restaurant) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
-        <Navigation />
-        <ErrorState
-          error={error || "حدث خطأ أثناء تحميل تفاصيل المطعم"}
-          onRetry={handleRetry}
-          onBack={handleBack}
-        />
-      </div>
-    );
-  }
-
-  const { restaurant, rating, branches } = restaurantData;
+  // Restaurant Status Banner Component
   const RestaurantStatusBanner = ({
     restaurant,
   }: {
@@ -231,28 +196,34 @@ const RestaurantDetails: React.FC = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
+        <Navigation />
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (error || !restaurantData?.restaurant) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
+        <Navigation />
+        <ErrorState
+          error={error || "حدث خطأ أثناء تحميل تفاصيل المطعم"}
+          onRetry={handleRetry}
+          onBack={handleBack}
+        />
+      </div>
+    );
+  }
+
+  const { restaurant, rating, branches } = restaurantData;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
       <Navigation />
-      {/* <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-3 sm:pt-4">
-        <Button
-          onClick={handleBack}
-          variant="outline"
-          className="mb-3 sm:mb-4 border-[#FFAA01] text-[#FFAA01] hover:bg-[#FFAA01] hover:text-white text-sm sm:text-base px-3 sm:px-4 py-2 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 ml-2" />
-          العودة للرئيسية
-        </Button>
-      </div> */}
-      {/* Restaurant Image Slider */}
-      {/* <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
-        <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
-          <ImageSlider
-            images={restaurant.slider_images || []}
-            restaurantName={restaurant.merchant_name}
-          />
-        </div>
-      </div> */}
+
       {/* Restaurant Information - Pass all data */}
       <div className="">
         <RestaurantInfo
@@ -262,9 +233,9 @@ const RestaurantDetails: React.FC = () => {
         />
       </div>
 
-      {/* <div className="h-[113px]" /> */}
       <RestaurantStatusBanner restaurant={restaurant} />
 
+      {/* Ticket-Style Offers Section */}
       {restaurant.valid_offers && restaurant.valid_offers.length > 0 && (
         <div className="p-3">
           <OffersSection
@@ -273,9 +244,10 @@ const RestaurantDetails: React.FC = () => {
             onViewAllClick={handleViewAllOffers}
             maxDisplayCount={3} // Show max 3 offers in restaurant details
             showOnlyValid={true} // Only show valid offers
-          />{" "}
+          />
         </div>
       )}
+
       {/* Most Ordered Items */}
       <div className="mx-0">
         <MostOrderedItems
@@ -285,6 +257,7 @@ const RestaurantDetails: React.FC = () => {
           restaurantName={restaurant.merchant_name}
         />
       </div>
+
       {/* Menu */}
       <div className="max-w-7xl mx-auto px-0 sm:px-4 lg:px-8 mb-6 sm:mb-8">
         <Menu
@@ -294,11 +267,12 @@ const RestaurantDetails: React.FC = () => {
           restaurant={restaurant}
           placeId={id}
           categoryId={menuItems[0]?.categories?.[0]?.id || 0}
-          restaurant={restaurant}
         />
       </div>
+
       {/* Floating Cart */}
       <FloatingCart />
+
       {/* Login Modal */}
       {showLoginModal && (
         <LoginModal

@@ -1,6 +1,6 @@
 // components/OffersContainer.tsx
 
-import React from "react";
+import React, { useMemo } from "react";
 import { ValidOffersItem } from "@/types/types";
 import OfferCard from "./OfferCard";
 
@@ -9,6 +9,7 @@ interface OffersContainerProps {
   onOfferClick: (offer: ValidOffersItem) => void;
   showViewAll?: boolean;
   onViewAllClick?: () => void;
+  prioritizeCashback?: boolean;
 }
 
 const OffersContainer: React.FC<OffersContainerProps> = ({
@@ -16,8 +17,32 @@ const OffersContainer: React.FC<OffersContainerProps> = ({
   onOfferClick,
   showViewAll = true,
   onViewAllClick,
+  prioritizeCashback = true,
 }) => {
-  if (!offers || offers.length === 0) {
+  // Sort offers with cashback priority if enabled
+  const sortedOffers = useMemo(() => {
+    if (!prioritizeCashback) return offers;
+
+    return [...offers].sort((a, b) => {
+      // Priority 1: Cashback offers first (offer_type === 3)
+      const aCashback = a.offer_type === 3;
+      const bCashback = b.offer_type === 3;
+
+      if (aCashback && !bCashback) return -1;
+      if (!aCashback && bCashback) return 1;
+
+      // Priority 2: Main offers
+      if (a.main_offer && !b.main_offer) return -1;
+      if (!a.main_offer && b.main_offer) return 1;
+
+      // Priority 3: Main offer order
+      const aOrder = a.main_offer_order || 999;
+      const bOrder = b.main_offer_order || 999;
+      return aOrder - bOrder;
+    });
+  }, [offers, prioritizeCashback]);
+
+  if (!sortedOffers || sortedOffers.length === 0) {
     return null;
   }
 
@@ -45,8 +70,12 @@ const OffersContainer: React.FC<OffersContainerProps> = ({
       {/* Horizontal Scrolling Offers */}
       <div className="relative">
         <div className="flex gap-4 overflow-x-auto scrollbar-hide offers-scroll px-4 pb-2">
-          {offers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} onClick={onOfferClick} />
+          {sortedOffers.map((offer, index) => (
+            <OfferCard
+              key={`${offer.id}-${index}`}
+              offer={offer}
+              onClick={onOfferClick}
+            />
           ))}
         </div>
       </div>
