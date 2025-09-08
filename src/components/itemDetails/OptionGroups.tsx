@@ -40,19 +40,17 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
         <div key={group.id} className="space-y-4">
           {/* Group Header */}
           <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900">{group.title}</h3>
             <Badge
               variant={group.type === "pick" ? "default" : "secondary"}
               className={`text-xs px-3 py-1 rounded-full font-medium ${
-                group.type === "pick" 
-                  ? "bg-orange-100 text-orange-800 border border-orange-200" 
-                  : "bg-gray-100 text-gray-700 border border-gray-200"
+                group.type === "pick"
+                  ? "bg-gray-100 text-grey-200 border border-black-200"
+                  : "bg-gray-100 text-grey-200 border border-gre  y-200"
               }`}
             >
               {group.type === "pick" ? "إجباري" : "اختياري"}
             </Badge>
-            <h3 className="text-lg font-bold text-gray-900">
-              {group.title}
-            </h3>
           </div>
 
           {/* Selection Indicator */}
@@ -75,13 +73,15 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
                 {group.options.map((option) => (
                   <div
                     key={option.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:border-[#E49B0F] transition-colors"
+                    className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:border-[#FBD252] transition-colors"
                   >
                     {/* Price on left */}
                     <span className="text-sm text-gray-600 font-medium">
-                      {option.price > 0 ? `+ ${option.price.toFixed(2)} ر.س` : "0.00 ر.س"}
+                      {option.price > 0
+                        ? `+ ${option.price.toFixed(2)} ر.س`
+                        : "0.00 ر.س"}
                     </span>
-                    
+
                     {/* Option name and radio on right */}
                     <div className="flex items-center gap-3">
                       <Label
@@ -93,7 +93,7 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
                       <RadioGroupItem
                         value={option.id.toString()}
                         id={`option-${option.id}`}
-                        className="border-2 border-gray-300 text-[#E49B0F] data-[state=checked]:border-[#E49B0F] data-[state=checked]:bg-[#E49B0F]"
+                        className="border-2 border-gray-300 text-[#FBD252] data-[state=checked]:border-[#FBD252] data-[state=checked]:bg-[#FBD252]"
                       />
                     </div>
                   </div>
@@ -104,21 +104,10 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
                 {group.options.map((option) => (
                   <div
                     key={option.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:border-[#E49B0F] transition-colors"
+                    className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:border-[#FBD252] transition-colors"
                   >
-                    {/* Price on left */}
-                    <span className="text-sm text-gray-600 font-medium">
-                      {option.price > 0 ? `+ ${option.price.toFixed(2)} ر.س` : "0.00 ر.س"}
-                    </span>
-                    
                     {/* Option name and checkbox on right */}
                     <div className="flex items-center gap-3">
-                      <Label
-                        htmlFor={`optional-${option.id}`}
-                        className="cursor-pointer text-gray-900 font-medium text-right"
-                      >
-                        {option.name}
-                      </Label>
                       <Checkbox
                         id={`optional-${option.id}`}
                         checked={selectedOptional.includes(option.id)}
@@ -128,9 +117,21 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
                             checked as boolean
                           )
                         }
-                        className="border-2 border-gray-300 data-[state=checked]:bg-[#E49B0F] data-[state=checked]:border-[#E49B0F] data-[state=checked]:text-white h-5 w-5"
+                        className="border-2 border-gray-300 data-[state=checked]:bg-[#FBD252] data-[state=checked]:border-[#FBD252] data-[state=checked]:text-white h-5 w-5"
                       />
+                      <Label
+                        htmlFor={`optional-${option.id}`}
+                        className="cursor-pointer text-gray-900 font-medium text-right"
+                      >
+                        {option.name}
+                      </Label>
                     </div>
+                    {/* Price on left */}
+                    <span className="text-sm text-gray-600 font-medium">
+                      {option.price > 0
+                        ? `+ ${option.price.toFixed(2)} ر.س`
+                        : "0.00 ر.س"}
+                    </span>
                   </div>
                 ))}
               </div>

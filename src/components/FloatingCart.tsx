@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import LoginModal from "./LoginModal";
 
 const FloatingCart: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const userId = isAuthenticated && user?.id ? user.id : null;
@@ -14,7 +15,8 @@ const FloatingCart: React.FC = () => {
 
   const totalItems = getTotalItems();
 
-  if (totalItems === 0) return null;
+  // Hide on ItemDetails page to prevent overlap
+  if (totalItems === 0 || location.pathname.startsWith("/item/")) return null;
 
   const handleViewCart = () => {
     if (!isAuthenticated) {
@@ -36,20 +38,14 @@ const FloatingCart: React.FC = () => {
 
   return (
     <>
-      {/* Spacer to avoid overlap with content */}
-      <div className="h-20" />
-
-      <div className="fixed bottom-3 left-3 right-3 z-50">
+      <div className="fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto">
         <button
           onClick={handleViewCart}
           className="w-full bg-[#FBD252] rounded-2xl shadow-md py-3 px-6 flex items-center justify-between"
         >
-          {/* Left side (Price + items count) */}
           <span className="font-semibold text-base text-white">
             {isAuthenticated ? "تنفيذ الطلب" : "تسجيل الدخول"}
           </span>
-
-          {/* Right side (Action text) */}
           <div className="flex flex-col items-center">
             <span className="font-semibold text-base text-white">
               {displayPrice} ر.س

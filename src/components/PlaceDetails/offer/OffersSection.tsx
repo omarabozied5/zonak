@@ -320,7 +320,7 @@ const OffersSection: React.FC<OffersSectionProps> = ({
           <h2 className="text-2xl font-bold text-gray-800">العروض</h2>
           <button
             onClick={handleViewAllClick}
-            className="px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+            className="px-4 py-1 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold rounded-lg transition-colors"
           >
             عرض الكل
           </button>
@@ -382,7 +382,7 @@ const OffersSection: React.FC<OffersSectionProps> = ({
             <div className="flex justify-center mt-6 xl:hidden">
               <button
                 onClick={handleShowAllToggle}
-                className="px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+                className="px-4 py-1 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold rounded-lg transition-colors"
               >
                 {showAll ? "عرض أقل" : "عرض المزيد"}
               </button>
