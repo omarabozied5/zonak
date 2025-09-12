@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Minus, Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CartItem } from "../../types/types";
 import CartItemOptions from "./CartItemOptions";
 
@@ -8,7 +8,8 @@ interface CartItemsListProps {
   onQuantityUpdate: (itemId: string, newQuantity: number) => void;
   onRemoveItem: (itemId: string) => void;
   onEditItem: (item: CartItem) => void;
-  hasCustomizations: (item: CartItem) => boolean; // Updated to accept CartItem instead of string
+  hasCustomizations: (item: CartItem) => boolean;
+  isCollapsed?: boolean;
 }
 
 const CartItemsList: React.FC<CartItemsListProps> = ({
@@ -17,131 +18,192 @@ const CartItemsList: React.FC<CartItemsListProps> = ({
   onRemoveItem,
   onEditItem,
   hasCustomizations,
+  isCollapsed = false,
 }) => {
-  
-  // Helper function to check if item has customizable options
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
   const itemHasCustomizations = (item: CartItem): boolean => {
-    // Check if item is marked as customizable
     if (item.isCustomizable) return true;
-    
-    // Check if item has any selected options that make it customizable
+
     if (item.selectedOptions) {
-      const hasRequiredOptions = item.selectedOptions.requiredOptions && 
+      const hasRequiredOptions =
+        item.selectedOptions.requiredOptions &&
         Object.keys(item.selectedOptions.requiredOptions).length > 0;
-      const hasOptionalOptions = item.selectedOptions.optionalOptions && 
+      const hasOptionalOptions =
+        item.selectedOptions.optionalOptions &&
         item.selectedOptions.optionalOptions.length > 0;
-      const hasNotes = item.selectedOptions.notes && 
+      const hasNotes =
+        item.selectedOptions.notes &&
         item.selectedOptions.notes.trim().length > 0;
       const hasSize = item.selectedOptions.size;
-      
-      return !!(hasRequiredOptions || hasOptionalOptions || hasNotes || hasSize);
+
+      return !!(
+        hasRequiredOptions ||
+        hasOptionalOptions ||
+        hasNotes ||
+        hasSize
+      );
     }
-    
-    // Fallback to passed function (though signature needs to be updated)
+
     return hasCustomizations(item);
   };
+
+  const handleAddQuantity = (item: CartItem) => {
+    onQuantityUpdate(item.id, item.quantity + 1);
+  };
+
+  const handleReduceQuantity = (item: CartItem) => {
+    if (item.quantity === 1) {
+      onRemoveItem(item.id);
+    } else {
+      onQuantityUpdate(item.id, item.quantity - 1);
+    }
+  };
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  if (isCollapsed) return null;
+
   return (
-    <div>
-      <h2 className="text-sm font-bold text-gray-900 mb-4 text-right">
-        عناصر السلة
-      </h2>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Dropdown Header */}
+      <div
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+        dir="rtl"
+      >
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-medium text-gray-900">ملخص الطلب</div>
+          <div className="text-xs text-gray-500">
+            {totalItems} منتجات • {totalPrice.toFixed(2)} ر.س
+          </div>
+        </div>
 
-      <div className="bg-white rounded-lg divide-y divide-gray-100">
-        {items.map((item) => {
-          const hasDiscount = (item.discountAmount || 0) > 0;
-          const totalDiscount = (item.discountAmount || 0) * item.quantity;
-          const totalOriginalPrice =
-            (item.originalPrice || item.price) * item.quantity;
-          const canEdit = itemHasCustomizations(item);
-
-          return (
-            <div key={item.id} className="p-4">
-              {/* Item Header */}
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">
-                    {item.name}
-                  </h3>
-                  <p className="text-gray-500 text-xs truncate mt-1">
-                    {item.restaurantName}
-                  </p>
-                  {hasDiscount && (
-                    <p className="text-green-600 text-xs mt-1">
-                      وفرت {totalDiscount.toFixed(2)} ر.س
-                    </p>
-                  )}
-                </div>
-
-                {/* Price */}
-                <div className="text-right whitespace-nowrap mr-3">
-                  {hasDiscount ? (
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-400 line-through">
-                        {totalOriginalPrice.toFixed(2)} ر.س
-                      </p>
-                      <p className="font-semibold text-sm">
-                        {(item.price * item.quantity).toFixed(2)} ر.س
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="font-semibold text-sm">
-                      {(item.price * item.quantity).toFixed(2)} ر.س
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Customizations - Use dedicated component */}
-              <CartItemOptions item={item} className="mb-3" />
-
-              {/* Actions */}
-              <div className="flex items-center justify-between">
-                {/* Quantity Controls */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => onQuantityUpdate(item.id, item.quantity - 1)}
-                    className="w-8 h-8 rounded-full border-2 border-gray-200 flex items-center justify-center hover:border-[#FFAA01] hover:bg-[#FFAA01]/10 transition-colors"
-                  >
-                    <Minus className="w-4 h-4 text-gray-600" />
-                  </button>
-
-                  <span className="w-8 text-center font-medium text-gray-900">
-                    {item.quantity}
-                  </span>
-
-                  <button
-                    onClick={() => onQuantityUpdate(item.id, item.quantity + 1)}
-                    className="w-8 h-8 rounded-full border-2 border-gray-200 flex items-center justify-center hover:border-[#FFAA01] hover:bg-[#FFAA01]/10 transition-colors"
-                  >
-                    <Plus className="w-4 h-4 text-gray-600" />
-                  </button>
-                </div>
-
-                {/* Edit and Delete Actions */}
-                <div className="flex items-center gap-2">
-                  {canEdit && (
-                    <button
-                      onClick={() => onEditItem(item)}
-                      className="p-2 text-gray-500 hover:text-[#FFAA01] transition-colors"
-                      title="تعديل"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => onRemoveItem(item.id)}
-                    className="p-2 text-gray-500 hover:text-red-500 transition-colors"
-                    title="حذف"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        <div className="text-gray-400">
+          {isExpanded ? (
+            <ChevronUp className="w-5 h-5" />
+          ) : (
+            <ChevronDown className="w-5 h-5" />
+          )}
+        </div>
       </div>
+
+      {/* Expandable Content */}
+      {isExpanded && (
+        <div className="border-t border-gray-100">
+          <div className="space-y-3 p-4">
+            {items.map((item) => {
+              const hasDiscount = (item.discountAmount || 0) > 0;
+              const totalDiscount = (item.discountAmount || 0) * item.quantity;
+              const originalPrice = item.originalPrice || item.price;
+              const canEdit = itemHasCustomizations(item);
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 pb-3 border-b border-gray-50 last:border-b-0"
+                  dir="rtl"
+                >
+                  {/* Small Product Image */}
+                  <div className="w-12 h-12 flex-shrink-0">
+                    <div className="w-full h-full bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={item.image || "/api/placeholder/400/300"}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Product Details */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm text-gray-900 mb-1 line-clamp-1">
+                      {item.name}
+                    </h4>
+
+                    {/* Price */}
+                    <div className="text-right mb-1">
+                      {hasDiscount ? (
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="text-sm font-semibold text-gray-900">
+                            {(item.price * item.quantity).toFixed(2)} ر.س
+                          </span>
+                          <span className="text-xs text-gray-400 line-through">
+                            {(originalPrice * item.quantity).toFixed(2)} ر.س
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-900">
+                          {(item.price * item.quantity).toFixed(2)} ر.س
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Options - Condensed */}
+                    {itemHasCustomizations(item) && (
+                      <div className="text-xs text-gray-500 mb-1">
+                        <CartItemOptions item={item} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quantity Controls */}
+                  <div className="flex-shrink-0">
+                    {item.quantity === 1 ? (
+                      <div className="bg-gray-100 rounded-lg px-2 py-1 flex items-center gap-1 shadow-sm border border-gray-200">
+                        <button
+                          onClick={() => handleAddQuantity(item)}
+                          className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+                        >
+                          <span className="text-sm font-bold text-gray-700">
+                            +
+                          </span>
+                        </button>
+                        <span className="text-sm font-bold text-gray-900 text-center min-w-[16px]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => handleReduceQuantity(item)}
+                          className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3 text-gray-600" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-100 rounded-lg px-2 py-1 flex items-center gap-1 shadow-sm border border-gray-200">
+                        <button
+                          onClick={() => handleAddQuantity(item)}
+                          className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+                        >
+                          <span className="text-sm font-bold text-gray-700">
+                            +
+                          </span>
+                        </button>
+                        <span className="text-sm font-bold text-gray-900 text-center min-w-[16px]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => handleReduceQuantity(item)}
+                          className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+                        >
+                          <span className="text-sm font-bold text-gray-700">
+                            −
+                          </span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -24,9 +24,9 @@ const CartPriceBreakdown: React.FC<CartPriceBreakdownProps> = ({
       </div>
 
       {hasDiscounts && (
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between text-xs">
           <span className="text-gray-600">الخصم</span>
-          <span className="text-green-600">
+          <span className="text-black-600">
             -{totalItemDiscounts.toFixed(2)} ر.س
           </span>
         </div>
@@ -40,10 +40,6 @@ const CartPriceBreakdown: React.FC<CartPriceBreakdownProps> = ({
         <span className="text-lg font-bold text-gray-900">
           {totalPrice.toFixed(2)} ر.س
         </span>
-      </div>
-
-      <div className="text-xs text-gray-400 text-right">
-        جميع الأسعار تشمل ضريبة القيمة المضافة 15%
       </div>
     </div>
   );

@@ -1,20 +1,18 @@
-// Updated Cart.tsx with Checkout-style UI and Fixed Edit Functionality
+// Updated Cart.tsx with integrated Restaurant Badge Dropdown
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
 import { useCartStore, CartItem as StoreCartItem } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useCartValidation } from "@/hooks/useCartValidation";
 import { useCartSummary } from "@/hooks/useCartSummary";
 import { toast } from "sonner";
 
-// Import new cart components with checkout styling
+// Import cart components
 import CartCheckoutHeader from "@/components/Cart/CartHeader";
-import CartItemsList from "@/components/Cart/CartItemList";
 import CartPriceBreakdown from "@/components/Cart/CartPriceBreakdown";
 import CartCTAButton from "@/components/Cart/CartCTAButton";
 import CartEmptyState from "@/components/Cart/EmptyCartState";
-import CheckoutRestaurantHeader from "../components/checkout/CheckoutRestaurantHeader";
+import CartRestaurantDropdown from "@/components/Cart/CartResturantDropDown";
 
 import { CartItem, Restaurant } from "../types/types";
 import { apiService } from "@/services/apiService";
@@ -104,6 +102,13 @@ const Cart = () => {
     navigate("/");
   };
 
+  // Navigate to add more items from the same restaurant
+  const handleAddMoreItems = (): void => {
+    if (items.length > 0) {
+      navigate(`/restaurant/${items[0].placeId}`);
+    }
+  };
+
   // Fixed edit item handler with proper customization check
   const handleEditItem = (item: CartItem): void => {
     try {
@@ -134,20 +139,28 @@ const Cart = () => {
   const itemHasCustomizations = (item: CartItem): boolean => {
     // Check if item is marked as customizable
     if (item.isCustomizable) return true;
-    
+
     // Check if item has any selected options that make it customizable
     if (item.selectedOptions) {
-      const hasRequiredOptions = item.selectedOptions.requiredOptions && 
+      const hasRequiredOptions =
+        item.selectedOptions.requiredOptions &&
         Object.keys(item.selectedOptions.requiredOptions).length > 0;
-      const hasOptionalOptions = item.selectedOptions.optionalOptions && 
+      const hasOptionalOptions =
+        item.selectedOptions.optionalOptions &&
         item.selectedOptions.optionalOptions.length > 0;
-      const hasNotes = item.selectedOptions.notes && 
+      const hasNotes =
+        item.selectedOptions.notes &&
         item.selectedOptions.notes.trim().length > 0;
       const hasSize = item.selectedOptions.size;
-      
-      return !!(hasRequiredOptions || hasOptionalOptions || hasNotes || hasSize);
+
+      return !!(
+        hasRequiredOptions ||
+        hasOptionalOptions ||
+        hasNotes ||
+        hasSize
+      );
     }
-    
+
     // Fallback to store's hasCustomizations function
     return hasCustomizations(item);
   };
@@ -226,41 +239,25 @@ const Cart = () => {
       <div className="max-w-sm mx-auto bg-gray-50">
         <CartCheckoutHeader onBack={handleGoBack} />
 
-        <div className="px-4 py-6 space-y-6 pb-24">
-          {/* Restaurant Header */}
+        <div className=" py-6 space-y-6 pb-18">
+          {/* Restaurant Badge with Cart Items Dropdown */}
           {items.length > 0 && (
-            <CheckoutRestaurantHeader
+            <CartRestaurantDropdown
               merchantId={items[0].restaurantId || ""}
               restaurantName={items[0].restaurantName || ""}
               placeId={items[0].placeId || ""}
-              user={{
-                profile_image: restaurant?.user?.profile_image || "",
-              }}
+              restaurant={restaurant}
+              items={convertedItems}
+              totalPrice={totalPrice}
+              totalItemDiscounts={totalItemDiscounts}
+              onQuantityUpdate={handleQuantityUpdate}
+              onRemoveItem={handleRemoveItem}
+              onEditItem={handleEditItem}
+              hasCustomizations={itemHasCustomizations}
+              onAddMoreItems={handleAddMoreItems}
+              defaultExpanded={false}
             />
           )}
-
-          {items.length > 0 && (
-            <div className="flex justify-center">
-              <div
-                className="bg-gray-100 rounded-full px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors"
-                onClick={() => navigate(`/restaurant/${items[0].placeId}`)}
-              >
-                <Plus className="w-3 h-3 text-gray-700" />
-                <span className="text-xs font-medium text-gray-700">
-                  إضافة منتجات
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Cart Items List */}
-          <CartItemsList
-            items={convertedItems}
-            onQuantityUpdate={handleQuantityUpdate}
-            onRemoveItem={handleRemoveItem}
-            onEditItem={handleEditItem}
-            hasCustomizations={itemHasCustomizations}
-          />
 
           {/* Price Breakdown */}
           <CartPriceBreakdown

@@ -10,6 +10,11 @@ interface RestaurantBadgeProps {
   user: {
     profile_image: string | string[]; // Support both string and array
   };
+  // Optional props for dropdown integration
+  showStatus?: boolean;
+  statusText?: string;
+  onClick?: () => void;
+  className?: string;
 }
 
 const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
@@ -17,6 +22,10 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
   restaurantName,
   placeId,
   user,
+  showStatus = true,
+  statusText = "طلبك جاهز",
+  onClick,
+  className = "",
 }) => {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,6 +120,12 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
     setImageError(true);
   }, [restaurantImage]);
 
+  const handleClick = useCallback(() => {
+    if (onClick) {
+      onClick();
+    }
+  }, [onClick]);
+
   console.log("RestaurantBadge - Final render state:", {
     restaurantImage,
     validImages,
@@ -119,7 +134,12 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
   });
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative z-10">
+    <div
+      className={`bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative z-10 ${
+        onClick ? "cursor-pointer hover:bg-gray-50 transition-colors" : ""
+      } ${className}`}
+      onClick={handleClick}
+    >
       <div className="flex items-center gap-3">
         {/* Restaurant Image/Icon */}
         <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center relative">
@@ -171,11 +191,13 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
         </div>
 
         {/* Status Badge */}
-        <div className="flex-shrink-0">
-          <div className="bg-[#FBD252] text-black px-3 py-1 rounded-full text-xs font-medium">
-            طلبك جاهز
+        {showStatus && (
+          <div className="flex-shrink-0">
+            <div className="bg-[#FBD252] text-black px-3 py-1 rounded-full text-xs font-medium">
+              {statusText}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

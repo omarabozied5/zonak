@@ -1,5 +1,7 @@
+/* eslint-disable no-case-declarations */
 import React, { useState, useMemo } from "react";
 import { ValidOffer } from "../../../types/types";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Ticket Decoration Component
 const TicketDecor: React.FC = () => {
@@ -126,8 +128,8 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
       onClick={onClick}
       className={`relative w-[320px] h-[89px] rounded-[8px] overflow-visible ${className} ${
         isCashback
-          ? "bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-300"
-          : "bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-300"
+          ? "bg-gradient-to-r from-[#F7BD01] to-[#FFBE00]"
+          : "bg-gradient-to-r from-[#F7BD01] to-[#FFBE00]"
       } cursor-pointer hover:shadow-lg transition-shadow duration-200`}
     >
       {/* ديكور ثابت */}
@@ -255,8 +257,7 @@ const OffersSection: React.FC<OffersSectionProps> = ({
       const now = new Date();
       filteredOffers = offers.filter((offer) => {
         // Check if offer is verified
-        const isVerified =
-          offer.is_offer_verified === "1" || offer.is_offer_verified === 1;
+        const isVerified = offer.is_offer_verified === "1";
 
         // Check if offer is still valid
         let isValidDate = true;
@@ -382,9 +383,9 @@ const OffersSection: React.FC<OffersSectionProps> = ({
             <div className="flex justify-center mt-6 xl:hidden">
               <button
                 onClick={handleShowAllToggle}
-                className="px-4 py-1 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold rounded-lg transition-colors"
+                className="px-2 py-1 text-black font-semibold rounded-lg transition-colors"
               >
-                {showAll ? "عرض أقل" : "عرض المزيد"}
+                {showAll ? <ChevronUp /> : <ChevronDown />}
               </button>
             </div>
           )}
