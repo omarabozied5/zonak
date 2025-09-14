@@ -1,4 +1,4 @@
-// Updated Cart.tsx with integrated Restaurant Badge Dropdown
+// Enhanced Cart.tsx with integrated offers section
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore, CartItem as StoreCartItem } from "@/stores/useCartStore";
@@ -13,8 +13,9 @@ import CartPriceBreakdown from "@/components/Cart/CartPriceBreakdown";
 import CartCTAButton from "@/components/Cart/CartCTAButton";
 import CartEmptyState from "@/components/Cart/EmptyCartState";
 import CartRestaurantDropdown from "@/components/Cart/CartResturantDropDown";
+import CartOfferSection from "@/components/Cart/CartOfferSection";
 
-import { CartItem, Restaurant } from "../types/types";
+import { CartItem, Restaurant, ValidOffersItem } from "../types/types";
 import { apiService } from "@/services/apiService";
 
 // Import utility functions
@@ -58,27 +59,46 @@ const Cart = () => {
   const totalItemDiscounts = calculateTotalItemDiscounts(convertedItems);
   const originalTotalPrice = calculateOriginalTotal(convertedItems);
 
-  // Restaurant state for header
+  // Restaurant and offers state
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [offers, setOffers] = useState<ValidOffersItem[]>([]);
+  const [loadingOffers, setLoadingOffers] = useState(false);
 
-  // Fetch restaurant details for header
+  // Fetch restaurant details and offers
   useEffect(() => {
-    const fetchRestaurantDetails = async () => {
+    const fetchRestaurantData = async () => {
       if (items.length > 0 && items[0].placeId) {
         try {
+          setLoadingOffers(true);
+
+          // Fetch restaurant details (which includes valid_offers)
           const response = await apiService.fetchRestaurantDetails(
             items[0].placeId
           );
+
           if (response.message === "success" && response.data) {
             setRestaurant(response.data);
+
+            // Extract offers from restaurant data
+            if (
+              response.data.valid_offers &&
+              response.data.valid_offers.length > 0
+            ) {
+              setOffers(response.data.valid_offers);
+            } else {
+              setOffers([]);
+            }
           }
         } catch (error) {
           console.error("Error fetching restaurant details:", error);
+          setOffers([]);
+        } finally {
+          setLoadingOffers(false);
         }
       }
     };
 
-    fetchRestaurantDetails();
+    fetchRestaurantData();
   }, [items]);
 
   // Redirect unauthenticated users
@@ -107,6 +127,14 @@ const Cart = () => {
     if (items.length > 0) {
       navigate(`/restaurant/${items[0].placeId}`);
     }
+  };
+
+  // Handle offer click
+  const handleOfferClick = (offer: ValidOffersItem): void => {
+    // Navigate to offer details or apply offer logic
+    console.log("Offer clicked:", offer);
+    toast.success("تم تحديد العرض بنجاح");
+    // TODO: Implement offer application logic
   };
 
   // Fixed edit item handler with proper customization check
@@ -239,7 +267,15 @@ const Cart = () => {
       <div className="max-w-sm mx-auto bg-gray-50">
         <CartCheckoutHeader onBack={handleGoBack} />
 
-        <div className=" py-6 space-y-6 pb-18">
+        <div className="py-6 space-y-6 pb-18">
+          {/* Offers Section */}
+          {offers.length > 0 && !loadingOffers && (
+            <CartOfferSection
+              offers={offers}
+              onOfferClick={handleOfferClick}
+              className="px-0"
+            />
+          )}
           {/* Restaurant Badge with Cart Items Dropdown */}
           {items.length > 0 && (
             <CartRestaurantDropdown
@@ -257,6 +293,16 @@ const Cart = () => {
               onAddMoreItems={handleAddMoreItems}
               defaultExpanded={false}
             />
+          )}
+
+          {/* Loading offers */}
+          {loadingOffers && (
+            <div className="px-4">
+              <div className="bg-white rounded-lg p-4 text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FBD252] mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">جاري تحميل العروض...</p>
+              </div>
+            </div>
           )}
 
           {/* Price Breakdown */}

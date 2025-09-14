@@ -102,6 +102,7 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
       className={`w-full bg-white shadow-sm border border-gray-100 ${className}`}
       dir="rtl"
     >
+      {/* <span>ملخص الطلب</span> */}
       {/* Restaurant Header with Toggle */}
       <div
         className="flex items-center justify-between py-2 px-3 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
@@ -310,7 +311,7 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
                               }}
                               className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
                             >
-                              <Trash2 className="w-4 h-4 text-red-500" />
+                              <Trash2 className="w-4 h-4 text-black" />
                             </button>
                           </div>
                         ) : (
