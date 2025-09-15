@@ -28,6 +28,7 @@ import NotesSection from "../components/itemDetails/NotesSection";
 import QuantityCartSection from "../components/itemDetails/QuantityCartSection";
 import ConfirmationDialog from "@/components/currentOrder/ConfirmationDialog";
 import CartSummary from "@/components/itemDetails/CartSummary";
+import { it } from "node:test";
 
 const ItemDetails = () => {
   const { itemId } = useParams();
@@ -463,8 +464,23 @@ const ItemDetails = () => {
               <EditModeIndicator isEditMode={isEditMode} />
 
               {/* Item Title */}
-              <div className="text-center">
-                <h1 className="text-xl font-bold text-gray-900 mb-2">
+              <div className="flex items-center gap-3 text-right">
+                <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={
+                      itemDetails.images[0]?.image_url ||
+                      "/api/placeholder/48/48"
+                    }
+                    alt={itemDetails.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/api/placeholder/48/48";
+                    }}
+                  />
+                </div>
+                <h1 className="text-xl font-bold text-gray-900">
                   {itemDetails.name}
                 </h1>
               </div>

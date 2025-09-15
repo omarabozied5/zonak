@@ -69,7 +69,7 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
                 {group.options.map((option) => (
                   <div
                     key={option.id}
-                    className="flex items-center justify-between p-3  rounded-xl hover:border-yellow-400 transition-colors bg-white"
+                    className="flex items-center justify-between p-3  rounded-xl hover:border-gray-400 transition-colors bg-white"
                   >
                     {/* Price on right for RTL */}
                     <span className="text-sm text-gray-600 font-medium">
