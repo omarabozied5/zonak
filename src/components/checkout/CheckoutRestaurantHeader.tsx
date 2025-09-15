@@ -149,7 +149,7 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
 
             {/* Cart Summary */}
             <div className="text-xs text-gray-600 mt-1 font-medium">
-              {totalItems} منتج{totalItems > 1 ? "ات" : ""} •{" "}
+              {totalItems} منتج{totalItems > 1 ? "ات" : ""} • {" "}
               {totalPrice.toFixed(2)} ر.س
               {totalItemDiscounts > 0 && (
                 <span className="text-green-600 mr-2">
@@ -190,7 +190,7 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
 
       {/* Expandable Content */}
       {isExpanded && (
-        <div className="border-t border-gray-100">
+        <div className="border-t border-gray-100 bg-white rounded-b-lg shadow-sm">
           {/* Add Products Button - Shows when expanded */}
           {onAddMoreItems && (
             <div className="px-4 py-3 border-b border-gray-50">
@@ -213,8 +213,8 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
           <div className="p-4 space-y-3">
             <h4 className="font-medium text-gray-900 text-sm">تفاصيل الطلب:</h4>
 
-            {/* Items List - Simplified */}
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            {/* Items List - Now with images like cart */}
+            <div className="space-y-3 max-h-60 overflow-y-auto">
               {items.map((item) => {
                 const hasDiscount = (item.discountAmount || 0) > 0;
                 const originalPrice = item.originalPrice || item.price;
@@ -222,45 +222,65 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between py-2 border-b border-gray-50 last:border-b-0"
+                    className="flex items-center   border-b border-gray-50 last:border-b-0"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500  py-1 ">
-                          x{item.quantity}
-                        </span>
-                        <span className="text-xs  text-gray-900 truncate">
-                          {item.name}
-                        </span>
-                      </div>
-
-                      {hasDiscount && (
-                        <div className="text-xs text-gray-600 mt-1">
-                          وفرت{" "}
-                          {(
-                            (originalPrice - item.price) *
-                            item.quantity
-                          ).toFixed(2)}{" "}
-                          ر.س
-                        </div>
-                      )}
+                    {/* Product Image */}
+                    <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                      <img
+                        src={item.image || "/api/placeholder/48/48"}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/api/placeholder/48/48";
+                        }}
+                      />
                     </div>
 
-                    <div className="text-right">
-                      {hasDiscount ? (
-                        <div className="space-y-1">
-                          <div className="text-xs text-gray-400 line-through">
-                            {(originalPrice * item.quantity).toFixed(2)} ر.س
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                              x{item.quantity}
+                            </span>
+                            <span className="text-xs font-light text-gray-900 truncate">
+                              {item.name}
+                            </span>
                           </div>
-                          <div className="text-xs font-light text-gray-900">
-                            {(item.price * item.quantity).toFixed(2)} ر.س
-                          </div>
+
+                          {hasDiscount && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              وفرت{" "}
+                              {(
+                                (originalPrice - item.price) *
+                                item.quantity
+                              ).toFixed(2)}{" "}
+                              ر.س
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-xs font-light text-gray-900">
-                          {(item.price * item.quantity).toFixed(2)} ر.س
+
+                        {/* Price Section */}
+                        <div className="text-right flex-shrink-0 mr-2">
+                          {hasDiscount ? (
+                            <div className="space-y-1">
+                              <div className="text-xs text-gray-400 line-through">
+                                {(originalPrice * item.quantity).toFixed(2)} ر.س
+                              </div>
+                              <div className="text-xs font-semibold text-gray-900">
+                                {(item.price * item.quantity).toFixed(2)} ر.س
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs font-semibold text-gray-900">
+                              {(item.price * item.quantity).toFixed(2)} ر.س
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -272,7 +292,7 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
               {totalItemDiscounts > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">إجمالي الخصومات</span>
-                  <span className="text-gray-600 font-medium">
+                  <span className="text-green-600 font-medium">
                     -{totalItemDiscounts.toFixed(2)} ر.س
                   </span>
                 </div>

@@ -9,7 +9,7 @@ interface CheckoutHeaderProps {
 
 const CheckoutHeader: React.FC<CheckoutHeaderProps> = React.memo(
   ({ onBack }) => (
-    <div className="relative flex items-center justify-center h-14 sm:h-16 md:h-20 bg-white border-b">
+    <div className="relative flex items-center justify-center h-20 sm:h-16 md:h-20 bg-white border-b">
       {/* Back Button on the right edge */}
       <div className="absolute right-3 sm:right-4">
         <BackButton />

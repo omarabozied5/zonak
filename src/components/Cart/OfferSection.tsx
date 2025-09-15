@@ -51,7 +51,7 @@ const CartOffersSection: React.FC<CartOffersSectionProps> = ({
               key={offer.id}
               className={`relative p-4 rounded-lg border-2 transition-colors ${
                 isSelected
-                  ? "border-[#fbd252] bg-[#fbd252]/10"
+                  ? "border-[#fbd252] bg-[#FBD2520D]/10"
                   : applicable
                   ? "border-gray-200 bg-white hover:border-gray-300 cursor-pointer"
                   : "border-gray-100 bg-gray-50 opacity-60"

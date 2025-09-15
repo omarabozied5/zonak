@@ -285,9 +285,9 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
+                    <div className="flex flex-col items-center justify-center gap-1 flex-shrink-0 ">
                       {/* Quantity Controls */}
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 mb-2">
                         {item.quantity === 1 ? (
                           <div className="bg-gray-100  px-1 py-1 flex items-center gap-1 shadow-sm border border-gray-200">
                             <button
@@ -352,7 +352,7 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
                             e.stopPropagation();
                             onEditItem(item);
                           }}
-                          className="text-xs text-gray-800 hover:text-[#f9c52b] font-medium px-2 py-1 rounded hover:bg-[#FBD252]/10 transition-colors"
+                          className="text-xs bg-gray-100 text-gray-800 hover:text-[#f9c52b] font-medium px-3 py-1  hover:bg-[#FBD252]/10 transition-colors"
                         >
                           تعديل
                         </button>

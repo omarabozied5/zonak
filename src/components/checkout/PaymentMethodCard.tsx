@@ -41,7 +41,6 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
     if (isDropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("scroll", handleScroll, true);
-      // Prevent body scroll when dropdown is open
       document.body.style.overflow = "hidden";
       updateDropdownPosition();
     }
@@ -57,7 +56,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
-      const padding = 16; // 1rem padding on sides
+      const padding = 16;
 
       setDropdownPosition({
         top: rect.bottom + 4,
@@ -72,27 +71,15 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
   };
 
   const selectPaymentMethod = (type: number) => {
+    console.log('Selecting payment method:', type);
+    console.log('setPaymentType function:', typeof setPaymentType);
     setPaymentType(type);
     setIsDropdownOpen(false);
   };
 
   const getSelectedPaymentContent = () => {
-    if (paymentType === 1) {
-      return (
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center">
-            <img
-              src="cash-logo.png"
-              alt="Cash"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <span className="text-xs sm:text-sm font-medium text-gray-900">
-            الدفع عند الاستلام
-          </span>
-        </div>
-      );
-    } else {
+    console.log('Current paymentType:', paymentType);
+    if (paymentType === 0) {
       return (
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-6 h-4 sm:w-8 sm:h-5 rounded flex items-center justify-center">
@@ -107,76 +94,22 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           </span>
         </div>
       );
-    }
-  };
-
-  const DropdownPortal = () => {
-    if (!isDropdownOpen) return null;
-
-    return createPortal(
-      <>
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-[99999]"
-          onClick={() => setIsDropdownOpen(false)}
-        />
-
-        {/* Dropdown Menu */}
-        <div
-          className="fixed bg-white border border-gray-200 rounded-lg shadow-2xl z-[100000] max-h-[40vh] overflow-y-auto"
-          style={{
-            top: `${dropdownPosition.top}px`,
-            left: `${dropdownPosition.left}px`,
-            right: `${dropdownPosition.right}px`,
-            maxWidth: "400px",
-            minWidth: "280px",
-          }}
-        >
-          {/* Cash on Delivery Option */}
-          <div
-            className={`p-3 sm:p-4 cursor-pointer transition-all hover:bg-gray-50 ${
-              paymentType === 1 ? "bg-yellow-50" : ""
-            }`}
-            onClick={() => selectPaymentMethod(1)}
-          >
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center">
-                <img
-                  src="cash-logo.png"
-                  alt="Cash"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-gray-900">
-                الدفع عند الاستلام
-              </span>
-            </div>
+    } else {
+      return (
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center">
+            <img
+              src="cash-logo.png"
+              alt="Cash"
+              className="w-full h-full object-contain"
+            />
           </div>
-
-          {/* Online Payment Option */}
-          <div
-            className={`p-3 sm:p-4 cursor-pointer transition-all hover:bg-gray-50 border-t border-gray-100 ${
-              paymentType === 0 ? "bg-yellow-50" : ""
-            }`}
-            onClick={() => selectPaymentMethod(0)}
-          >
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-6 h-4 sm:w-8 sm:h-5 rounded flex items-center justify-center">
-                <img
-                  src="visa-logo.png"
-                  alt="Visa"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="text-xs sm:text-sm font-medium text-gray-900">
-                الدفع أونلاين
-              </span>
-            </div>
-          </div>
+          <span className="text-xs sm:text-sm font-medium text-gray-900">
+            الدفع عند الاستلام
+          </span>
         </div>
-      </>,
-      document.body
-    );
+      );
+    }
   };
 
   return (
@@ -184,6 +117,9 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
       <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-3 sm:mb-4 text-right">
         طريقة الدفع
       </h2>
+
+      {/* Debug info */}
+    
 
       {/* Selected Payment Method */}
       <div
@@ -201,8 +137,58 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
         </div>
       </div>
 
-      {/* Portal-rendered dropdown */}
-      <DropdownPortal />
+      {/* Simple dropdown without portal for testing */}
+      {isDropdownOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+          {/* Online Payment Option */}
+          <button
+            className={`w-full p-3 sm:p-4 text-left transition-all hover:bg-gray-50 ${
+              paymentType === 0 ? "bg-yellow-50" : ""
+            }`}
+            onClick={() => {
+              console.log('Online button clicked!');
+              selectPaymentMethod(0);
+            }}
+          >
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-6 h-4 sm:w-8 sm:h-5 rounded flex items-center justify-center">
+                <img
+                  src="visa-logo.png"
+                  alt="Visa"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <span className="text-xs sm:text-sm font-medium text-gray-900">
+                الدفع أونلاين
+              </span>
+            </div>
+          </button>
+
+          {/* Cash on Delivery Option */}
+          <button
+            className={`w-full p-3 sm:p-4 text-left transition-all hover:bg-gray-50 border-t border-gray-100 ${
+              paymentType === 1 ? "bg-yellow-50" : ""
+            }`}
+            onClick={() => {
+              console.log('Cash button clicked!');
+              selectPaymentMethod(1);
+            }}
+          >
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center">
+                <img
+                  src="cash-logo.png"
+                  alt="Cash"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <span className="text-xs sm:text-sm font-medium text-gray-900">
+                الدفع عند الاستلام
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
