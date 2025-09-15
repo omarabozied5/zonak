@@ -1,4 +1,4 @@
-// Updated ItemDetails.tsx - Fullscreen modal design with proper RTL and dynamic data
+// Updated ItemDetails.tsx - Responsive fullscreen modal design with proper RTL and dynamic data
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -432,14 +432,14 @@ const ItemDetails = () => {
       {/* Fullscreen Dark Overlay */}
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50" />
 
-      {/* Main Modal Container */}
+      {/* Main Modal Container - Responsive */}
       <div
-        className="fixed inset-0 z-50 flex items-end justify-center"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         dir="rtl"
       >
-        <div className="w-full max-w-md bg-white rounded-t-3xl max-h-[95vh] flex flex-col">
+        <div className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200">
             <Button
               variant="ghost"
               onClick={() =>
@@ -459,13 +459,13 @@ const ItemDetails = () => {
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               {/* Edit Mode Indicator */}
               <EditModeIndicator isEditMode={isEditMode} />
 
-              {/* Item Title */}
+              {/* Item Title - Responsive */}
               <div className="flex items-center gap-3 text-right">
-                <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   <img
                     src={
                       itemDetails.images[0]?.image_url ||
@@ -480,38 +480,140 @@ const ItemDetails = () => {
                     }}
                   />
                 </div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex-1">
                   {itemDetails.name}
                 </h1>
               </div>
 
-              {/* Option Groups */}
-              <OptionGroups
-                optionGroups={itemDetails.optionGroups}
-                selectedOptions={selectedOptions}
-                selectedOptional={selectedOptional}
-                handleRequiredOptionChange={handleRequiredOptionChange}
-                handleOptionalOptionChange={handleOptionalOptionChange}
-              />
+              {/* Content Grid - Two columns on larger screens */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column - Options and Notes */}
+                <div className="space-y-6">
+                  {/* Option Groups */}
+                  <OptionGroups
+                    optionGroups={itemDetails.optionGroups}
+                    selectedOptions={selectedOptions}
+                    selectedOptional={selectedOptional}
+                    handleRequiredOptionChange={handleRequiredOptionChange}
+                    handleOptionalOptionChange={handleOptionalOptionChange}
+                  />
 
-              {/* Notes Section */}
-              <NotesSection notes={notes} setNotes={setNotes} />
-              <QuantityCartSection
-                quantity={quantity}
-                setQuantity={setQuantity}
-                optionsPrice={optionsPrice}
-                totalPrice={totalPrice}
-                itemsCount={items.length}
-                isEditMode={isEditMode}
-                canAddToCartFinal={canAddToCartFinal}
-                isItemActive={isItemAvailable}
-                handleAddToCart={handleAddToCart}
-                isAuthenticated={isAuthenticated}
-              />
+                  {/* Notes Section */}
+                  <NotesSection notes={notes} setNotes={setNotes} />
+                </div>
+
+                {/* Right Column - Summary (only on large screens) */}
+                <div className="hidden lg:block">
+                  <div className="sticky top-0">
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                      <h3 className="text-lg font-bold text-gray-900 text-right">
+                        ملخص الطلب
+                      </h3>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-700">سعر الإضافات</span>
+                          <span className="font-bold text-gray-900">
+                            {optionsPrice.toFixed(2)} ر.س
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between border-t pt-2">
+                          <span className="text-base font-semibold text-gray-900">
+                            السعر الإجمالي
+                          </span>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-gray-900">
+                              {totalPrice.toFixed(2)} ر.س
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {quantity} منتجات
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile-only Quantity Cart Section */}
+              <div className="lg:hidden">
+                <QuantityCartSection
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  optionsPrice={optionsPrice}
+                  totalPrice={totalPrice}
+                  itemsCount={items.length}
+                  isEditMode={isEditMode}
+                  canAddToCartFinal={canAddToCartFinal}
+                  isItemActive={isItemAvailable}
+                  handleAddToCart={handleAddToCart}
+                  isAuthenticated={isAuthenticated}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Fixed Bottom Cart Section */}
+          {/* Fixed Bottom Cart Section - Desktop */}
+          <div className="hidden lg:block border-t border-gray-200 bg-white p-4 sm:p-6">
+            <div className="flex items-center gap-4">
+              {/* Quantity Controls */}
+              <div className="flex items-center bg-gray-100 rounded-full h-12 sm:h-14">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setQuantity(quantity - 1)}
+                  disabled={quantity <= 1}
+                  className="h-10 w-10 sm:h-12 sm:w-12 p-0 rounded-full bg-transparent hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+                >
+                  <span className="text-lg">−</span>
+                </Button>
+
+                <div className="text-lg font-bold min-w-[2.5rem] text-center text-gray-900 px-2 sm:px-4">
+                  {quantity}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="h-10 w-10 sm:h-12 sm:w-12 p-0 rounded-full bg-transparent hover:bg-gray-200 text-gray-700"
+                >
+                  <span className="text-lg">+</span>
+                </Button>
+              </div>
+
+              {/* Add to Cart Button */}
+              <Button
+                onClick={handleAddToCart}
+                disabled={!canAddToCartFinal}
+                className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-3 sm:py-4 rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all text-base sm:text-lg h-12 sm:h-14"
+              >
+                {isEditMode ? "تحديث العنصر" : "أضف إلى السلة"} (
+                {totalPrice.toFixed(2)} ر.س)
+              </Button>
+            </div>
+
+            {/* Error Messages */}
+            {!isAuthenticated && (
+              <p className="text-red-500 text-center text-sm mt-3">
+                يجب تسجيل الدخول أولاً
+              </p>
+            )}
+
+            {isAuthenticated && !isItemAvailable && (
+              <p className="text-red-500 text-center text-sm mt-3">
+                هذا العنصر غير متوفر حالياً
+              </p>
+            )}
+
+            {isAuthenticated && isItemAvailable && !canAddToCartFinal && (
+              <p className="text-red-500 text-center text-sm mt-3">
+                يجب اختيار جميع الخيارات المطلوبة
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
