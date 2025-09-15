@@ -447,6 +447,8 @@ export interface BackendOrderPayload {
   discount_from_coupons: number;
   max_coupoun_discount: number;
   is_delivery_zonak: number;
+  device_type: string;
+  coupouns?: number[];
 }
 
 export interface OrderResponse {

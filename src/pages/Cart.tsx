@@ -1,4 +1,4 @@
-// Enhanced Cart.tsx with integrated offers section
+// Enhanced Cart.tsx with responsive design fixes
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore, CartItem as StoreCartItem } from "@/stores/useCartStore";
@@ -254,7 +254,7 @@ const Cart = () => {
   if (cartSummary.isEmpty) {
     return (
       <div className="min-h-screen bg-gray-50" dir="rtl">
-        <div className="max-w-sm mx-auto bg-gray-50">
+        <div className="w-full max-w-md mx-auto bg-gray-50">
           <CartCheckoutHeader onBack={handleGoBack} />
           <CartEmptyState onExploreRestaurants={handleExploreRestaurants} />
         </div>
@@ -264,44 +264,49 @@ const Cart = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      <div className="max-w-sm mx-auto bg-gray-50">
+      {/* Fixed Container with proper responsive sizing */}
+      <div className="w-full max-w-md mx-auto bg-gray-50 relative">
         <CartCheckoutHeader onBack={handleGoBack} />
 
-        <div className="py-6 space-y-6 pb-18">
+        {/* Main Content with proper bottom padding for fixed CTA */}
+        <div className="pt-4 pb-28 space-y-4 px-4">
           {/* Offers Section */}
           {offers.length > 0 && !loadingOffers && (
-            <CartOfferSection
-              offers={offers}
-              onOfferClick={handleOfferClick}
-              className="px-0"
-            />
+            <div className="-mx-4">
+              <CartOfferSection
+                offers={offers}
+                onOfferClick={handleOfferClick}
+                className="px-0"
+              />
+            </div>
           )}
+
           {/* Restaurant Badge with Cart Items Dropdown */}
           {items.length > 0 && (
-            <CartRestaurantDropdown
-              merchantId={items[0].restaurantId || ""}
-              restaurantName={items[0].restaurantName || ""}
-              placeId={items[0].placeId || ""}
-              restaurant={restaurant}
-              items={convertedItems}
-              totalPrice={totalPrice}
-              totalItemDiscounts={totalItemDiscounts}
-              onQuantityUpdate={handleQuantityUpdate}
-              onRemoveItem={handleRemoveItem}
-              onEditItem={handleEditItem}
-              hasCustomizations={itemHasCustomizations}
-              onAddMoreItems={handleAddMoreItems}
-              defaultExpanded={false}
-            />
+            <div className="-mx-4 px-4">
+              <CartRestaurantDropdown
+                merchantId={items[0].restaurantId || ""}
+                restaurantName={items[0].restaurantName || ""}
+                placeId={items[0].placeId || ""}
+                restaurant={restaurant}
+                items={convertedItems}
+                totalPrice={totalPrice}
+                totalItemDiscounts={totalItemDiscounts}
+                onQuantityUpdate={handleQuantityUpdate}
+                onRemoveItem={handleRemoveItem}
+                onEditItem={handleEditItem}
+                hasCustomizations={itemHasCustomizations}
+                onAddMoreItems={handleAddMoreItems}
+                defaultExpanded={false}
+              />
+            </div>
           )}
 
           {/* Loading offers */}
           {loadingOffers && (
-            <div className="px-4">
-              <div className="bg-white rounded-lg p-4 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FBD252] mx-auto mb-2"></div>
-                <p className="text-sm text-gray-600">جاري تحميل العروض...</p>
-              </div>
+            <div className="bg-white rounded-lg p-4 text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FBD252] mx-auto mb-2"></div>
+              <p className="text-sm text-gray-600">جاري تحميل العروض...</p>
             </div>
           )}
 
@@ -313,12 +318,14 @@ const Cart = () => {
           />
         </div>
 
-        {/* Fixed Bottom CTA Button */}
-        <CartCTAButton
-          total={totalPrice}
-          isDisabled={isCheckoutDisabled}
-          onProceedToCheckout={handleProceedToCheckout}
-        />
+        {/* Fixed Bottom CTA Button - Positioned properly */}
+        <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md z-50">
+          <CartCTAButton
+            total={totalPrice}
+            isDisabled={isCheckoutDisabled}
+            onProceedToCheckout={handleProceedToCheckout}
+          />
+        </div>
       </div>
     </div>
   );

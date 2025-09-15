@@ -12,17 +12,17 @@ const CartCTAButton: React.FC<CartCTAButtonProps> = ({
   onProceedToCheckout,
 }) => {
   return (
-    <div className="bottom-0 left-0 right-0 max-w-sm mx-auto z-50">
-      <div className="w-full h-[100px] bg-white shadow-none flex items-center justify-center">
+    <div className="w-full bg-white border-t border-gray-100 shadow-lg">
+      <div className="p-4 safe-area-inset-bottom">
         <button
-          className="w-[353px] h-[56px] bg-[#fbd252] rounded-[10px] mx-[20px] mt-[22px] flex items-center justify-between px-[44px] disabled:opacity-70 hover:bg-[#f9c52b] transition-colors"
+          className="w-full h-12 sm:h-14 bg-[#fbd252] rounded-lg flex items-center justify-between px-4 sm:px-6 disabled:opacity-70 hover:bg-[#f9c52b] transition-colors disabled:hover:bg-[#fbd252]"
           onClick={onProceedToCheckout}
           disabled={isDisabled}
         >
-          <span className="font-medium text-[16px] leading-[20px] text-white">
+          <span className="font-medium text-sm sm:text-base text-white">
             {total.toFixed(2)} ر.س
           </span>
-          <span className="font-medium text-[16px] leading-[20px] text-white">
+          <span className="font-medium text-sm sm:text-base text-white">
             متابعة للدفع
           </span>
         </button>

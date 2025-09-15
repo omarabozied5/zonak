@@ -25,6 +25,60 @@ import { ValidatedCoupon } from "../lib/couponUtils";
 
 const BASE_URL = "https://dev-backend.zonak.net/api";
 
+// ===== New Offer Types =====
+interface Offer {
+  id: number;
+  user_id: number;
+  place_id: number;
+  is_offer_verified: string;
+  title: string;
+  title_ar: string;
+  description: string;
+  description_ar: string;
+  start_date: string;
+  end_date: string;
+  updatetime: string;
+  insertdate: string;
+  discount: number | null;
+  main_offer: boolean;
+  view_count: number;
+  offer_type: number;
+  old_price: number | null;
+  new_price: number | null;
+  offer_details: string | null;
+  is_zonak: boolean;
+  product_name: string;
+  offer_terms: string | null;
+  main_offer_order: number;
+  available_cashback: number;
+  max_daily_cashback: number | null;
+  text_offer: string | null;
+  cashback_delivery: number | null;
+  cashback_upon_receipt: number | null;
+  places: number[];
+  offer_image: string | null;
+}
+
+interface CartOrderResponse {
+  message: string;
+  time_to_ready: string;
+  payment: number;
+  offers: Offer[];
+  balance: number;
+  cashback: Offer;
+  duration_time: number;
+  max: number | null;
+  cash: number;
+  car: any[];
+  is_delivery: any;
+  cashback_delivery: number;
+  cashback_branch: number;
+  have_items: number;
+  car_delivery: boolean;
+  price_car_delivery: number;
+  enable_car_delivery: number;
+}
+
 interface PaymentUrlResponse {
   message: string;
   data: string; // The payment URL
@@ -106,10 +160,10 @@ export const apiService = {
       params.place_id = placeId;
     }
 
-    console.log(`🔄 Making API call to /menu/items/${userId}`);
+    console.log(`📄 Making API call to /menu/items/${userId}`);
     console.log(`📋 Parameters:`, params);
     console.log(
-      `🏪 Request URL: ${BASE_URL}/menu/items/${userId}${
+      `🪝 Request URL: ${BASE_URL}/menu/items/${userId}${
         placeId ? `?place_id=${placeId}` : ""
       }`
     );
@@ -195,6 +249,47 @@ export const apiService = {
       params: { lat: latitude, lang: longitude },
     });
     return response.data;
+  },
+
+  // NEW ENDPOINT - Fetch cart order info with offers
+  fetchCartOrderInfo: async (
+    merchantId: string | number,
+    placeId: string | number
+  ): Promise<CartOrderResponse> => {
+    const token = getAuthToken();
+
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
+
+    try {
+      const response = await axiosInstance.get("/order/cart", {
+        params: {
+          merchant_id: merchantId,
+          place_id: placeId,
+        },
+        headers: {
+          "x-auth-token": token,
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Cart order info received:", {
+        offersCount: response.data.offers?.length || 0,
+        hasCashback: !!response.data.cashback,
+        balance: response.data.balance,
+      });
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data;
+        throw new Error(
+          errorData?.message || "Failed to fetch cart order info"
+        );
+      }
+      throw error;
+    }
   },
 
   // AUTHENTICATED ENDPOINTS - Require token
@@ -285,7 +380,7 @@ export const apiService = {
       const response = await axiosInstance.get("/pay/order/place", {
         params: {
           order_id: orderId,
-          device_type: "android",
+          device_type: "web",
         },
         headers: {
           "x-auth-token": token,
@@ -481,6 +576,7 @@ export const buildOrderPayload = (
       discount_from_coupons: Math.round(couponDiscountAmount * 100) / 100,
       max_coupoun_discount: appliedCoupon?.max_coupoun_discount || 0,
       is_delivery_zonak: 0,
+      device_type: "web",
     };
 
     console.log("Final payload being sent:", JSON.stringify(payload, null, 2));
@@ -504,88 +600,6 @@ export const buildOrderPayload = (
     );
   }
 };
-// export const buildOrderPayload = (
-//   cartItems: CartItem[],
-//   placeId: number,
-//   merchantId: number,
-//   totalPrice: number,
-//   paymentType: number,
-//   couponDiscountAmount = 0
-// ): BackendOrderPayload => {
-//   try {
-//     if (!cartItems || cartItems.length === 0) {
-//       throw new Error("No cart items provided");
-//     }
-
-//     if (!placeId || placeId <= 0) {
-//       throw new Error("Invalid place ID");
-//     }
-
-//     if (!merchantId || merchantId <= 0) {
-//       throw new Error("Invalid merchant ID");
-//     }
-
-//     const backendItems = transformCartItemsToBackend(cartItems);
-
-//     // Calculate cart price using current prices (after item discounts are applied)
-//     const cartPrice = cartItems.reduce(
-//       (sum, item) => sum + item.totalPriceWithModifiers * item.quantity,
-//       0
-//     );
-
-//     // Calculate total item discounts for logging/validation
-//     const totalItemDiscounts = cartItems.reduce(
-//       (total, item) =>
-//         total +
-//         ((item.originalPrice || item.price) - item.price) * item.quantity,
-//       0
-//     );
-
-//     console.log("Order payload discount breakdown:", {
-//       originalSubtotal: cartPrice + totalItemDiscounts,
-//       itemDiscounts: totalItemDiscounts,
-//       subtotalAfterItemDiscounts: cartPrice,
-//       couponDiscount: couponDiscountAmount,
-//       finalTotal: totalPrice,
-//       totalSavings: totalItemDiscounts + couponDiscountAmount,
-//     });
-
-//     const cashbackRate = 0.07;
-//     const cashbackValue = Math.round(totalPrice * cashbackRate * 100) / 100;
-
-//     const payload: BackendOrderPayload = {
-//       cart_price: Math.round(cartPrice * 100) / 100, // This already includes item discounts
-//       discount:
-//         couponDiscountAmount > 0
-//           ? -Math.round(couponDiscountAmount * 100) / 100
-//           : 0, // Only coupon discount
-//       is_zonak_account_used: false,
-//       items_id: backendItems,
-//       merchant_id: merchantId,
-//       place_id: placeId,
-//       total_price: Math.round(totalPrice * 100) / 100,
-//       zonak_discount: 0,
-//       type: paymentType,
-//       cashback_value: cashbackValue,
-//       is_new: true,
-//       is_delivery: 0,
-//       cashback_from_coupons: 0,
-//       discount_from_coupons: Math.round(couponDiscountAmount * 100) / 100, // Only coupon discount
-//       max_coupoun_discount: Math.round(couponDiscountAmount * 100) / 100,
-//       is_delivery_zonak: 0,
-//     };
-
-//     console.log("Final payload being sent:", JSON.stringify(payload, null, 2));
-
-//     return payload;
-//   } catch (error) {
-//     throw new Error(
-//       `Failed to build order payload: ${
-//         error instanceof Error ? error.message : "Unknown error"
-//       }`
-//     );
-//   }
-// };
 
 // ===== Custom Hook =====
 export const useApiService = () => {
@@ -612,6 +626,45 @@ export const useApiService = () => {
   };
 
   return { loading, error, callApi };
+};
+
+// ===== Custom Hook for Offers =====
+export const useOffers = (
+  merchantId: string | number | null,
+  placeId: string | number | null
+) => {
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [cashback, setCashback] = useState<Offer | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchOffers = async () => {
+    if (!merchantId || !placeId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiService.fetchCartOrderInfo(merchantId, placeId);
+      setOffers(response.offers || []);
+      setCashback(response.cashback || null);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to fetch offers";
+      setError(errorMessage);
+      console.error("Error fetching offers:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    offers,
+    cashback,
+    loading,
+    error,
+    fetchOffers,
+  };
 };
 
 // ===== Data Processing Helpers =====
@@ -763,3 +816,6 @@ export const dataHelpers = {
     }));
   },
 };
+
+// Export types for use in components
+export type { Offer, CartOrderResponse };

@@ -1,4 +1,4 @@
-// Updated Checkout.tsx with separated components
+// Updated Checkout.tsx with responsive design fixes
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { usePaymentStore } from "@/stores/usePaymentStore";
 
 // Components
 import CheckoutHeader from "../components/checkout/CheckoutHeader";
+import OffersSection from "../components/checkout/OfferSection";
 import CouponCard from "../components/checkout/CouponCard";
 import OrderSummaryCard from "../components/checkout/OrderSummaryCard";
 import PriceBreakdown from "../components/checkout/PriceBreakdown";
@@ -27,6 +28,7 @@ import {
 } from "../lib/cartUtils";
 import { apiService, buildOrderPayload } from "../services/apiService";
 import { OrderResponse, CartItem, User, Restaurant } from "../types/types";
+import CheckoutRestaurantHeader from "@/components/checkout/CheckoutRestaurantHeader";
 
 interface OrderValidation {
   isValid: boolean;
@@ -53,8 +55,29 @@ const Checkout: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
 
-  // Get placeId from first item for coupon validation
+  // Get placeId and merchantId from first item
   const placeId = items.length > 0 ? items[0].placeId : "";
+  const merchantId = items.length > 0 ? items[0].restaurantId : "";
+
+  // State for offers
+  const [offersData, setOffersData] = useState<any[]>([]);
+  const [offersLoading, setOffersLoading] = useState<boolean>(false);
+
+  // Function to fetch offers
+  const fetchOffers = async () => {
+    if (!merchantId || !placeId) return;
+
+    setOffersLoading(true);
+    try {
+      const response = await apiService.fetchCartOrderInfo(merchantId, placeId);
+      setOffersData(response.offers || []);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+      setOffersData([]);
+    } finally {
+      setOffersLoading(false);
+    }
+  };
 
   const {
     couponCode,
@@ -86,6 +109,13 @@ const Checkout: React.FC = () => {
   );
   const total = totalPrice - couponDiscountAmount;
 
+  // Fetch offers when component mounts or when merchantId/placeId changes
+  useEffect(() => {
+    if (merchantId && placeId) {
+      fetchOffers();
+    }
+  }, [merchantId, placeId]);
+
   useEffect(() => {
     const fetchRestaurantDetails = async () => {
       if (items.length > 0 && items[0].placeId) {
@@ -97,9 +127,9 @@ const Checkout: React.FC = () => {
           console.log("User data:", response.data?.user);
           console.log("Profile image:", response.data?.user?.profile_image);
           if (response.message === "success" && response.data) {
-            console.log("Calling setRestaurant with:", response.data); // Add this
+            console.log("Calling setRestaurant with:", response.data);
             setRestaurant(response.data);
-            console.log("setRestaurant called"); // Add this
+            console.log("setRestaurant called");
           }
         } catch (error) {
           console.error("Error fetching restaurant details:", error);
@@ -316,7 +346,7 @@ const Checkout: React.FC = () => {
               });
 
               console.log(
-                "💳 Redirecting to payment URL:",
+                "🔳 Redirecting to payment URL:",
                 paymentResponse.data
               );
 
@@ -372,20 +402,22 @@ const Checkout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      <div className="max-w-sm mx-auto bg-gray-50">
+      <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto bg-gray-50 relative">
         <CheckoutHeader onBack={handleBack} />
 
         {/* Show restoration indicator */}
         {isRestoring && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg mx-4">
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg mx-2 sm:mx-4">
             <p className="text-blue-700 text-sm">
               🔄 جاري استعادة بيانات الطلب السابق...
             </p>
           </div>
         )}
 
-        <div className="px-4 py-6 space-y-6 pb-24">
+        {/* Main content with proper spacing for fixed CTA button */}
+        <div className="px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32 sm:pb-36 relative">
           {/* العروض Section */}
+          <OffersSection offers={offersData} loading={offersLoading} />
 
           {/* القسائم Section */}
           <CouponCard
@@ -398,26 +430,30 @@ const Checkout: React.FC = () => {
           />
 
           {/* ملخص الطلب Section */}
-          {console.log(
-            "About to render OrderSummaryCard with restaurant:",
-            restaurant
-          )}
-
           {isLoadingRestaurant ? (
-            <div className="bg-white rounded-lg p-4 mb-4">
+            <div className="bg-white rounded-lg p-3 sm:p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="text-right">
-                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
-                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-16 sm:w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
+                    <div className="h-3 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                   </div>
-                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                  <div className="w-8 sm:w-10 h-8 sm:h-10 bg-gray-200 rounded-full animate-pulse"></div>
                 </div>
               </div>
             </div>
           ) : (
-            <OrderSummaryCard items={items} restaurant={restaurant} />
+            <CheckoutRestaurantHeader
+              merchantId={merchantId}
+              restaurantName={items[0]?.restaurantName || "مطعم"}
+              placeId={placeId}
+              items={items}
+              totalPrice={totalPrice}
+              totalItemDiscounts={totalItemDiscounts}
+              defaultExpanded={false}
+              onAddMoreItems={() => navigate("/restaurant/" + placeId)}
+            />
           )}
 
           {/* Price Breakdown */}
@@ -429,12 +465,14 @@ const Checkout: React.FC = () => {
             itemCount={items.length}
           />
 
-          {/* طريقة الدفع Section */}
-          <PaymentMethodCard
-            paymentType={paymentType}
-            setPaymentType={setPaymentType}
-            total={total}
-          />
+          {/* طريقة الدفع Section - isolated container */}
+          <div className="relative mb-8 sm:mb-12">
+            <PaymentMethodCard
+              paymentType={paymentType}
+              setPaymentType={setPaymentType}
+              total={total}
+            />
+          </div>
 
           {/* Loyalty Points Banner */}
           <LoyaltyBanner

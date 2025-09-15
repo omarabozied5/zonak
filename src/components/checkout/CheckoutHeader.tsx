@@ -9,14 +9,16 @@ interface CheckoutHeaderProps {
 
 const CheckoutHeader: React.FC<CheckoutHeaderProps> = React.memo(
   ({ onBack }) => (
-    <div className="relative flex items-center justify-center  h-20 bg-white border-b">
+    <div className="relative flex items-center justify-center h-14 sm:h-16 md:h-20 bg-white border-b">
       {/* Back Button on the right edge */}
-      <div className="absolute right-4">
+      <div className="absolute right-3 sm:right-4">
         <BackButton />
       </div>
 
       {/* Centered Title */}
-      <h1 className="text-lg sm:text-xl font-bold text-black">إتمام الطلب</h1>
+      <h1 className="text-base sm:text-lg md:text-xl font-bold text-black px-12">
+        إتمام الطلب
+      </h1>
     </div>
   )
 );

@@ -315,13 +315,13 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <div className="bg-gray-100 rounded-lg px-2 py-1 flex items-center gap-1 shadow-sm border border-gray-200">
+                          <div className="bg-gray-100  px-2 py-1 flex items-center gap-1 shadow-sm border border-gray-200">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAddQuantity(item);
                               }}
-                              className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+                              className="w-7 h-7 flex items-center justify-center hover:bg-gray-200  transition-colors"
                             >
                               <span className="text-sm font-bold text-gray-700">
                                 +
@@ -335,7 +335,7 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
                                 e.stopPropagation();
                                 handleReduceQuantity(item);
                               }}
-                              className="w-7 h-7 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+                              className="w-7 h-7 flex items-center justify-center hover:bg-gray-200  transition-colors"
                             >
                               <span className="text-sm font-bold text-gray-700">
                                 −
@@ -352,7 +352,7 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
                             e.stopPropagation();
                             onEditItem(item);
                           }}
-                          className="text-xs text-[#FBD252] hover:text-[#f9c52b] font-medium px-2 py-1 rounded hover:bg-[#FBD252]/10 transition-colors"
+                          className="text-xs text-gray-800 hover:text-[#f9c52b] font-medium px-2 py-1 rounded hover:bg-[#FBD252]/10 transition-colors"
                         >
                           تعديل
                         </button>

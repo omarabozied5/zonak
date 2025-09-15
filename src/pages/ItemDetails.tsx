@@ -419,7 +419,8 @@ const ItemDetails = () => {
   }
 
   const images = itemDetails.images || [];
-  const canAddToCartFinal = isAuthenticated && isItemAvailable && canAddToCart();
+  const canAddToCartFinal =
+    isAuthenticated && isItemAvailable && canAddToCart();
   const basePrice = itemDetails.price * quantity;
   const optionsPrice = calculateOptionsTotal();
   const totalPrice = calculateTotalPrice();
@@ -433,7 +434,6 @@ const ItemDetails = () => {
 
       {/* Main Content Container */}
       <div className="relative max-w-md mx-auto bg-white min-h-screen">
-        
         {/* Edit Mode Indicator */}
         <EditModeIndicator isEditMode={isEditMode} />
 
@@ -473,11 +473,12 @@ const ItemDetails = () => {
             {itemDetails.description}
           </p>
           {/* Nutritional info - only show if available */}
-          {itemDetails.description && itemDetails.description.includes("Carbs") && (
-            <div className="text-xs text-gray-500 text-center">
-              {itemDetails.description.split(" - ").slice(-1)[0]}
-            </div>
-          )}
+          {itemDetails.description &&
+            itemDetails.description.includes("Carbs") && (
+              <div className="text-xs text-gray-500 text-center">
+                {itemDetails.description.split(" - ").slice(-1)[0]}
+              </div>
+            )}
         </div>
 
         {/* Options Section */}
