@@ -35,19 +35,15 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {optionGroups.map((group) => (
-        <div key={group.id} className="space-y-4">
+        <div key={group.id} className="space-y-3">
           {/* Group Header */}
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-900">{group.title}</h3>
+            <h3 className="text-base font-bold text-gray-900">{group.title}</h3>
             <Badge
               variant={group.type === "pick" ? "default" : "secondary"}
-              className={`text-xs px-3 py-1 rounded-full font-medium ${
-                group.type === "pick"
-                  ? "bg-gray-100 text-grey-200 border border-black-200"
-                  : "bg-gray-100 text-grey-200 border border-gre  y-200"
-              }`}
+              className="text-xs px-2 py-1 rounded font-medium bg-gray-50 text-gray-300 border border-gray-100"
             >
               {group.type === "pick" ? "إجباري" : "اختياري"}
             </Badge>
@@ -55,58 +51,58 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
 
           {/* Selection Indicator */}
           <div className="text-right">
-            <span className="text-sm text-gray-500">
-              {group.type === "pick" ? "اختر 1 فقط" : "اختر"}
+            <span className="text-xs text-gray-500">
+              {group.type === "pick" ? "خيار 1 فقط" : "اختر"}
             </span>
           </div>
 
           {/* Options List */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {group.type === "pick" ? (
               <RadioGroup
                 value={selectedOptions[group.id]?.toString() || ""}
                 onValueChange={(value) =>
                   handleRequiredOptionChange(group.id, parseInt(value))
                 }
-                className="space-y-3"
+                className="space-y-2"
               >
                 {group.options.map((option) => (
                   <div
                     key={option.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:border-[#FBD252] transition-colors"
+                    className="flex items-center justify-between p-3  rounded-xl hover:border-yellow-400 transition-colors bg-white"
                   >
-                    {/* Price on left */}
+                    {/* Price on right for RTL */}
                     <span className="text-sm text-gray-600 font-medium">
                       {option.price > 0
-                        ? `+ ${option.price.toFixed(2)} ر.س`
+                        ? `${option.price.toFixed(2)} ر.س +`
                         : "0.00 ر.س"}
                     </span>
 
-                    {/* Option name and radio on right */}
+                    {/* Option name and radio on left for RTL */}
                     <div className="flex items-center gap-3">
                       <Label
                         htmlFor={`option-${option.id}`}
-                        className="cursor-pointer text-gray-900 font-medium text-right"
+                        className="cursor-pointer text-gray-900 font-medium text-right text-sm"
                       >
                         {option.name}
                       </Label>
                       <RadioGroupItem
                         value={option.id.toString()}
                         id={`option-${option.id}`}
-                        className="border-2 border-gray-300 text-[#FBD252] data-[state=checked]:border-[#FBD252] data-[state=checked]:bg-[#FBD252]"
+                        className="border-2 border-gray-300 text-yellow-400 data-[state=checked]:border-yellow-400 data-[state=checked]:bg-yellow-400"
                       />
                     </div>
                   </div>
                 ))}
               </RadioGroup>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {group.options.map((option) => (
                   <div
                     key={option.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:border-[#FBD252] transition-colors"
+                    className="flex items-center justify-between p-3  rounded-xl hover:border-yellow-400 transition-colors bg-white"
                   >
-                    {/* Option name and checkbox on right */}
+                    {/* Option name and checkbox on left for RTL */}
                     <div className="flex items-center gap-3">
                       <Checkbox
                         id={`optional-${option.id}`}
@@ -117,19 +113,19 @@ const OptionGroups: React.FC<OptionGroupsProps> = ({
                             checked as boolean
                           )
                         }
-                        className="border-2 border-gray-300 data-[state=checked]:bg-[#FBD252] data-[state=checked]:border-[#FBD252] data-[state=checked]:text-white h-5 w-5"
+                        className="border-2 border-gray-300 data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400 data-[state=checked]:text-white h-5 w-5"
                       />
                       <Label
                         htmlFor={`optional-${option.id}`}
-                        className="cursor-pointer text-gray-900 font-medium text-right"
+                        className="cursor-pointer text-gray-900 font-medium text-right text-sm"
                       >
                         {option.name}
                       </Label>
                     </div>
-                    {/* Price on left */}
+                    {/* Price on right for RTL */}
                     <span className="text-sm text-gray-600 font-medium">
                       {option.price > 0
-                        ? `+ ${option.price.toFixed(2)} ر.س`
+                        ? `${option.price.toFixed(2)} ر.س +`
                         : "0.00 ر.س"}
                     </span>
                   </div>

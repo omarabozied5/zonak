@@ -1,4 +1,4 @@
-// Updated ItemDetails.tsx - Complete RTL layout matching the image
+// Updated ItemDetails.tsx - Fullscreen modal design with proper RTL and dynamic data
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -27,6 +27,7 @@ import OptionGroups from "../components/itemDetails/OptionGroups";
 import NotesSection from "../components/itemDetails/NotesSection";
 import QuantityCartSection from "../components/itemDetails/QuantityCartSection";
 import ConfirmationDialog from "@/components/currentOrder/ConfirmationDialog";
+import CartSummary from "@/components/itemDetails/CartSummary";
 
 const ItemDetails = () => {
   const { itemId } = useParams();
@@ -426,95 +427,75 @@ const ItemDetails = () => {
   const totalPrice = calculateTotalPrice();
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
-      {/* Hide Navigation for mobile-first design */}
-      <div className="hidden lg:block">
-        <Navigation />
-      </div>
+    <>
+      {/* Fullscreen Dark Overlay */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50" />
 
-      {/* Main Content Container */}
-      <div className="relative max-w-md mx-auto bg-white min-h-screen">
-        {/* Edit Mode Indicator */}
-        <EditModeIndicator isEditMode={isEditMode} />
+      {/* Main Modal Container */}
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center"
+        dir="rtl"
+      >
+        <div className="w-full max-w-md bg-white rounded-t-3xl max-h-[95vh] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+            <Button
+              variant="ghost"
+              onClick={() =>
+                handleNavigation(() => navigate(isEditMode ? "/cart" : -1))
+              }
+              className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
+            >
+              <X className="h-5 w-5" />
+            </Button>
 
-        {/* Header Section with Image */}
-        <div className="relative">
-          {/* Close Button - Top Right for RTL */}
-          <Button
-            variant="ghost"
-            onClick={() =>
-              handleNavigation(() => navigate(isEditMode ? "/cart" : -1))
-            }
-            className="absolute top-4 right-4 z-20 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white rounded-full"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-
-          {/* Image */}
-          <div className="aspect-[4/3] bg-gray-200 relative overflow-hidden">
-            <ImageSection
-              images={images}
-              itemName={itemDetails.name}
-              currentImageIndex={currentImageIndex}
-              setCurrentImageIndex={setCurrentImageIndex}
-              navigateImage={navigateImage}
-              isCombo={itemDetails.is_combo === 1}
-              isItemActive={isItemAvailable}
-            />
-          </div>
-        </div>
-
-        {/* Item Title and Description */}
-        <div className="px-6 py-4 bg-white">
-          <h1 className="text-xl font-bold text-gray-900 mb-2 text-center">
-            {itemDetails.name}
-          </h1>
-          <p className="text-sm text-gray-600 leading-relaxed text-center mb-2">
-            {itemDetails.description}
-          </p>
-          {/* Nutritional info - only show if available */}
-          {itemDetails.description &&
-            itemDetails.description.includes("Carbs") && (
-              <div className="text-xs text-gray-500 text-center">
-                {itemDetails.description.split(" - ").slice(-1)[0]}
+            <div className="flex items-center gap-2">
+              <div className="bg-yellow-400 text-white px-3 py-1 rounded text-sm font-bold">
+                {finalRestaurantName}
               </div>
-            )}
-        </div>
+            </div>
+          </div>
 
-        {/* Options Section */}
-        <div className="px-6 space-y-6">
-          <OptionGroups
-            optionGroups={itemDetails.optionGroups}
-            selectedOptions={selectedOptions}
-            selectedOptional={selectedOptional}
-            handleRequiredOptionChange={handleRequiredOptionChange}
-            handleOptionalOptionChange={handleOptionalOptionChange}
-          />
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 space-y-6">
+              {/* Edit Mode Indicator */}
+              <EditModeIndicator isEditMode={isEditMode} />
 
-          {/* Notes Section */}
-          <NotesSection notes={notes} setNotes={setNotes} />
-        </div>
+              {/* Item Title */}
+              <div className="text-center">
+                <h1 className="text-xl font-bold text-gray-900 mb-2">
+                  {itemDetails.name}
+                </h1>
+              </div>
 
-        {/* Bottom padding for fixed cart */}
-        <div className="h-72"></div>
-      </div>
+              {/* Option Groups */}
+              <OptionGroups
+                optionGroups={itemDetails.optionGroups}
+                selectedOptions={selectedOptions}
+                selectedOptional={selectedOptional}
+                handleRequiredOptionChange={handleRequiredOptionChange}
+                handleOptionalOptionChange={handleOptionalOptionChange}
+              />
 
-      {/* Fixed Bottom Cart Section */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="max-w-md mx-auto p-6">
-          <QuantityCartSection
-            quantity={quantity}
-            setQuantity={setQuantity}
-            basePrice={basePrice}
-            optionsPrice={optionsPrice}
-            totalPrice={totalPrice}
-            isEditMode={isEditMode}
-            canAddToCartFinal={canAddToCartFinal}
-            isItemActive={isItemAvailable}
-            canAddToCart={canAddToCart}
-            handleAddToCart={handleAddToCart}
-            isAuthenticated={isAuthenticated}
-          />
+              {/* Notes Section */}
+              <NotesSection notes={notes} setNotes={setNotes} />
+              <QuantityCartSection
+                quantity={quantity}
+                setQuantity={setQuantity}
+                optionsPrice={optionsPrice}
+                totalPrice={totalPrice}
+                itemsCount={items.length}
+                isEditMode={isEditMode}
+                canAddToCartFinal={canAddToCartFinal}
+                isItemActive={isItemAvailable}
+                handleAddToCart={handleAddToCart}
+                isAuthenticated={isAuthenticated}
+              />
+            </div>
+          </div>
+
+          {/* Fixed Bottom Cart Section */}
         </div>
       </div>
 
@@ -530,9 +511,7 @@ const ItemDetails = () => {
         confirmVariant="default"
         showCloseButton={true}
       />
-
-      <FloatingCart />
-    </div>
+    </>
   );
 };
 
