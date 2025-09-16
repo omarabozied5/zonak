@@ -1,4 +1,4 @@
-// Updated Checkout.tsx with responsive design fixes
+// Updated Checkout.tsx with all padding and margins removed
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -405,17 +405,17 @@ const Checkout: React.FC = () => {
       <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto bg-gray-50 relative">
         <CheckoutHeader onBack={handleBack} />
 
-        {/* Show restoration indicator */}
+        {/* Show restoration indicator - removed margins */}
         {isRestoring && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg mx-2 sm:mx-4">
-            <p className="text-blue-700 text-sm">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-700 text-sm p-3">
               🔄 جاري استعادة بيانات الطلب السابق...
             </p>
           </div>
         )}
 
-        {/* Main content with proper spacing for fixed CTA button */}
-        <div className="px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32 sm:pb-36 relative">
+        {/* Main content - removed all padding, margins, and spacing */}
+        <div className="pb-32 sm:pb-36 relative">
           {/* العروض Section */}
           <OffersSection offers={offersData} loading={offersLoading} />
 
@@ -431,12 +431,12 @@ const Checkout: React.FC = () => {
 
           {/* ملخص الطلب Section */}
           {isLoadingRestaurant ? (
-            <div className="bg-white rounded-lg p-3 sm:p-4 mb-4">
-              <div className="flex items-center justify-between">
+            <div className="bg-white rounded-lg">
+              <div className="flex items-center justify-between p-3 sm:p-4">
                 <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="text-right">
-                    <div className="h-4 w-16 sm:w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
+                    <div className="h-4 w-16 sm:w-20 bg-gray-200 rounded animate-pulse"></div>
                     <div className="h-3 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
                   </div>
                   <div className="w-8 sm:w-10 h-8 sm:h-10 bg-gray-200 rounded-full animate-pulse"></div>
@@ -465,8 +465,8 @@ const Checkout: React.FC = () => {
             itemCount={items.length}
           />
 
-          {/* طريقة الدفع Section - isolated container */}
-          <div className="relative mb-8 sm:mb-12">
+          {/* طريقة الدفع Section - removed container margin */}
+          <div className="relative">
             <PaymentMethodCard
               paymentType={paymentType}
               setPaymentType={setPaymentType}

@@ -123,7 +123,7 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
   return (
     <div
       onClick={onClick}
-      className={`relative w-[320px] h-[89px] rounded-[8px] overflow-visible ${className} ${
+      className={`relative w-[350px] h-[95px] rounded-[8px] overflow-visible ${className} ${
         isCashback
           ? "bg-gradient-to-r from-[#F7BD01] to-[#FFBE00]"
           : "bg-[#FBD252]/35 text-gray-400"
@@ -141,7 +141,7 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
 
       {/* العنوان */}
       <div
-        className="absolute right-[103px] top-[24px] text-black text-sm leading-[22px] text-right truncate z-10"
+        className="absolute right-[90px] top-[24px] text-black text-xs font-semibold leading-[18px] text-right break-words z-10"
         style={{ maxWidth: "194px", height: "22px" }}
       >
         {displayData.title}
@@ -155,7 +155,7 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
           right: "170px",
           left: "40px",
           height: "22px",
-          maxWidth: "112px",
+          maxWidth: "140px",
         }}
       >
         <div className="w-[4px] h-[4px] rounded-full bg-gray-700" />

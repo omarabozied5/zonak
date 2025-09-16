@@ -39,9 +39,6 @@ const CheckoutCTAButton: React.FC<CheckoutCTAButtonProps> = ({
               disabled={isProcessing}
             >
               {/* Price display */}
-              <span className="font-semibold text-sm sm:text-base md:text-lg text-white truncate">
-                {total.toFixed(2)} ر.س
-              </span>
 
               {/* Action text */}
               <span className="font-semibold text-sm sm:text-base md:text-lg text-white truncate">
@@ -57,6 +54,9 @@ const CheckoutCTAButton: React.FC<CheckoutCTAButtonProps> = ({
                     <span className="sm:hidden">طلب</span>
                   </>
                 )}
+              </span>
+              <span className="font-semibold text-sm sm:text-base md:text-lg text-white truncate">
+                {total.toFixed(2)} ر.س
               </span>
             </button>
           </div>

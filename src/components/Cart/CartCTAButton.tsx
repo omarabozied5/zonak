@@ -20,10 +20,10 @@ const CartCTAButton: React.FC<CartCTAButtonProps> = ({
           disabled={isDisabled}
         >
           <span className="font-medium text-sm sm:text-base text-white">
-            {total.toFixed(2)} ر.س
+            متابعة للدفع
           </span>
           <span className="font-medium text-sm sm:text-base text-white">
-            متابعة للدفع
+            {total.toFixed(2)} ر.س
           </span>
         </button>
       </div>
