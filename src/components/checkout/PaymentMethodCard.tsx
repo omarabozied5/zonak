@@ -71,18 +71,18 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
   };
 
   const selectPaymentMethod = (type: number) => {
-    console.log('Selecting payment method:', type);
-    console.log('setPaymentType function:', typeof setPaymentType);
+    console.log("Selecting payment method:", type);
+    console.log("setPaymentType function:", typeof setPaymentType);
     setPaymentType(type);
     setIsDropdownOpen(false);
   };
 
   const getSelectedPaymentContent = () => {
-    console.log('Current paymentType:', paymentType);
+    console.log("Current paymentType:", paymentType);
     if (paymentType === 0) {
       return (
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-6 h-4 sm:w-8 sm:h-5 rounded flex items-center justify-center">
+          <div className="w-6 h-4 sm:w-8 sm:h-5  flex items-center justify-center">
             <img
               src="visa-logo.png"
               alt="Visa"
@@ -114,17 +114,14 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
 
   return (
     <div ref={containerRef} className="relative">
-      <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-3 sm:mb-4 text-right">
+      <h2 className="text-sm sm:text-base font-bold text-gray-900 text-right">
         طريقة الدفع
       </h2>
 
-      {/* Debug info */}
-    
-
-      {/* Selected Payment Method */}
+      {/* Selected Payment Method - removed padding */}
       <div
         ref={buttonRef}
-        className="bg-white rounded-lg p-3 sm:p-4 border-2 border-yellow-400 relative z-10"
+        className="bg-white px-2 py-1 rounded-sm border-2 border-yellow-400 relative z-10"
       >
         <div className="flex items-center justify-between">
           {getSelectedPaymentContent()}
@@ -142,11 +139,11 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
           {/* Online Payment Option */}
           <button
-            className={`w-full p-3 sm:p-4 text-left transition-all hover:bg-gray-50 ${
+            className={`w-full text-left transition-all hover:bg-gray-50 ${
               paymentType === 0 ? "bg-yellow-50" : ""
             }`}
             onClick={() => {
-              console.log('Online button clicked!');
+              console.log("Online button clicked!");
               selectPaymentMethod(0);
             }}
           >
@@ -166,11 +163,11 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
 
           {/* Cash on Delivery Option */}
           <button
-            className={`w-full p-3 sm:p-4 text-left transition-all hover:bg-gray-50 border-t border-gray-100 ${
+            className={`w-full text-left transition-all hover:bg-gray-50 border-t border-gray-100 ${
               paymentType === 1 ? "bg-yellow-50" : ""
             }`}
             onClick={() => {
-              console.log('Cash button clicked!');
+              console.log("Cash button clicked!");
               selectPaymentMethod(1);
             }}
           >

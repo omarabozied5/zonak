@@ -76,10 +76,7 @@ const getOfferDisplayText = (
       return {
         rightLabelTop: "كاش",
         rightLabelBottom: "بـــــاك",
-        title:
-          offer.product_name ||
-          offer.offer_details ||
-          `كاش باك ${offer.discount}%`,
+        title: `كاش باك ${offer.discount}% علي جميع المنتجات من الكاشير`,
         validUntil,
       };
 
@@ -89,7 +86,7 @@ const getOfferDisplayText = (
       return {
         rightLabelTop: "كان",
         rightLabelBottom: "وصار",
-        title: offer.product_name || `${oldPrice} ج.م → ${newPrice} ج.م`,
+        title: `كان ب ${oldPrice} ج.م و صار ${newPrice} ج.م`,
         validUntil,
       };
 
@@ -129,8 +126,8 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
       className={`relative w-[320px] h-[89px] rounded-[8px] overflow-visible ${className} ${
         isCashback
           ? "bg-gradient-to-r from-[#F7BD01] to-[#FFBE00]"
-          : "bg-gradient-to-r from-[#F7BD01] to-[#FFBE00]"
-      } cursor-pointer hover:shadow-lg transition-shadow duration-200`}
+          : "bg-[#FBD252]/35 text-gray-400"
+      } cursor-pointer  transition-shadow duration-200`}
     >
       {/* ديكور ثابت */}
       <TicketDecor />
@@ -144,7 +141,7 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
 
       {/* العنوان */}
       <div
-        className="absolute right-[103px] top-[24px] text-black font-extrabold text-[14.5px] leading-[22px] text-right truncate z-10"
+        className="absolute right-[103px] top-[24px] text-black text-sm leading-[22px] text-right truncate z-10"
         style={{ maxWidth: "194px", height: "22px" }}
       >
         {displayData.title}
@@ -152,11 +149,11 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
 
       {/* التاريخ */}
       <div
-        className="absolute flex items-center gap-2 text-gray-700 text-[11px] leading-[22px] z-10"
+        className="absolute flex items-center gap-1 font-bold text-xs leading-[22px] z-10"
         style={{
           top: "65px",
           right: "170px",
-          left: "38px",
+          left: "40px",
           height: "22px",
           maxWidth: "112px",
         }}
@@ -170,11 +167,13 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
       {/* اليمين - نوع العرض */}
       <div className="absolute right-0 top-0 w-[59px] h-full flex items-center justify-center z-10">
         <div
-          className="text-center text-black font-extrabold text-[15px] leading-[22px]"
+          className="text-center text-black   leading-[22px]"
           style={{ height: "44px" }}
         >
-          <div>{displayData.rightLabelTop}</div>
-          <div>{displayData.rightLabelBottom}</div>
+          <div className="text-[20px] font-extrabold">
+            {displayData.rightLabelTop}
+          </div>
+          <div> {displayData.rightLabelBottom}</div>
         </div>
       </div>
     </div>

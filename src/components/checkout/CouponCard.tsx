@@ -15,7 +15,7 @@ interface CouponCardProps {
 const AppliedCouponCard = ({ coupon, onRemove }) => {
   return (
     <div
-      className="relative w-3/5 sm:w-72 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-yellow-100 shadow-sm border border-yellow-400"
+      className="relative w-3/5 sm:w-72 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-[#FBD252]/5 shadow-sm border border-yellow-400"
       dir="rtl"
       style={{ overflow: "visible" }}
     >

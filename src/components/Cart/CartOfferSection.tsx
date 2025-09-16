@@ -30,9 +30,61 @@ const mockOffers = [
   },
 ];
 
+// Offer type constants
+const OFFER_TYPES = {
+  PRICE_CHANGE: 0, // كان وصار
+  DISCOUNT_PERCENTAGE: 1, // نسبة خصم
+  CASHBACK: 3, // كاش باك
+} as const;
+
+// Helper function to get offer display text based on type
+const getOfferDisplayText = (offer) => {
+  const validUntil = offer.end_date
+    ? `ساري حتى ${new Date(offer.end_date).toLocaleDateString("ar-EG")}`
+    : "عرض محدود";
+
+  switch (offer.offer_type) {
+    case OFFER_TYPES.CASHBACK:
+      return {
+        rightLabelTop: "كاش",
+        rightLabelBottom: "بـــــاك",
+        title: `كاش باك ${offer.discount}% علي جميع المنتجات من الكاشير`,
+        validUntil,
+      };
+
+    case OFFER_TYPES.PRICE_CHANGE:
+      const oldPrice = offer.old_price || 0;
+      const newPrice = offer.new_price || 0;
+      return {
+        rightLabelTop: "كان",
+        rightLabelBottom: "وصار",
+        title: `كان ب ${oldPrice} ج.م و صار ${newPrice} ج.م`,
+        validUntil,
+      };
+
+    case OFFER_TYPES.DISCOUNT_PERCENTAGE:
+      return {
+        rightLabelTop: `${offer.discount}%`,
+        rightLabelBottom: "خصم",
+        title:
+          offer.product_name || offer.offer_details || `خصم ${offer.discount}%`,
+        validUntil,
+      };
+
+    default:
+      return {
+        rightLabelTop: "عرض",
+        rightLabelBottom: "خاص",
+        title: offer.product_name || offer.offer_details || "عرض خاص",
+        validUntil,
+      };
+  }
+};
+
 // Updated offer card for cart with horizontal layout
 const CartOfferCard = ({ offer, onClick, isFocused = false }) => {
   const isCashback = offer.offer_type === 3;
+  const displayData = getOfferDisplayText(offer);
 
   // Get offer text based on type
   const getOfferText = () => {
@@ -48,17 +100,13 @@ const CartOfferCard = ({ offer, onClick, isFocused = false }) => {
     }
   };
 
-  const getOfferDescription = () => {
-    if (offer.offer_details) return offer.offer_details;
-    if (offer.product_name) return offer.product_name;
-    return "منتجات مختارة";
-  };
-
   return (
     <div
       onClick={onClick}
-      className={`relative w-4/5 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-gray-100 shadow-sm ${
-        isFocused ? "border border-[#FBD252]" : "border border-gray-200"
+      className={`relative w-5/6 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-gray-100 shadow-sm ${
+        isFocused
+          ? " border border-[#FBD252] bg-[#FBD252]/15"
+          : "border border-gray-200"
       }`}
       dir="rtl"
       style={{ overflow: "visible" }}
@@ -102,18 +150,10 @@ const CartOfferCard = ({ offer, onClick, isFocused = false }) => {
 
         {/* Main content */}
         <div className="flex-1 px-2 min-w-0">
-          <p className="text-gray-800 font-medium text-sm truncate">
-            {getOfferDescription()}
+          <p className="text-gray-800 font-medium text-xs truncate">
+            {displayData.title}
           </p>
-          <p className="text-gray-600 text-xs">
-            صالح حتى{" "}
-            {offer.end_date
-              ? new Date(offer.end_date).toLocaleDateString("ar-EG", {
-                  month: "short",
-                  day: "numeric",
-                })
-              : "نهاية الشهر"}
-          </p>
+          <p className="text-gray-600 text-xs">{displayData.validUntil}</p>
         </div>
 
         {/* Left arrow */}
