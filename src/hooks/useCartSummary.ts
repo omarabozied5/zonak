@@ -45,27 +45,27 @@ export const useCartSummary = (items: CartItem[]): EnhancedCartSummary => {
                 : items[0].restaurantId, // Fallback to restaurantId if placeId is invalid
           }
         : null;
-    console.log(
-      "Cart items for summary:",
-      items.map((item) => ({
-        id: item.id,
-        restaurantId: item.restaurantId,
-        placeId: item.placeId,
-        restaurantName: item.restaurantName,
-      }))
-    );
+    // console.log(
+    //   "Cart items for summary:",
+    //   items.map((item) => ({
+    //     id: item.id,
+    //     restaurantId: item.restaurantId,
+    //     placeId: item.placeId,
+    //     restaurantName: item.restaurantName,
+    //   }))
+    // );
 
     // Debug logging for cart summary
-    if (items.length > 0) {
-      console.log("Cart Summary - Debug Info:", {
-        firstItem: {
-          restaurantId: items[0].restaurantId,
-          restaurantName: items[0].restaurantName,
-          placeId: items[0].placeId,
-        },
-        extractedRestaurant: primaryRestaurant,
-      });
-    }
+    // if (items.length > 0) {
+    //   console.log("Cart Summary - Debug Info:", {
+    //     firstItem: {
+    //       restaurantId: items[0].restaurantId,
+    //       restaurantName: items[0].restaurantName,
+    //       placeId: items[0].placeId,
+    //     },
+    //     extractedRestaurant: primaryRestaurant,
+    //   });
+    // }
 
     return {
       totalItems,

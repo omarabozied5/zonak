@@ -2,7 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useOrderStore, Order } from "../hooks/useOrderStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import OrderCard from "../components/currentOrder/OrderCard";
-import {EmptyState , LoadingState} from "../components/currentOrder/EmptyState";
+import {
+  EmptyState,
+  LoadingState,
+} from "../components/currentOrder/EmptyState";
 import ErrorState from "../components/currentOrder/ErrorState";
 import RefreshButton from "../components/currentOrder/RefreshButton";
 import BackButton from "@/components/ui/BackButton";
@@ -11,9 +14,6 @@ const CurrentOrders: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore();
   const orderStore = useOrderStore(user?.id || null);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
-  
-
-  
 
   // Initial data fetching
   useEffect(() => {
@@ -30,14 +30,12 @@ const CurrentOrders: React.FC = () => {
     fetchData();
   }, [isAuthenticated, user?.id]);
 
-
-
-  console.log("Auth Check:", {
-    isAuthenticated,
-    userId: user?.id,
-    storeOrders: orderStore.orders.length,
-    activeOrdersCalculated: orderStore.getActiveOrders().length,
-  });
+  // console.log("Auth Check:", {
+  //   isAuthenticated,
+  //   userId: user?.id,
+  //   storeOrders: orderStore.orders.length,
+  //   activeOrdersCalculated: orderStore.getActiveOrders().length,
+  // });
 
   // Update local state when store changes
   useEffect(() => {
@@ -63,17 +61,18 @@ const CurrentOrders: React.FC = () => {
     return null;
   }
 
-  const handleNavigateToRestaurants = () => {
-    // Navigation logic would be handled by parent component
-    console.log("Navigate to restaurants");
-  };
+  // const handleNavigateToRestaurants = () => {
+  //   // Navigation logic would be handled by parent component
+  //   console.log("Navigate to restaurants");
+  // };
 
   const isLoading = orderStore.loading;
 
   return (
-    <div className="w-full max-w-[393px] mx-auto min-h-screen bg-[#f6f6f6]" dir="rtl">
-      
-
+    <div
+      className="w-full max-w-[393px] mx-auto min-h-screen bg-[#f6f6f6]"
+      dir="rtl"
+    >
       {/* Header Section */}
       <div className="w-full bg-white   pb-4">
         <div className="flex items-center justify-between px-6 pt-2">

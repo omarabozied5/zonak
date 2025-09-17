@@ -132,8 +132,8 @@ const Cart = () => {
   // Handle offer click
   const handleOfferClick = (offer: ValidOffersItem): void => {
     // Navigate to offer details or apply offer logic
-    console.log("Offer clicked:", offer);
-    toast.success("تم تحديد العرض بنجاح");
+    // console.log("Offer clicked:", offer);
+    // toast.success("تم تحديد العرض بنجاح");
     // TODO: Implement offer application logic
   };
 
@@ -239,16 +239,16 @@ const Cart = () => {
   const isCheckoutDisabled = cartValidation.isCheckoutDisabled;
 
   // Log discount information for debugging
-  React.useEffect(() => {
-    if (totalItemDiscounts > 0) {
-      console.log("Cart discount summary:", {
-        originalTotal: originalTotalPrice,
-        currentTotal: totalPrice,
-        itemDiscounts: totalItemDiscounts,
-        savings: totalItemDiscounts,
-      });
-    }
-  }, [totalItemDiscounts, originalTotalPrice, totalPrice]);
+  // React.useEffect(() => {
+  //   if (totalItemDiscounts > 0) {
+  //     console.log("Cart discount summary:", {
+  //       originalTotal: originalTotalPrice,
+  //       currentTotal: totalPrice,
+  //       itemDiscounts: totalItemDiscounts,
+  //       savings: totalItemDiscounts,
+  //     });
+  //   }
+  // }, [totalItemDiscounts, originalTotalPrice, totalPrice]);
 
   // If cart is empty, show empty state
   if (cartSummary.isEmpty) {
@@ -261,6 +261,8 @@ const Cart = () => {
       </div>
     );
   }
+
+  console.log("Cart Items:", items);
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">

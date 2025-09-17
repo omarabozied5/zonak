@@ -315,7 +315,7 @@ const CartRestaurantDropdown: React.FC<CartRestaurantDropdownProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <div className="bg-gray-100  px-2 py-1 flex items-center gap-1 shadow-sm border border-gray-200">
+                          <div className="bg-gray-100  px-1 py-1 flex items-center gap-1 shadow-sm border border-gray-200">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

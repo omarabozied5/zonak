@@ -85,14 +85,14 @@ export const createCartItem = ({
   };
 
   // Log discount information for debugging
-  if (discountAmount > 0) {
-    console.log(`Item discount applied: ${item.name}`, {
-      originalPrice: originalPrice,
-      currentPrice: currentPrice,
-      discountAmount: discountAmount,
-      discountPercentage: discountPercentage.toFixed(1) + "%",
-    });
-  }
+  // if (discountAmount > 0) {
+  //   console.log(`Item discount applied: ${item.name}`, {
+  //     originalPrice: originalPrice,
+  //     currentPrice: currentPrice,
+  //     discountAmount: discountAmount,
+  //     discountPercentage: discountPercentage.toFixed(1) + "%",
+  //   });
+  // }
 
   return cartItem;
 };

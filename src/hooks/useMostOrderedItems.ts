@@ -62,7 +62,7 @@ export const useMostOrderedItems = (
 
     try {
       const response = await apiService.fetchMostOrderedItems(userId, placeId);
-      console.log("Most ordered items response:", response);
+      // console.log("Most ordered items response:", response);
 
       // Ensure we're getting the items array and it's valid
       const items = response?.items || response?.data?.items || [];

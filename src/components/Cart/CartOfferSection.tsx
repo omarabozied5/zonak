@@ -105,7 +105,7 @@ const CartOfferCard = ({ offer, onClick, isFocused = false }) => {
       onClick={onClick}
       className={`relative w-5/6 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-gray-100 shadow-sm ${
         isFocused
-          ? " border border-[#FBD252] bg-[#FBD252]/15"
+          ? " border border-[#FBD252] bg-[#FBD252]/20"
           : "border border-gray-200"
       }`}
       dir="rtl"

@@ -80,13 +80,13 @@ export const useSearch = (
         lat: latitude || DEFAULT_COORDS.lat,
         lng: longitude || DEFAULT_COORDS.lng,
       };
-      console.log("🌍 Location Debug:", {
-        userLatitude: latitude,
-        userLongitude: longitude,
-        finalCoords: coords,
-        isUsingUserLocation: !!(latitude && longitude),
-        isUsingDefaultCoords: !(latitude && longitude),
-      });
+      // console.log("🌍 Location Debug:", {
+      //   userLatitude: latitude,
+      //   userLongitude: longitude,
+      //   finalCoords: coords,
+      //   isUsingUserLocation: !!(latitude && longitude),
+      //   isUsingDefaultCoords: !(latitude && longitude),
+      // });
       const response = await apiService.fetchPreparedOrders(
         coords.lng,
         coords.lat,
@@ -235,7 +235,7 @@ export const useSearch = (
   );
 
   const handleResultClick = useCallback((result: SearchResult) => {
-    console.log("Navigate to restaurant:", result.user_id);
+    // console.log("Navigate to restaurant:", result.user_id);
     setShowResults(false);
     // You can add navigation logic here or return the result to parent
   }, []);

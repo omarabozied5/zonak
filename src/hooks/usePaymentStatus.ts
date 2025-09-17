@@ -44,11 +44,11 @@ export const usePaymentStatus = (config: PaymentStatusConfig = {}) => {
     const pathname = window.location.pathname.toLowerCase();
     const searchParams = new URLSearchParams(window.location.search);
 
-    console.log("🔍 Detecting payment result:", {
-      url: currentUrl,
-      pathname,
-      params: searchParams.toString(),
-    });
+    // console.log("🔍 Detecting payment result:", {
+    //   url: currentUrl,
+    //   pathname,
+    //   params: searchParams.toString(),
+    // });
 
     // Success detection patterns based on your backend
     if (

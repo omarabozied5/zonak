@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { CartItem } from "@/components/Cart/types";
-import { CartValidation } from "@/components/Cart/types";
+import { CartItem } from "@/types/types";
+import { CartValidation } from "@/types/types";
 export const useCartValidation = (items: CartItem[]): CartValidation => {
   return useMemo(() => {
     const validationErrors: string[] = [];
@@ -24,7 +24,11 @@ export const useCartValidation = (items: CartItem[]): CartValidation => {
 
     // Check for missing required data
     const hasMissingData = items.some(
-      (item) => !item.name || !item.price || !item.restaurantId
+      (item) =>
+        !item.name ||
+        item.price === undefined ||
+        item.price === null ||
+        !item.restaurantId
     );
     if (hasMissingData) {
       validationErrors.push("بيانات ناقصة لبعض الأصناف");

@@ -158,14 +158,14 @@ const Home = () => {
     hideResults,
   } = useSearch(latitude, longitude);
 
-  console.log(
-    "Home component - restaurants:",
-    restaurants,
-    "loading:",
-    loading,
-    "error:",
-    error
-  );
+  // console.log(
+  //   "Home component - restaurants:",
+  //   restaurants,
+  //   "loading:",
+  //   loading,
+  //   "error:",
+  //   error
+  // );
 
   // Memoized handlers to prevent recreation on every render
   const handleRetry = useCallback(() => {
@@ -175,7 +175,7 @@ const Home = () => {
   const handleRestaurantClick = useCallback(
     (user_id: number) => {
       navigate(`/restaurant/${user_id}`);
-      console.log("Navigating to restaurant:", user_id);
+      // console.log("Navigating to restaurant:", user_id);
     },
     [navigate]
   );

@@ -160,30 +160,30 @@ export const apiService = {
       params.place_id = placeId;
     }
 
-    console.log(`📄 Making API call to /menu/items/${userId}`);
-    console.log(`📋 Parameters:`, params);
-    console.log(
-      `🪝 Request URL: ${BASE_URL}/menu/items/${userId}${
-        placeId ? `?place_id=${placeId}` : ""
-      }`
-    );
+    // console.log(`📄 Making API call to /menu/items/${userId}`);
+    // console.log(`📋 Parameters:`, params);
+    // console.log(
+    //   `🪝 Request URL: ${BASE_URL}/menu/items/${userId}${
+    //     placeId ? `?place_id=${placeId}` : ""
+    //   }`
+    // );
 
     try {
       const response = await axiosInstance.get(`/menu/items/${userId}`, {
         params,
       });
 
-      console.log(`✅ API Response received:`, {
-        status: response.status,
-        dataKeys: Object.keys(response.data),
-        itemsCount:
-          response.data?.data?.items?.length ||
-          response.data?.items?.length ||
-          0,
-        hasCategories: !!(
-          response.data?.data?.categories || response.data?.categories
-        ),
-      });
+      // console.log(`✅ API Response received:`, {
+      //   status: response.status,
+      //   dataKeys: Object.keys(response.data),
+      //   itemsCount:
+      //     response.data?.data?.items?.length ||
+      //     response.data?.items?.length ||
+      //     0,
+      //   hasCategories: !!(
+      //     response.data?.data?.categories || response.data?.categories
+      //   ),
+      // });
 
       // Validate response structure
       if (!response.data) {
@@ -193,33 +193,33 @@ export const apiService = {
 
       const menuData = response.data;
 
-      // Log structure for debugging
-      if (menuData.data) {
-        console.log("📊 Response structure: menuData.data exists");
-        console.log("📊 Items found:", menuData.data.items?.length || 0);
-      } else if (menuData.items) {
-        console.log("📊 Response structure: menuData.items exists");
-        console.log("📊 Items found:", menuData.items?.length || 0);
-      } else {
-        console.warn(
-          "⚠️ Unexpected response structure:",
-          Object.keys(menuData)
-        );
-      }
+      // // Log structure for debugging
+      // if (menuData.data) {
+      //   console.log("📊 Response structure: menuData.data exists");
+      //   console.log("📊 Items found:", menuData.data.items?.length || 0);
+      // } else if (menuData.items) {
+      //   console.log("📊 Response structure: menuData.items exists");
+      //   console.log("📊 Items found:", menuData.items?.length || 0);
+      // } else {
+      //   console.warn(
+      //     "⚠️ Unexpected response structure:",
+      //     Object.keys(menuData)
+      //   );
+      // }
 
       return menuData;
     } catch (error) {
-      console.error(`❌ API Error for menu items:`, {
-        userId,
-        placeId,
-        error: error instanceof Error ? error.message : "Unknown error",
-        status: axios.isAxiosError(error)
-          ? error.response?.status
-          : "No status",
-        responseData: axios.isAxiosError(error)
-          ? error.response?.data
-          : "No response data",
-      });
+      // console.error(`❌ API Error for menu items:`, {
+      //   userId,
+      //   placeId,
+      //   error: error instanceof Error ? error.message : "Unknown error",
+      //   status: axios.isAxiosError(error)
+      //     ? error.response?.status
+      //     : "No status",
+      //   responseData: axios.isAxiosError(error)
+      //     ? error.response?.data
+      //     : "No response data",
+      // });
 
       throw error;
     }
@@ -274,11 +274,11 @@ export const apiService = {
         },
       });
 
-      console.log("Cart order info received:", {
-        offersCount: response.data.offers?.length || 0,
-        hasCashback: !!response.data.cashback,
-        balance: response.data.balance,
-      });
+      // console.log("Cart order info received:", {
+      //   offersCount: response.data.offers?.length || 0,
+      //   hasCashback: !!response.data.cashback,
+      //   balance: response.data.balance,
+      // });
 
       return response.data;
     } catch (error) {
@@ -478,15 +478,15 @@ export const transformCartItemsToBackend = (
 
     const baseItemId = getBaseItemId(item.id);
     const itemDiscount = (originalPrice - currentPrice) * item.quantity;
-    if (itemDiscount > 0) {
-      console.log(
-        `Item ${
-          item.name
-        }: Original ${originalPrice}, Current ${currentPrice}, Discount per item: ${
-          originalPrice - currentPrice
-        }, Total discount: ${itemDiscount}`
-      );
-    }
+    // if (itemDiscount > 0) {
+    //   console.log(
+    //     `Item ${
+    //       item.name
+    //     }: Original ${originalPrice}, Current ${currentPrice}, Discount per item: ${
+    //       originalPrice - currentPrice
+    //     }, Total discount: ${itemDiscount}`
+    //   );
+    // }
 
     return {
       id: baseItemId,
@@ -540,14 +540,14 @@ export const buildOrderPayload = (
       0
     );
 
-    console.log("Order payload discount breakdown:", {
-      originalSubtotal: cartPrice + totalItemDiscounts,
-      itemDiscounts: totalItemDiscounts,
-      subtotalAfterItemDiscounts: cartPrice,
-      couponDiscount: couponDiscountAmount,
-      finalTotal: totalPrice,
-      totalSavings: totalItemDiscounts + couponDiscountAmount,
-    });
+    // console.log("Order payload discount breakdown:", {
+    //   originalSubtotal: cartPrice + totalItemDiscounts,
+    //   itemDiscounts: totalItemDiscounts,
+    //   subtotalAfterItemDiscounts: cartPrice,
+    //   couponDiscount: couponDiscountAmount,
+    //   finalTotal: totalPrice,
+    //   totalSavings: totalItemDiscounts + couponDiscountAmount,
+    // });
 
     const cashbackRate = 0.07;
     const cashbackValue = Math.round(totalPrice * cashbackRate * 100) / 100;
@@ -579,17 +579,17 @@ export const buildOrderPayload = (
       device_type: "web",
     };
 
-    console.log("Final payload being sent:", JSON.stringify(payload, null, 2));
+    // console.log("Final payload being sent:", JSON.stringify(payload, null, 2));
 
-    if (appliedCoupon) {
-      console.log("Coupon details:", {
-        id: appliedCoupon.id,
-        code: appliedCoupon.code,
-        discount_value: appliedCoupon.discount_value,
-        discount_type: appliedCoupon.discount_type,
-        calculated_discount: couponDiscountAmount,
-      });
-    }
+    // if (appliedCoupon) {
+    //   console.log("Coupon details:", {
+    //     id: appliedCoupon.id,
+    //     code: appliedCoupon.code,
+    //     discount_value: appliedCoupon.discount_value,
+    //     discount_type: appliedCoupon.discount_type,
+    //     calculated_discount: couponDiscountAmount,
+    //   });
+    // }
 
     return payload;
   } catch (error) {

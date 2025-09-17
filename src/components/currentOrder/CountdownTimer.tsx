@@ -96,15 +96,15 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   const [timeData, setTimeData] = useState(() => calculateRemainingTime(order));
 
   // Debug logging
-  console.log("CountdownTimer Debug:", {
-    orderId: order.id,
-    status: order.status,
-    time_to_ready: order.time_to_ready,
-    remaining_time: order.remaining_time,
-    preparing_at: order.preparing_at,
-    timeData,
-    hasValidTime: timeData.hasValidTime,
-  });
+  // console.log("CountdownTimer Debug:", {
+  //   orderId: order.id,
+  //   status: order.status,
+  //   time_to_ready: order.time_to_ready,
+  //   remaining_time: order.remaining_time,
+  //   preparing_at: order.preparing_at,
+  //   timeData,
+  //   hasValidTime: timeData.hasValidTime,
+  // });
 
   useEffect(() => {
     // Always recalculate when order changes

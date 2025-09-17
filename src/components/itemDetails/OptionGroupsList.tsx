@@ -1,6 +1,6 @@
 // components/ItemDetails/OptionGroupsList.tsx
 import React from "react";
-import { OptionGroup } from "./OptionGroups";
+import { OptionGroups } from "./OptionGroups";
 
 interface Option {
   id: number;
@@ -37,7 +37,7 @@ export const OptionGroupsList: React.FC<OptionGroupsListProps> = ({
   return (
     <>
       {optionGroups.map((group) => (
-        <OptionGroup
+        <OptionGroups
           key={group.id}
           group={group}
           selectedValue={selectedOptions[group.id]}

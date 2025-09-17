@@ -37,20 +37,20 @@ const OrderPricing: React.FC<OrderPricingProps> = ({ order }) => {
   const calculatedTotal = calculateCorrectTotal();
 
   // Use the backend total_price but show our calculation in console for debugging
-  console.log("Order Pricing Debug:", {
-    backendTotal: order.total_price,
-    calculatedTotal,
-    cartPrice: order.cart_price,
-    discounts: {
-      regular: order.discount,
-      zonak: order.zonak_discount,
-      coupons: order.discount_from_coupons,
-      total:
-        (order.discount || 0) +
-        (order.zonak_discount || 0) +
-        (order.discount_from_coupons || 0),
-    },
-  });
+  // console.log("Order Pricing Debug:", {
+  //   backendTotal: order.total_price,
+  //   calculatedTotal,
+  //   cartPrice: order.cart_price,
+  //   discounts: {
+  //     regular: order.discount,
+  //     zonak: order.zonak_discount,
+  //     coupons: order.discount_from_coupons,
+  //     total:
+  //       (order.discount || 0) +
+  //       (order.zonak_discount || 0) +
+  //       (order.discount_from_coupons || 0),
+  //   },
+  // });
 
   return (
     <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-[#053468]/20">

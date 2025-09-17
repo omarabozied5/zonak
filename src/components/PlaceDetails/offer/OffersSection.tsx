@@ -65,6 +65,7 @@ const getOfferDisplayText = (
   rightLabelTop: string;
   rightLabelBottom: string;
   title: string;
+  offer_details?: string;
   validUntil: string;
 } => {
   const validUntil = offer.end_date
@@ -86,7 +87,8 @@ const getOfferDisplayText = (
       return {
         rightLabelTop: "كان",
         rightLabelBottom: "وصار",
-        title: `كان ب ${oldPrice} ج.م و صار ${newPrice} ج.م`,
+        title: `خصم على ${offer.product_name} كان بـ ${oldPrice} وصار بـ ${newPrice}`,
+        offer_details: offer.offer_details || "",
         validUntil,
       };
 
@@ -94,8 +96,7 @@ const getOfferDisplayText = (
       return {
         rightLabelTop: `${offer.discount}%`,
         rightLabelBottom: "خصم",
-        title:
-          offer.product_name || offer.offer_details || `خصم ${offer.discount}%`,
+        title: offer.product_name || `خصم ${offer.discount}%`,
         validUntil,
       };
 
@@ -103,7 +104,8 @@ const getOfferDisplayText = (
       return {
         rightLabelTop: "عرض",
         rightLabelBottom: "خاص",
-        title: offer.product_name || offer.offer_details || "عرض خاص",
+        title: offer.product_name || "عرض خاص",
+        offer_details: offer.offer_details || "",
         validUntil,
       };
   }
@@ -140,25 +142,28 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
       <div className="absolute right-[59px] top-3 bottom-3 border-r-2 border-dashed border-gray-600 z-10" />
 
       {/* العنوان */}
-      <div
-        className="absolute right-[90px] top-[24px] text-black text-xs font-semibold leading-[18px] text-right break-words z-10"
-        style={{ maxWidth: "194px", height: "22px" }}
-      >
-        {displayData.title}
-      </div>
 
+      <div
+        className="absolute right-[80px] top-[15px]  text-xs font-medium leading-5 text-right z-10"
+        style={{ maxWidth: "200px" }}
+      >
+        <span className="block text-[#FBD252] font-bold text-lg">
+          {displayData.offer_details}
+        </span>
+        <span className="block">{displayData.title}</span>
+      </div>
       {/* التاريخ */}
       <div
         className="absolute flex items-center gap-1 font-bold text-xs leading-[22px] z-10"
         style={{
           top: "65px",
-          right: "170px",
+          right: "188px",
           left: "40px",
           height: "22px",
           maxWidth: "140px",
         }}
       >
-        <div className="w-[4px] h-[4px] rounded-full bg-gray-700" />
+        <div className="w-[2px] h-[2px] rounded-full bg-gray-700" />
         <div className="text-right truncate w-full">
           {displayData.validUntil}
         </div>
@@ -167,7 +172,7 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
       {/* اليمين - نوع العرض */}
       <div className="absolute right-0 top-0 w-[59px] h-full flex items-center justify-center z-10">
         <div
-          className="text-center text-black   leading-[22px]"
+          className="text-center text-black leading-[22px]"
           style={{ height: "44px" }}
         >
           <div className="text-[20px] font-extrabold">

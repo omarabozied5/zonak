@@ -1,35 +1,38 @@
-
-import React, { useState } from 'react';
-import { User, Phone, Mail, MapPin, Edit2 } from 'lucide-react';
-import Navigation from '@/components/Navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React, { useState } from "react";
+import { User, Phone, Mail, MapPin, Edit2 } from "lucide-react";
+import Navigation from "@/components/Navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
-    name: 'أحمد محمد السالم',
-    phone: '+966501234567',
-    email: 'ahmed.salem@email.com',
-    address: 'شارع الملك فهد، حي العليا، الرياض 12345',
+    name: "أحمد محمد السالم",
+    phone: "+966501234567",
+    email: "ahmed.salem@email.com",
+    address: "شارع الملك فهد، حي العليا، الرياض 12345",
   });
 
   const handleSave = () => {
     setIsEditing(false);
     // Here you would typically save to backend
-    console.log('Profile saved:', profile);
+    // console.log('Profile saved:', profile);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-arabic-sand/20 to-white">
       <Navigation />
-      
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">الملف الشخصي</h1>
-          <p className="text-gray-600">إدارة معلوماتك الشخصية وإعدادات الحساب</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            الملف الشخصي
+          </h1>
+          <p className="text-gray-600">
+            إدارة معلوماتك الشخصية وإعدادات الحساب
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -44,12 +47,15 @@ const Profile = () => {
                   className="border-arabic-gold text-arabic-orange hover:bg-arabic-sand/30"
                 >
                   <Edit2 className="h-4 w-4 ml-2" />
-                  {isEditing ? 'إلغاء' : 'تعديل'}
+                  {isEditing ? "إلغاء" : "تعديل"}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-right flex items-center space-x-2 space-x-reverse">
+                  <Label
+                    htmlFor="name"
+                    className="text-right flex items-center space-x-2 space-x-reverse"
+                  >
                     <User className="h-4 w-4 text-arabic-gold" />
                     <span>الاسم الكامل</span>
                   </Label>
@@ -57,7 +63,9 @@ const Profile = () => {
                     <Input
                       id="name"
                       value={profile.name}
-                      onChange={(e) => setProfile({...profile, name: e.target.value})}
+                      onChange={(e) =>
+                        setProfile({ ...profile, name: e.target.value })
+                      }
                       className="text-right"
                     />
                   ) : (
@@ -68,7 +76,10 @@ const Profile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-right flex items-center space-x-2 space-x-reverse">
+                  <Label
+                    htmlFor="phone"
+                    className="text-right flex items-center space-x-2 space-x-reverse"
+                  >
                     <Phone className="h-4 w-4 text-arabic-gold" />
                     <span>رقم الهاتف</span>
                   </Label>
@@ -76,19 +87,27 @@ const Profile = () => {
                     <Input
                       id="phone"
                       value={profile.phone}
-                      onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                      onChange={(e) =>
+                        setProfile({ ...profile, phone: e.target.value })
+                      }
                       className="text-right"
                       dir="ltr"
                     />
                   ) : (
-                    <p className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg" dir="ltr">
+                    <p
+                      className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg"
+                      dir="ltr"
+                    >
                       {profile.phone}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-right flex items-center space-x-2 space-x-reverse">
+                  <Label
+                    htmlFor="email"
+                    className="text-right flex items-center space-x-2 space-x-reverse"
+                  >
                     <Mail className="h-4 w-4 text-arabic-gold" />
                     <span>البريد الإلكتروني</span>
                   </Label>
@@ -97,19 +116,27 @@ const Profile = () => {
                       id="email"
                       type="email"
                       value={profile.email}
-                      onChange={(e) => setProfile({...profile, email: e.target.value})}
+                      onChange={(e) =>
+                        setProfile({ ...profile, email: e.target.value })
+                      }
                       className="text-right"
                       dir="ltr"
                     />
                   ) : (
-                    <p className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg" dir="ltr">
+                    <p
+                      className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg"
+                      dir="ltr"
+                    >
                       {profile.email}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address" className="text-right flex items-center space-x-2 space-x-reverse">
+                  <Label
+                    htmlFor="address"
+                    className="text-right flex items-center space-x-2 space-x-reverse"
+                  >
                     <MapPin className="h-4 w-4 text-arabic-gold" />
                     <span>العنوان</span>
                   </Label>
@@ -117,7 +144,9 @@ const Profile = () => {
                     <Input
                       id="address"
                       value={profile.address}
-                      onChange={(e) => setProfile({...profile, address: e.target.value})}
+                      onChange={(e) =>
+                        setProfile({ ...profile, address: e.target.value })
+                      }
                       className="text-right"
                     />
                   ) : (
@@ -164,7 +193,10 @@ const Profile = () => {
                 <Button variant="outline" className="w-full justify-start">
                   اللغة والمنطقة
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-red-600 hover:bg-red-50">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-red-600 hover:bg-red-50"
+                >
                   حذف الحساب
                 </Button>
               </CardContent>

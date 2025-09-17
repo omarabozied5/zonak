@@ -20,10 +20,10 @@ export const useMenuItems = (
     setError(null);
 
     try {
-      console.log("Fetching menu items with:", { userId, placeId });
+      // console.log("Fetching menu items with:", { userId, placeId });
 
       const response = await apiService.fetchMenuItems(userId, placeId);
-      console.log("Menu API response:", response);
+      // console.log("Menu API response:", response);
 
       // Handle the response structure from MenuResponse
       const items = response.data?.items || response.items || [];
@@ -53,7 +53,7 @@ export const useMenuItems = (
         };
       });
 
-      console.log("Processed menu items:", processedItems.length, "items");
+      // console.log("Processed menu items:", processedItems.length, "items");
       setMenuItems(processedItems);
     } catch (err) {
       console.error("Error fetching menu items:", err);

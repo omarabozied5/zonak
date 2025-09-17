@@ -154,38 +154,38 @@ const Menu = ({
   );
 
   // Enhanced logging with all props
-  React.useEffect(() => {
-    console.log("Menu component props:", {
-      userId,
-      restaurantName,
-      placeId,
-      merchantId,
-      categoryId,
-      restaurantId: restaurant?.id,
-    });
+  // React.useEffect(() => {
+  //   // console.log("Menu component props:", {
+  //   //   userId,
+  //   //   restaurantName,
+  //   //   placeId,
+  //   //   merchantId,
+  //   //   categoryId,
+  //   //   restaurantId: restaurant?.id,
+  //   // });
 
-    // Validation warnings
-    if (!userId) {
-      console.error("❌ userId is required for Menu component");
-    }
-    if (!placeId) {
-      console.warn("⚠️ placeId is missing - this may affect menu loading");
-    }
-    if (!merchantId) {
-      console.warn("⚠️ merchantId is missing");
-    }
-  }, [userId, restaurantName, placeId, merchantId, categoryId, restaurant]);
+  //   // Validation warnings
+  //   if (!userId) {
+  //     console.error("❌ userId is required for Menu component");
+  //   }
+  //   if (!placeId) {
+  //     console.warn("⚠️ placeId is missing - this may affect menu loading");
+  //   }
+  //   if (!merchantId) {
+  //     console.warn("⚠️ merchantId is missing");
+  //   }
+  // }, [userId, restaurantName, placeId, merchantId, categoryId, restaurant]);
 
   // Additional debug info
-  React.useEffect(() => {
-    console.log("Menu items loaded:", {
-      count: menuItems.length,
-      categories: categories.length,
-      filteredCount: filteredItems.length,
-      selectedCategory,
-      searchQuery,
-    });
-  }, [menuItems, categories, filteredItems, selectedCategory, searchQuery]);
+  // React.useEffect(() => {
+  //   console.log("Menu items loaded:", {
+  //     count: menuItems.length,
+  //     categories: categories.length,
+  //     filteredCount: filteredItems.length,
+  //     selectedCategory,
+  //     searchQuery,
+  //   });
+  // }, [menuItems, categories, filteredItems, selectedCategory, searchQuery]);
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState error={""} />;

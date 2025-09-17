@@ -38,13 +38,13 @@ export const usePreparedOrders = () => {
 
     try {
       const response = await apiService.fetchPreparedOrders(lng, lat, page);
-      console.log("API Response:", response);
+      // console.log("API Response:", response);
 
       // Handle the nested data structure: response.data.data
       const newOrders = Array.isArray(response?.data?.data)
         ? response.data.data
         : [];
-      console.log("Processed orders:", newOrders);
+      // console.log("Processed orders:", newOrders);
 
       if (append) {
         setOrders((prevOrders) => {

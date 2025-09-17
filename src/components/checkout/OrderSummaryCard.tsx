@@ -18,14 +18,8 @@ const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({
   items,
   restaurant,
 }) => {
-  console.log("OrderSummaryCard - restaurant prop:", restaurant);
-  console.log(
-    "OrderSummaryCard - profile_image:",
-    restaurant?.user?.profile_image
-  );
-
   const profileImage = restaurant?.user?.profile_image || null;
-  console.log("OrderSummaryCard - final profileImage:", profileImage);
+  // console.log("OrderSummaryCard - final profileImage:", profileImage);
   const firstItem = items[0];
 
   return (

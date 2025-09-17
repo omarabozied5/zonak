@@ -216,7 +216,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           return;
         }
 
-        console.log("🔥 OTP verified successfully, performing final login...");
+        // console.log("🔥 OTP verified successfully, performing final login...");
 
         // FIXED: Pass the password to get real user data from backend
         const loginResult = await authService.loginAfterOTPVerification(
@@ -224,7 +224,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           password // ✅ Pass the actual password
         );
 
-        console.log("🔥 Final login result:", loginResult);
+        // console.log("🔥 Final login result:", loginResult);
 
         // Store user with real ID from backend
         const storeUser = {
@@ -237,7 +237,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           isNewUser: userType === "new",
         };
 
-        console.log("🔥 Storing user in auth store:", storeUser);
+        // console.log("🔥 Storing user in auth store:", storeUser);
 
         storeLogin(storeUser, loginResult.token);
 

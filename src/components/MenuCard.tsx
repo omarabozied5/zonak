@@ -29,6 +29,18 @@ const MenuCard = ({
   merchantId,
   categoryId,
 }: MenuCardProps) => {
+  console.log("🔍 MenuCard Debug - Props received:", {
+    itemId: item.id,
+    itemName: item.name,
+    placeId: placeId,
+    placeIdType: typeof placeId,
+    merchantId: merchantId,
+    merchantIdType: typeof merchantId,
+    restaurantName: restaurantName,
+    restaurantFromProp: restaurant?.id,
+    restaurantUserId: restaurant?.user_id,
+  });
+
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const currentUserId = useAuthStore((state) => state.getUserId());
@@ -56,30 +68,57 @@ const MenuCard = ({
   }, [items, item.id, isAuthenticated]);
 
   const handleAddToCart = () => {
+    console.log("🛒 MenuCard - handleAddToCart called:", {
+      hasOptions: hasOptions,
+      placeId: placeId,
+      merchantId: merchantId,
+      finalURL: `${placeId?.toString() || "MISSING"}/${
+        merchantId?.toString() || "MISSING"
+      }/${restaurantName}`,
+    });
+
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
       setShowLoginModal(true);
       return;
     }
+
     if (!restaurantStatus.canOrder) {
       toast.error(restaurantStatus.statusMessage);
       return;
     }
+
     if (!isItemAvailable) {
       toast.error("هذا العنصر غير متوفر حالياً");
       return;
     }
 
     if (hasOptions) {
-      const searchParams = new URLSearchParams({
-        placeId: placeId?.toString() || "",
-        merchantId: merchantId?.toString() || "",
-        restaurantName: restaurantName,
-      });
-      navigate(`/item/${item.id}?${searchParams}`);
+      // 🔧 FIX: Ensure all required parameters are passed
+      const searchParams = new URLSearchParams();
+
+      // Validate and set placeId
+      const validPlaceId = placeId?.toString() || "";
+      const validMerchantId = merchantId?.toString() || "";
+
+      if (!validPlaceId) {
+        console.error("❌ Missing placeId for item with options");
+        toast.error("معلومات المطعم مفقودة");
+        return;
+      }
+
+      searchParams.set("placeId", validPlaceId);
+      searchParams.set("merchantId", validMerchantId);
+      searchParams.set("restaurantName", restaurantName || "");
+
+      const navigationUrl = `/item/${item.id}?${searchParams.toString()}`;
+      console.log("🔄 Navigating to:", navigationUrl);
+
+      navigate(navigationUrl);
       return;
     }
 
+    // For items without options, create cart item directly
     const cartItem = createCartItem({
       item,
       restaurantName,
@@ -91,7 +130,6 @@ const MenuCard = ({
     addItem(cartItem);
     toast.success(`تم إضافة ${item.name} إلى السلة`);
   };
-
   const handleIncreaseQuantity = () => {
     handleAddToCart();
   };

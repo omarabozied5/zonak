@@ -71,14 +71,14 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
   };
 
   const selectPaymentMethod = (type: number) => {
-    console.log("Selecting payment method:", type);
-    console.log("setPaymentType function:", typeof setPaymentType);
+    // console.log("Selecting payment method:", type);
+    // console.log("setPaymentType function:", typeof setPaymentType);
     setPaymentType(type);
     setIsDropdownOpen(false);
   };
 
   const getSelectedPaymentContent = () => {
-    console.log("Current paymentType:", paymentType);
+    // console.log("Current paymentType:", paymentType);
     if (paymentType === 0) {
       return (
         <div className="flex items-center gap-2 sm:gap-3">
@@ -114,7 +114,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
 
   return (
     <div ref={containerRef} className="relative">
-      <h2 className="text-sm sm:text-base font-bold text-gray-900 text-right">
+      <h2 className="text-sm sm:text-base font-bold text-gray-900 text-right mb-2">
         طريقة الدفع
       </h2>
 
@@ -136,14 +136,14 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
 
       {/* Simple dropdown without portal for testing */}
       {isDropdownOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-xl z-50 p-2">
           {/* Online Payment Option */}
           <button
             className={`w-full text-left transition-all hover:bg-gray-50 ${
               paymentType === 0 ? "bg-yellow-50" : ""
             }`}
             onClick={() => {
-              console.log("Online button clicked!");
+              // console.log("Online button clicked!");
               selectPaymentMethod(0);
             }}
           >
@@ -167,7 +167,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
               paymentType === 1 ? "bg-yellow-50" : ""
             }`}
             onClick={() => {
-              console.log("Cash button clicked!");
+              // console.log("Cash button clicked!");
               selectPaymentMethod(1);
             }}
           >

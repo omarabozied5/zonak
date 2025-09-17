@@ -120,7 +120,7 @@ const RestaurantDetails: React.FC = () => {
         branches: branchesData,
       });
     } catch (err) {
-      console.error("Error fetching restaurant data:", err);
+      // console.error("Error fetching restaurant data:", err);
       setError(
         err instanceof Error ? err.message : "فشل في تحميل تفاصيل المطعم"
       );
@@ -131,7 +131,7 @@ const RestaurantDetails: React.FC = () => {
 
   // Handler for offer click
   const handleOfferClick = useCallback((offer: ValidOffer) => {
-    console.log("تم النقر على العرض:", offer);
+    // console.log("تم النقر على العرض:", offer);
     // Handle offer click - you can navigate to a specific page,
     // add to cart, or show offer details modal
     // Example: navigate(`/offer/${offer.id}`);
@@ -139,7 +139,7 @@ const RestaurantDetails: React.FC = () => {
 
   // Handler for view all offers
   const handleViewAllOffers = useCallback(() => {
-    console.log("عرض جميع العروض");
+    // console.log("عرض جميع العروض");
     // Navigate to offers page or show offers modal
     // Example: navigate(`/restaurant/${id}/offers`);
   }, [id]);

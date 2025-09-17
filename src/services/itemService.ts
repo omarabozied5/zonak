@@ -62,14 +62,14 @@ export interface ItemDetails {
 export const itemService = {
   fetchItemDetails: async (itemId: string): Promise<ItemDetails> => {
     try {
-      console.log("Fetching item details for itemId:", itemId);
+      // console.log("Fetching item details for itemId:", itemId);
       const response = await axios.get(`${BASE_URL}/menu/item/${itemId}`, {
         headers: {
           "Content-Type": "application/json",
         },
       });
 
-      console.log("Item details response ID:", response.data, itemId);
+      // console.log("Item details response ID:", response.data, itemId);
 
       // Transform the API response to match the expected structure
       const apiData = response.data.data;

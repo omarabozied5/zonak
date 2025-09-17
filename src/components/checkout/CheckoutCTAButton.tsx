@@ -14,7 +14,7 @@ const CheckoutCTAButton: React.FC<CheckoutCTAButtonProps> = ({
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9990] pointer-events-none">
       {/* Safe area for modern devices */}
-      <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto pointer-events-auto">
+      <div className="w-full pointer-events-auto">
         {/* Background container with proper spacing */}
         <div className="w-full bg-white shadow-2xl border-t border-gray-200 safe-area-inset-bottom">
           {/* Inner container with responsive padding */}

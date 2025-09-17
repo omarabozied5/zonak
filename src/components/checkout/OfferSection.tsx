@@ -80,7 +80,7 @@ const OfferCard = ({ offer, isActive = false, onClick }) => {
       onClick={() => onClick(offer)}
       className={`relative w-full h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-gray-100 shadow-sm ${
         isActive
-          ? "bg-[#FBD252]/20 border border-[#FBD252] "
+          ? "bg-[#FBD252]/15 border border-[#FBD252] "
           : "border border-gray-200"
       }`}
       dir="rtl"
@@ -175,11 +175,11 @@ const OffersSection: React.FC<OffersSectionProps> = ({
   // Loading state
   if (loading) {
     return (
-      <div>
-        <div className="flex justify-end">
+      <div className="mb-6">
+        <div className="flex justify-end mb-4">
           <h2 className="text-sm font-bold text-foreground">العروض</h2>
         </div>
-        <div>
+        <div className="px-4">
           <div
             className="flex overflow-x-auto pb-2"
             style={{ paddingTop: "8px", paddingBottom: "8px" }}
@@ -201,14 +201,14 @@ const OffersSection: React.FC<OffersSectionProps> = ({
   }
 
   return (
-    <div dir="rtl">
-      {/* Section Title - removed padding */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-base font-medium text-gray-900">العروض</h3>
+    <div className="mb-6" dir="rtl">
+      {/* Section Title */}
+      <div className="flex items-center justify-between px-2 font-bold text-md mb-2">
+        <span>العروض</span>
       </div>
 
-      {/* Offers List - Horizontal Layout - removed padding */}
-      <div className="gap-1">
+      {/* Offers List - Horizontal Layout */}
+      <div className="px-4 gap-1">
         <div
           className="flex overflow-x-auto pb-2 gap-3"
           style={{ paddingTop: "8px", paddingBottom: "8px" }}
@@ -216,7 +216,7 @@ const OffersSection: React.FC<OffersSectionProps> = ({
           {processedOffers.map((offer, index) => (
             <div
               key={`offer-${offer.id}-${index}`}
-              className="flex-shrink-0 w-72"
+              className="flex-shrink-0 w-72 mb-2"
             >
               <OfferCard
                 offer={offer}

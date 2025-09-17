@@ -144,9 +144,7 @@ const CouponCard: React.FC<CouponCardProps> = ({
     <div className="mb-6" dir="rtl">
       {/* Section Title */}
       <div className="flex items-center justify-between px-2 sm:px-4 mb-4">
-        <h3 className="text-sm sm:text-base font-medium text-gray-900">
-          القسائم
-        </h3>
+        <span className="text-md sm:text-base font-bold ">القسائم</span>
       </div>
 
       {/* Coupons List - Horizontal Layout */}
