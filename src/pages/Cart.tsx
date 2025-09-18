@@ -158,7 +158,7 @@ const Cart = () => {
 
       navigate(editUrl.pathname + editUrl.search);
     } catch (error) {
-      console.error("Error editing item:", error);
+      // console.error("Error editing item:", error);
       toast.error("حدث خطأ أثناء تعديل الصنف");
     }
   };
@@ -262,7 +262,7 @@ const Cart = () => {
     );
   }
 
-  console.log("Cart Items:", items);
+  // console.log("Cart Items:", items);
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">

@@ -118,7 +118,7 @@ const OfferCard = ({ offer, isActive = false, onClick }) => {
       <div className="flex items-center h-full px-2">
         {/* Right section - Offer type */}
         <div className="flex-shrink-0 w-12 text-right">
-          <div className="text-gray-800 font-light text-xs leading-tight">
+          <div className="text-gray-800 font-bold text-md leading-tight">
             {getOfferText()}
           </div>
         </div>

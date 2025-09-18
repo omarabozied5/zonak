@@ -97,13 +97,13 @@ const MenuCard = ({
       searchParams.set("restaurantName", validRestaurantName);
 
       const navigationUrl = `/item/${item.id}?${searchParams.toString()}`;
-      console.log("Navigating to item details:", {
-        itemId: item.id,
-        placeId: validPlaceId,
-        merchantId: validMerchantId,
-        restaurantName: validRestaurantName,
-        fullUrl: navigationUrl,
-      });
+      // console.log("Navigating to item details:", {
+      //   itemId: item.id,
+      //   placeId: validPlaceId,
+      //   merchantId: validMerchantId,
+      //   restaurantName: validRestaurantName,
+      //   fullUrl: navigationUrl,
+      // });
 
       navigate(navigationUrl);
       return;
