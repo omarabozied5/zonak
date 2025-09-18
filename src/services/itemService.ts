@@ -57,16 +57,38 @@ export interface ItemDetails {
   optionGroups: OptionGroup[];
   new_price: boolean;
   has_offer: boolean;
+  placeId?: string;
+  merchantId?: string;
+  restaurantName?: string;
 }
 
 export const itemService = {
-  fetchItemDetails: async (itemId: string): Promise<ItemDetails> => {
+  fetchItemDetails: async (
+    itemId: string,
+    placeId?: string | number,
+    merchantId?: string | number
+  ): Promise<ItemDetails> => {
     try {
+      console.log("Fetching item details for:", {
+        itemId,
+        placeId,
+        merchantId,
+      });
+
+      // Build query parameters
+      const params: Record<string, string | number> = {};
+      if (placeId) {
+        params.place_id = placeId;
+      }
+      if (merchantId) {
+        params.merchant_id = merchantId;
+      }
       // console.log("Fetching item details for itemId:", itemId);
       const response = await axios.get(`${BASE_URL}/menu/item/${itemId}`, {
         headers: {
           "Content-Type": "application/json",
         },
+        params: params,
       });
 
       // console.log("Item details response ID:", response.data, itemId);
@@ -146,6 +168,8 @@ export const itemService = {
         optionGroups: optionGroups,
         new_price: apiData.new_price,
         has_offer: apiData.has_offer,
+        placeId: placeId?.toString() || "",
+        merchantId: merchantId?.toString() || "",
       };
 
       return transformedData;

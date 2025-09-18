@@ -29,18 +29,6 @@ const MenuCard = ({
   merchantId,
   categoryId,
 }: MenuCardProps) => {
-  console.log("🔍 MenuCard Debug - Props received:", {
-    itemId: item.id,
-    itemName: item.name,
-    placeId: placeId,
-    placeIdType: typeof placeId,
-    merchantId: merchantId,
-    merchantIdType: typeof merchantId,
-    restaurantName: restaurantName,
-    restaurantFromProp: restaurant?.id,
-    restaurantUserId: restaurant?.user_id,
-  });
-
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const currentUserId = useAuthStore((state) => state.getUserId());
@@ -68,15 +56,6 @@ const MenuCard = ({
   }, [items, item.id, isAuthenticated]);
 
   const handleAddToCart = () => {
-    console.log("🛒 MenuCard - handleAddToCart called:", {
-      hasOptions: hasOptions,
-      placeId: placeId,
-      merchantId: merchantId,
-      finalURL: `${placeId?.toString() || "MISSING"}/${
-        merchantId?.toString() || "MISSING"
-      }/${restaurantName}`,
-    });
-
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
       setShowLoginModal(true);
@@ -94,42 +73,60 @@ const MenuCard = ({
     }
 
     if (hasOptions) {
-      // 🔧 FIX: Ensure all required parameters are passed
+      // FIX: Better validation and parameter passing
       const searchParams = new URLSearchParams();
 
-      // Validate and set placeId
-      const validPlaceId = placeId?.toString() || "";
-      const validMerchantId = merchantId?.toString() || "";
+      // Validate required parameters
+      const validPlaceId = placeId?.toString()?.trim() || "";
+      const validMerchantId = merchantId?.toString()?.trim() || "";
+      const validRestaurantName = restaurantName?.trim() || "مطعم";
 
-      if (!validPlaceId) {
-        console.error("❌ Missing placeId for item with options");
-        toast.error("معلومات المطعم مفقودة");
+      // At least one ID must be present
+      if (!validPlaceId && !validMerchantId) {
+        console.error("Missing both placeId and merchantId:", {
+          placeId,
+          merchantId,
+        });
+        toast.error("معلومات المطعم مفقودة - لا يمكن فتح تفاصيل العنصر");
         return;
       }
 
-      searchParams.set("placeId", validPlaceId);
-      searchParams.set("merchantId", validMerchantId);
-      searchParams.set("restaurantName", restaurantName || "");
+      // Always set both parameters, use the available one as fallback
+      searchParams.set("placeId", validPlaceId || validMerchantId);
+      searchParams.set("merchantId", validMerchantId || validPlaceId);
+      searchParams.set("restaurantName", validRestaurantName);
 
       const navigationUrl = `/item/${item.id}?${searchParams.toString()}`;
-      console.log("🔄 Navigating to:", navigationUrl);
+      console.log("Navigating to item details:", {
+        itemId: item.id,
+        placeId: validPlaceId,
+        merchantId: validMerchantId,
+        restaurantName: validRestaurantName,
+        fullUrl: navigationUrl,
+      });
 
       navigate(navigationUrl);
       return;
     }
 
     // For items without options, create cart item directly
-    const cartItem = createCartItem({
-      item,
-      restaurantName,
-      placeId: placeId || "0",
-      merchantId: merchantId,
-      quantity: 1,
-    });
+    try {
+      const cartItem = createCartItem({
+        item,
+        restaurantName: restaurantName || "مطعم",
+        placeId: placeId || merchantId || "0", // Fallback to merchantId if placeId missing
+        merchantId: merchantId || placeId || "0", // Fallback to placeId if merchantId missing
+        quantity: 1,
+      });
 
-    addItem(cartItem);
-    toast.success(`تم إضافة ${item.name} إلى السلة`);
+      addItem(cartItem);
+      toast.success(`تم إضافة ${item.name} إلى السلة`);
+    } catch (error) {
+      console.error("Error creating cart item:", error);
+      toast.error("حدث خطأ أثناء إضافة العنصر إلى السلة");
+    }
   };
+
   const handleIncreaseQuantity = () => {
     handleAddToCart();
   };
@@ -239,6 +236,7 @@ const MenuCard = ({
                     onClick={handleAddToCart}
                     size="sm"
                     className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+                    disabled={!canAddToCart}
                   >
                     <Plus className="h-4 w-4 ml-1" />
                     أضف

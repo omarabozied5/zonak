@@ -59,11 +59,16 @@ const ItemDetails = () => {
 
   // Get final restaurant context - prefer editing item's data over URL params
   const finalPlaceId =
-    isEditMode && editingItem ? editingItem.placeId : urlPlaceId;
+    itemDetails?.placeId ||
+    (isEditMode && editingItem ? editingItem.placeId : urlPlaceId);
   const finalMerchantId =
-    isEditMode && editingItem ? editingItem.restaurantId : urlMerchantId;
+    itemDetails?.merchantId ||
+    (isEditMode && editingItem ? editingItem.restaurantId : urlMerchantId);
   const finalRestaurantName =
-    isEditMode && editingItem ? editingItem.restaurantName : urlRestaurantName;
+    itemDetails?.restaurantName ||
+    (isEditMode && editingItem
+      ? editingItem.restaurantName
+      : urlRestaurantName);
 
   const isItemAvailable =
     itemDetails?.is_available === true || itemDetails?.is_available === 1;

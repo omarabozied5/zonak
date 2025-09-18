@@ -252,7 +252,7 @@ const RestaurantDetails: React.FC = () => {
       <div className="mx-0">
         <MostOrderedItems
           userId={restaurant.user_id.toString()}
-          placeId={id}
+          placeId={id || restaurant.id.toString()} // Use URL id as primary, restaurant.id as fallback
           restaurant={restaurant}
           restaurantName={restaurant.merchant_name}
         />
@@ -262,10 +262,10 @@ const RestaurantDetails: React.FC = () => {
       <div className="max-w-7xl mx-auto px-0 sm:px-4 lg:px-8 mb-6 sm:mb-8">
         <Menu
           userId={restaurant.user_id.toString()}
-          merchantId={restaurant.user_id}
+          merchantId={restaurant.user_id} // Use user_id as merchantId
           restaurantName={restaurant.merchant_name}
           restaurant={restaurant}
-          placeId={id}
+          placeId={id} // URL param (restaurant ID from route)
           categoryId={menuItems[0]?.categories?.[0]?.id || 0}
         />
       </div>

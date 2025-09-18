@@ -80,24 +80,55 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
       return;
     }
 
+    // FIX: Better parameter validation and handling
+    const validPlaceId = placeId?.toString()?.trim() || "";
+    const validMerchantId = merchantId?.toString()?.trim() || "";
+    const validRestaurantName = restaurantName?.trim() || "مطعم";
+
+    // Use restaurant data as fallback if IDs are missing
+    const finalPlaceId = validPlaceId || restaurant.id?.toString() || "0";
+    const finalMerchantId =
+      validMerchantId || restaurant.user_id?.toString() || "0";
+
     if (hasOptions) {
-      navigate(`/item/${item.id}`);
+      // Navigate to item details with proper parameters
+      const searchParams = new URLSearchParams();
+      searchParams.set("placeId", finalPlaceId);
+      searchParams.set("merchantId", finalMerchantId);
+      searchParams.set("restaurantName", validRestaurantName);
+
+      const navigationUrl = `/item/${item.id}?${searchParams.toString()}`;
+      console.log("Navigating to item details:", {
+        itemId: item.id,
+        placeId: finalPlaceId,
+        merchantId: finalMerchantId,
+        restaurantName: validRestaurantName,
+        fullUrl: navigationUrl,
+      });
+
+      navigate(navigationUrl);
       return;
     }
 
-    const cartItem = createCartItem({
-      item,
-      restaurantName,
-      placeId: placeId || "0",
-      merchantId: merchantId,
-      quantity: 1,
-    });
+    // For items without options, create cart item directly
+    try {
+      const cartItem = createCartItem({
+        item,
+        restaurantName: validRestaurantName,
+        placeId: finalPlaceId,
+        merchantId: finalMerchantId,
+        quantity: 1,
+      });
 
-    addItem(cartItem);
-    toast.success(`تم إضافة ${item.name} إلى السلة`);
+      addItem(cartItem);
+      toast.success(`تم إضافة ${item.name} إلى السلة`);
 
-    if (onAddToCart) {
-      onAddToCart(item);
+      if (onAddToCart) {
+        onAddToCart(item);
+      }
+    } catch (error) {
+      console.error("Error creating cart item:", error);
+      toast.error("حدث خطأ أثناء إضافة العنصر إلى السلة");
     }
   };
 
@@ -175,9 +206,20 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
                 <div className="absolute bottom-0 right-0 z-20">
                   <button
                     onClick={handleAddToCart}
-                    className="w-8 h-8 bg-white rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-all hover:bg-gray-50"
+                    disabled={!canAddToCart}
+                    className={`w-8 h-8 rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-all ${
+                      canAddToCart
+                        ? "bg-white hover:bg-gray-50"
+                        : "bg-gray-100 cursor-not-allowed opacity-60"
+                    }`}
                   >
-                    <span className="text-base font-bold text-black">+</span>
+                    <span
+                      className={`text-base font-bold ${
+                        canAddToCart ? "text-black" : "text-gray-400"
+                      }`}
+                    >
+                      +
+                    </span>
                   </button>
                 </div>
               )}
@@ -187,6 +229,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
                 <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
                   <button
                     onClick={handleAddToCart}
+                    disabled={!canAddToCart}
                     className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
                   >
                     <span className="text-base font-bold text-black">+</span>
@@ -209,6 +252,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
                 <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
                   <button
                     onClick={handleAddToCart}
+                    disabled={!canAddToCart}
                     className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
                   >
                     <span className="text-base font-bold text-black">+</span>

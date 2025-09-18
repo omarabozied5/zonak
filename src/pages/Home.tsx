@@ -50,15 +50,53 @@ const RestaurantCard = React.memo(
           </div>
 
           {/* Discount Badge - Top Left */}
-          <div className="absolute top-3 left-3">
-            <div className="bg-[#FFD14A] text-black rounded-lg px-2 py-1 font-bold text-sm shadow-lg">
-              10%
-              <div className="text-xs">كاش باك</div>
-            </div>
-          </div>
+          {(() => {
+            // Debug: Log the restaurant data to console
+            console.log("Restaurant data:", restaurant.merchant_name, {
+              cashback_offer: restaurant.cashback_offer,
+              place_main_offer: restaurant.place?.main_offer,
+            });
+
+            // Check for cashback offer first
+            if (restaurant.cashback_offer?.discount) {
+              return (
+                <div className="absolute top-3 right-3">
+                  <div className="backdrop-blur-md bg-white/20 rounded-lg px-2 py-1 font-bold text-sm shadow-md flex flex-col items-center leading-tight">
+                    <span className="text-base" style={{ color: "#F7BD01" }}>
+                      {restaurant.cashback_offer.discount}%
+                    </span>
+                    <span className="text-[11px]" style={{ color: "#F7BD01" }}>
+                      كاش باك
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            // Check for main offer as fallback
+            if (
+              restaurant.place?.main_offer?.offer_type === 3 &&
+              restaurant.place.main_offer.discount
+            ) {
+              return (
+                <div className="absolute top-1 right-1">
+                  <div className="backdrop-blur-md bg-black/20 rounded-md px-4 py-3 font-bold  shadow-md flex flex-col items-center leading-tight">
+                    <span className=" text-[25px]" style={{ color: "#F7BD01" }}>
+                      {restaurant.place.main_offer.discount}%
+                    </span>
+                    <span className="text-[12px]" style={{ color: "#F7BD01" }}>
+                      كاش باك
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
 
           {/* Status Badge - Top Right */}
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 left-3">
             <div
               className={`rounded-full px-3 py-1 text-xs font-bold shadow-lg ${
                 isBusy ? "bg-red-500 text-white" : "bg-green-500 text-white"
@@ -104,14 +142,14 @@ const RestaurantCard = React.memo(
             </div>
 
             {/* Delivery Time */}
-            <div className="flex items-center justify-start space-x-2 space-x-reverse text-gray-600">
+            {/* <div className="flex items-center justify-start space-x-2 space-x-reverse text-gray-600">
               <span className="text-sm">
                 {restaurant.distance > 0
                   ? `${restaurant.distance.toFixed(1)} كم • `
                   : ""}
                 25-35 دقيقة
               </span>
-            </div>
+            </div> */}
 
             {/* Promotional Text */}
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3">
