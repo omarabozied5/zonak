@@ -132,7 +132,13 @@ const MenuCard = ({
   };
 
   const handleDecreaseQuantity = () => {
-    if (!isAuthenticated || itemQuantity === 0) return;
+    if (!isAuthenticated) {
+      toast.error("يجب تسجيل الدخول");
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (itemQuantity === 0) return;
 
     const cartItem = items.find((cartItem) => {
       const baseItemId = cartItem.id.split("-")[0];
@@ -235,8 +241,9 @@ const MenuCard = ({
                   <Button
                     onClick={handleAddToCart}
                     size="sm"
-                    className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
-                    disabled={!canAddToCart}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 ${
+                      !isItemAvailable ? "opacity-60 cursor-not-allowed" : ""
+                    }`}
                   >
                     <Plus className="h-4 w-4 ml-1" />
                     أضف

@@ -60,6 +60,17 @@ const Navigation = ({
     if (closeMenu) setIsMobileMenuOpen(false);
   };
 
+  // Handle unauthorized access to protected routes
+  const handleProtectedRoute = (path: string, e?: React.MouseEvent) => {
+    if (!isAuthenticated) {
+      if (e) e.preventDefault();
+      toast.error("يجب تسجيل الدخول");
+      setShowLoginModal(true);
+      return false;
+    }
+    return true;
+  };
+
   // Get cart items count properly
   const cartItemsCount = cartStore.getTotalItems();
 
@@ -69,11 +80,19 @@ const Navigation = ({
   const NavLink = ({ item, onClick = () => {}, className = "" }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
+    const isProtected = item.path === "/current-orders";
+
+    const handleClick = (e: React.MouseEvent) => {
+      if (isProtected && !handleProtectedRoute(item.path, e)) {
+        return;
+      }
+      onClick();
+    };
 
     return (
       <Link
         to={item.path}
-        onClick={onClick}
+        onClick={handleClick}
         className={`relative flex items-center space-x-2 space-x-reverse px-3 md:px-4 py-2 md:py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
           isActive
             ? "text-[#FFAA01] bg-[#FFAA01]/10 shadow-sm"
@@ -83,15 +102,17 @@ const Navigation = ({
         <div className="relative inline-block">
           <Icon className="h-4 w-4 md:h-4 md:w-4" />
           {/* Add badge for current orders */}
-          {item.path === "/current-orders" && currentOrdersCount > 0 && (
-            <span
-              className="absolute -top-1 -right-1 bg-white text-[#FFD14A] 
+          {item.path === "/current-orders" &&
+            currentOrdersCount > 0 &&
+            isAuthenticated && (
+              <span
+                className="absolute -top-1 -right-1 bg-white text-[#FFD14A] 
                      text-[10px] rounded-full h-4 w-4 
                      flex items-center justify-center font-bold shadow"
-            >
-              {currentOrdersCount}
-            </span>
-          )}
+              >
+                {currentOrdersCount}
+              </span>
+            )}
         </div>
         <span>{item.name}</span>
       </Link>
@@ -101,10 +122,17 @@ const Navigation = ({
   const CartLink = ({ onClick = () => {}, className = "" }) => {
     const isActive = location.pathname === "/cart";
 
+    const handleClick = (e: React.MouseEvent) => {
+      if (!handleProtectedRoute("/cart", e)) {
+        return;
+      }
+      onClick();
+    };
+
     return (
       <Link
         to="/cart"
-        onClick={onClick}
+        onClick={handleClick}
         className={`relative flex items-center space-x-2 space-x-reverse px-3 md:px-4 py-2 md:py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
           isActive
             ? "text-[#FFAA01] bg-[#FFAA01]/10 shadow-sm"
@@ -113,7 +141,7 @@ const Navigation = ({
       >
         <div className="relative inline-block">
           <ShoppingCart className="h-6 w-6" />
-          {cartItemsCount > 0 && (
+          {cartItemsCount > 0 && isAuthenticated && (
             <span
               className="absolute -top-1 -right-1 bg-white text-[#FFD14A] 
                      text-[10px] rounded-full h-4 w-4 
@@ -133,6 +161,7 @@ const Navigation = ({
     <div className="flex items-center space-x-2 space-x-reverse md:hidden">
       <Link
         to="/cart"
+        onClick={(e) => handleProtectedRoute("/cart", e)}
         className={`relative p-2 rounded-lg transition-all duration-200 ${
           location.pathname === "/cart"
             ? "bg-[#FFAA01]/10"
@@ -152,7 +181,7 @@ const Navigation = ({
               e.currentTarget.parentNode?.appendChild(fallback);
             }}
           />
-          {cartItemsCount > 0 && (
+          {cartItemsCount > 0 && isAuthenticated && (
             <span className="absolute -top-1 -right-1 bg-white text-[#FBD252] text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold shadow-sm border border-gray-200">
               {cartItemsCount}
             </span>
@@ -162,6 +191,7 @@ const Navigation = ({
 
       <Link
         to="/current-orders"
+        onClick={(e) => handleProtectedRoute("/current-orders", e)}
         className={`relative p-2 rounded-lg transition-all duration-200 ${
           location.pathname === "/current-orders"
             ? "bg-[#FFAA01]/10"
@@ -182,7 +212,7 @@ const Navigation = ({
             }}
           />
           {/* Add badge for mobile current orders icon */}
-          {currentOrdersCount > 0 && (
+          {currentOrdersCount > 0 && isAuthenticated && (
             <span className="absolute -top-1 -right-1 bg-white text-[#FBD252] text-xs rounded-full h-4 w-4 flex items-center justify-center font-bold shadow-sm border border-gray-200">
               {currentOrdersCount}
             </span>

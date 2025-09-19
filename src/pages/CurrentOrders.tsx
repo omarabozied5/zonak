@@ -64,12 +64,12 @@ const CurrentOrders: React.FC = () => {
 
   return (
     <div
-      className="w-full max-w-[393px] mx-auto min-h-screen bg-[#f6f6f6]"
+      className="w-full max-w-[393px] mx-auto min-h-screen bg-white"
       dir="rtl"
     >
       {/* Header Section */}
       <div className="w-full bg-white pb-4">
-        <div className="flex items-center justify-between px-6 pt-2">
+        <div className="flex items-center justify-between px-6 pt-2 mt-2">
           <BackButton />
           <h1 className="text-[18px] font-medium text-[#111719] font-['Bahij_TheSansArabic']">
             الطلبات الحالية

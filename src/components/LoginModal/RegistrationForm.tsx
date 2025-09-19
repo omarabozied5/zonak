@@ -1,4 +1,4 @@
-// RegistrationForm.tsx - Improved responsive design
+// RegistrationForm.tsx - Enhanced responsive design with modern layout
 import React, { useState } from "react";
 import { User, Phone, Lock, Eye, EyeOff, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -114,223 +114,252 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     validationState.name.isValid;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-[#FFAA01] to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <UserPlus className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-[#053468] mb-2">
-          إنشاء حساب جديد
-        </h2>
-        <p className="text-gray-600 text-sm">
-          أكمل بياناتك لإنشاء حسابك الجديد
-        </p>
-      </div>
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Name Fields - Improved responsive layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FormField
-            label="الاسم الأول"
-            icon={<User className="w-4 h-4" />}
-            error={
-              validationState.name.touched &&
-              !validationState.name.isValid &&
-              firstName.trim()
-                ? "الاسم الأول مطلوب"
-                : undefined
-            }
-          >
-            <Input
-              type="text"
-              value={firstName}
-              onChange={(e) => handleNameChange("firstName", e.target.value)}
-              onBlur={handleNameBlur}
-              onKeyDown={handleKeyDown}
-              placeholder="الاسم الأول"
-              className="text-right transition-colors focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-              disabled={isLoading}
-              autoComplete="given-name"
-            />
-          </FormField>
-
-          <FormField
-            label="الاسم الأخير"
-            icon={<User className="w-4 h-4" />}
-            error={
-              validationState.name.touched &&
-              !validationState.name.isValid &&
-              lastName.trim()
-                ? "الاسم الأخير مطلوب"
-                : undefined
-            }
-          >
-            <Input
-              type="text"
-              value={lastName}
-              onChange={(e) => handleNameChange("lastName", e.target.value)}
-              onBlur={handleNameBlur}
-              onKeyDown={handleKeyDown}
-              placeholder="الاسم الأخير"
-              className="text-right transition-colors focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-              disabled={isLoading}
-              autoComplete="family-name"
-            />
-          </FormField>
+    <div className="w-full max-w-md mx-auto px-4">
+      <div className="space-y-4">
+        {/* Compact Header */}
+        <div className="text-center">
+          <div className="w-12 h-12 bg-gradient-to-br from-[#FFAA01] to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
+            <UserPlus className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-[#053468] mb-1">
+            إنشاء حساب جديد
+          </h2>
+          <p className="text-gray-600 text-xs">
+            أكمل بياناتك لإنشاء حسابك الجديد
+          </p>
         </div>
 
-        {/* Phone Field */}
-        <FormField
-          label="رقم الجوال"
-          icon={<Phone className="w-4 h-4" />}
-          error={
-            validationState.phone.touched && !validationState.phone.isValid
-              ? validationState.phone.message
-              : undefined
-          }
-        >
-          <Input
-            type="tel"
-            value={phone}
-            onChange={(e) => handlePhoneChange(e.target.value)}
-            onBlur={handlePhoneBlur}
-            onKeyDown={handleKeyDown}
-            className={cn(
-              "text-right transition-colors",
-              validationState.phone.touched && !validationState.phone.isValid
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                : "border-gray-300 focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-            )}
-            disabled={isLoading}
-            autoComplete="tel"
-          />
-        </FormField>
-
-        {/* Password Field */}
-        <FormField
-          label="كلمة المرور"
-          icon={<Lock className="w-4 h-4" />}
-          error={
-            validationState.password.touched &&
-            !validationState.password.isValid
-              ? validationState.password.message
-              : undefined
-          }
-        >
-          <div className="relative">
-            <Input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
-              onBlur={handlePasswordBlur}
-              onKeyDown={handleKeyDown}
-              placeholder="ادخل كلمة المرور (8 أحرف على الأقل)"
-              className={cn(
-                "text-right pr-10 transition-colors",
-                validationState.password.touched &&
-                  !validationState.password.isValid
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-              )}
-              disabled={isLoading}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#053468] transition-colors"
-              disabled={isLoading}
-              tabIndex={-1}
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Name Fields - Compact layout */}
+          <div className="grid grid-cols-2 gap-2">
+            <FormField
+              label="الاسم الأول"
+              icon={<User className="w-3 h-3" />}
+              error={
+                validationState.name.touched &&
+                !validationState.name.isValid &&
+                !firstName.trim()
+                  ? "مطلوب"
+                  : undefined
+              }
             >
-              {showPassword ? (
-                <EyeOff className="w-4 h-4" />
-              ) : (
-                <Eye className="w-4 h-4" />
+              <Input
+                type="text"
+                value={firstName}
+                onChange={(e) => handleNameChange("firstName", e.target.value)}
+                onBlur={handleNameBlur}
+                onKeyDown={handleKeyDown}
+                placeholder="الأول"
+                className={cn(
+                  "text-right transition-colors h-9 text-sm",
+                  "focus:border-[#FFAA01] focus:ring-1 focus:ring-[#FFAA01]",
+                  "border-gray-300",
+                  validationState.name.touched &&
+                    !validationState.name.isValid &&
+                    !firstName.trim()
+                    ? "border-red-500"
+                    : ""
+                )}
+                disabled={isLoading}
+                autoComplete="given-name"
+              />
+            </FormField>
+
+            <FormField
+              label="الاسم الأخير"
+              icon={<User className="w-3 h-3" />}
+              error={
+                validationState.name.touched &&
+                !validationState.name.isValid &&
+                !lastName.trim()
+                  ? "مطلوب"
+                  : undefined
+              }
+            >
+              <Input
+                type="text"
+                value={lastName}
+                onChange={(e) => handleNameChange("lastName", e.target.value)}
+                onBlur={handleNameBlur}
+                onKeyDown={handleKeyDown}
+                placeholder="الأخير"
+                className={cn(
+                  "text-right transition-colors h-9 text-sm",
+                  "focus:border-[#FFAA01] focus:ring-1 focus:ring-[#FFAA01]",
+                  "border-gray-300",
+                  validationState.name.touched &&
+                    !validationState.name.isValid &&
+                    !lastName.trim()
+                    ? "border-red-500"
+                    : ""
+                )}
+                disabled={isLoading}
+                autoComplete="family-name"
+              />
+            </FormField>
+          </div>
+
+          {/* Phone Field */}
+          <FormField
+            label="رقم الجوال"
+            icon={<Phone className="w-3 h-3" />}
+            error={
+              validationState.phone.touched && !validationState.phone.isValid
+                ? validationState.phone.message
+                : undefined
+            }
+          >
+            <Input
+              type="tel"
+              value={phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              onBlur={handlePhoneBlur}
+              onKeyDown={handleKeyDown}
+              placeholder="05xxxxxxxx أو +966"
+              className={cn(
+                "text-right transition-colors h-9 text-sm",
+                "focus:border-[#FFAA01] focus:ring-1 focus:ring-[#FFAA01]",
+                "border-gray-300",
+                validationState.phone.touched && !validationState.phone.isValid
+                  ? "border-red-500"
+                  : ""
               )}
-            </button>
-          </div>
-        </FormField>
+              disabled={isLoading}
+              autoComplete="tel"
+              dir="ltr"
+            />
+          </FormField>
 
-        {/* Password Strength Indicator - Improved responsive layout */}
-        {password && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <div
+          {/* Password Field */}
+          <FormField
+            label="كلمة المرور"
+            icon={<Lock className="w-3 h-3" />}
+            error={
+              validationState.password.touched &&
+              !validationState.password.isValid
+                ? validationState.password.message
+                : undefined
+            }
+          >
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => handlePasswordChange(e.target.value)}
+                onBlur={handlePasswordBlur}
+                onKeyDown={handleKeyDown}
+                placeholder="8+ أحرف"
                 className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
-                  password.length >= 8 ? "bg-green-500" : "bg-gray-300"
+                  "text-right pr-8 transition-colors h-9 text-sm",
+                  "focus:border-[#FFAA01] focus:ring-1 focus:ring-[#FFAA01]",
+                  "border-gray-300",
+                  validationState.password.touched &&
+                    !validationState.password.isValid
+                    ? "border-red-500"
+                    : ""
                 )}
+                disabled={isLoading}
+                autoComplete="new-password"
               />
-              <span
-                className={
-                  password.length >= 8 ? "text-green-600" : "text-gray-500"
-                }
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#053468] transition-colors"
+                disabled={isLoading}
+                tabIndex={-1}
               >
-                8 أحرف على الأقل
-              </span>
+                {showPassword ? (
+                  <EyeOff className="w-3 h-3" />
+                ) : (
+                  <Eye className="w-3 h-3" />
+                )}
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <div
-                className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
-                  /[a-zA-Z\u0621-\u064A]/.test(password) &&
+          </FormField>
+
+          {/* Compact Password Strength */}
+          {password && (
+            <div className="flex items-center justify-center gap-4 text-xs bg-gray-50 rounded px-3 py-2">
+              <div className="flex items-center gap-1">
+                <div
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    password.length >= 8 ? "bg-green-500" : "bg-gray-300"
+                  )}
+                />
+                <span
+                  className={
+                    password.length >= 8 ? "text-green-600" : "text-gray-500"
+                  }
+                >
+                  8+ أحرف
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    /[a-zA-Z\u0621-\u064A]/.test(password) &&
+                      /[0-9\u0660-\u0669]/.test(password)
+                      ? "bg-green-500"
+                      : "bg-gray-300"
+                  )}
+                />
+                <span
+                  className={
+                    /[a-zA-Z\u0621-\u064A]/.test(password) &&
                     /[0-9\u0660-\u0669]/.test(password)
-                    ? "bg-green-500"
-                    : "bg-gray-300"
-                )}
-              />
-              <span
-                className={
-                  /[a-zA-Z\u0621-\u064A]/.test(password) &&
-                  /[0-9\u0660-\u0669]/.test(password)
-                    ? "text-green-600"
-                    : "text-gray-500"
-                }
-              >
-                أحرف وأرقام
-              </span>
+                      ? "text-green-600"
+                      : "text-gray-500"
+                  }
+                >
+                  أحرف + أرقام
+                </span>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          disabled={isLoading || !isFormValid}
-          className="w-full bg-[#FFAA01] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed h-12 text-base font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              جاري إنشاء الحساب...
-            </span>
-          ) : (
-            <>
-              إنشاء الحساب
-              <UserPlus className="w-4 h-4 mr-2" />
-            </>
           )}
-        </Button>
-      </form>
 
-      {/* Switch to Login Link */}
-      <div className="text-center pt-4 border-t border-gray-100">
-        <p className="text-sm text-gray-600 mb-2">لديك حساب بالفعل؟</p>
-        <button
-          type="button"
-          onClick={onSwitchToLogin}
-          disabled={isLoading}
-          className="text-[#053468] hover:text-[#FFAA01] font-medium text-sm transition-colors duration-200 underline hover:no-underline"
-        >
-          تسجيل الدخول
-        </button>
-      </div>
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            disabled={isLoading || !isFormValid}
+            className={cn(
+              "w-full bg-[#FFAA01] hover:bg-[#e69900] text-white",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              "h-10 text-sm font-medium transition-colors",
+              "shadow-sm hover:shadow-md"
+            )}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                جاري الإنشاء...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                إنشاء الحساب
+                <UserPlus className="w-3 h-3" />
+              </span>
+            )}
+          </Button>
+        </form>
 
-      {/* Footer */}
-      <div className="text-center text-xs text-gray-500 pt-2">
-        <p>بالمتابعة، أنت توافق على الشروط والأحكام</p>
+        {/* Compact Footer */}
+        <div className="text-center pt-3 space-y-2">
+          <p className="text-xs text-gray-600">لديك حساب؟</p>
+          <button
+            type="button"
+            onClick={onSwitchToLogin}
+            disabled={isLoading}
+            className="text-[#053468] hover:text-[#FFAA01] font-medium text-sm transition-colors px-2 py-1 rounded"
+          >
+            تسجيل الدخول
+          </button>
+          <p className="text-xs text-gray-400 pt-1">
+            بالمتابعة، توافق على الشروط والأحكام
+          </p>
+        </div>
       </div>
     </div>
   );

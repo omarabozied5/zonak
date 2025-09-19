@@ -5,12 +5,11 @@ import { toast } from "sonner";
 import { usePaymentStore } from "@/stores/usePaymentStore";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useCartRestoration } from "@/lib/cartRestoration";
 
 interface PaymentStatusHandlerProps {
   onPaymentSuccess?: (paymentId: string, orderId: string) => void;
   onPaymentFailed?: (reason?: string) => void;
-  autoRedirectDelay?: number; // in milliseconds
+  autoRedirectDelay?: number;
 }
 
 const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
@@ -22,7 +21,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
   const location = useLocation();
   const { user } = useAuthStore();
   const cartStore = useCartStore(user?.id);
-  const { restoreCart } = useCartRestoration();
 
   const processedRef = useRef<Set<string>>(new Set());
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -33,12 +31,10 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
   const {
     setPaymentStatus,
     clearPaymentState,
-    hasFailedPayment,
     restoreCheckoutWithValidation,
-    incrementRestorationAttempt,
-    canAttemptRestoration,
     markPaymentReturnDetected,
     checkoutData,
+    orderId: storedOrderId,
   } = usePaymentStore();
 
   useEffect(() => {
@@ -54,11 +50,10 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
     const pathname = window.location.pathname.toLowerCase();
     const searchParams = new URLSearchParams(window.location.search);
 
-    // Create unique key for this navigation to prevent duplicate processing
+    // Create unique key for this navigation
     const navigationKey = `${pathname}-${searchParams.toString()}-${Date.now()}`;
 
     if (processedRef.current.has(navigationKey)) {
-      console.log("Already processed this navigation:", navigationKey);
       return;
     }
 
@@ -70,7 +65,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       searchParams: searchParams.toString(),
     });
 
-    // 🎯 ENHANCED PAYMENT STATUS DETECTION based on your backend URLs
     const paymentStatus = detectPaymentStatus(
       currentUrl,
       pathname,
@@ -81,8 +75,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       handleSuccessfulPayment(paymentStatus.paymentId, paymentStatus.orderId);
     } else if (paymentStatus.type === "failed") {
       handleFailedPayment(paymentStatus.reason);
-    } else if (paymentStatus.type === "checkout_restoration") {
-      handleCheckoutRestoration();
     }
 
     // Clean up old processed keys
@@ -91,40 +83,29 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       processedRef.current.clear();
       keysArray.slice(-5).forEach((key) => processedRef.current.add(key));
     }
-  }, [location.pathname, location.search, location.hash]);
+  }, [location.pathname, location.search]);
 
   const detectPaymentStatus = (
     currentUrl: string,
     pathname: string,
     searchParams: URLSearchParams
   ) => {
-    // 🏆 SUCCESS PATTERNS - Based on your backend response
+    // SUCCESS PATTERNS - Based on your backend response
     const successPatterns = [
       pathname.includes("/success/payment/"),
-      pathname.includes("/payment/success"),
-      searchParams.get("payment") === "success",
-      searchParams.get("status") === "success",
       currentUrl.includes("success/payment"),
+      // Check if we're on a success page based on the encrypted token pattern
+      /\/success\/payment\/[a-zA-Z0-9+/=]+/.test(pathname),
     ];
 
-    // 🚨 FAILURE PATTERNS - Based on common failure URLs
+    // FAILURE PATTERNS - Based on common failure URLs
     const failurePatterns = [
       pathname.includes("/failed/payment/"),
       pathname.includes("/failure/payment/"),
-      pathname.includes("/payment/failed"),
-      pathname.includes("/payment/failure"),
-      searchParams.get("payment") === "failed",
-      searchParams.get("payment") === "failure",
-      searchParams.get("status") === "failed",
-      searchParams.get("status") === "failure",
-      searchParams.get("result") === "failed",
       currentUrl.includes("failed/payment"),
       currentUrl.includes("failure/payment"),
-      currentUrl.includes("payment-failed"),
-      // Additional failure indicators
-      searchParams.has("error"),
-      searchParams.has("payment_error"),
-      searchParams.get("success") === "false",
+      // Check for failure token pattern
+      /\/failed\/payment\/[a-zA-Z0-9+/=]+/.test(pathname),
     ];
 
     if (successPatterns.some((pattern) => pattern)) {
@@ -132,12 +113,13 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       const paymentId =
         searchParams.get("paymentId") ||
         searchParams.get("Id") ||
-        extractFromPath(pathname, "success/payment/");
+        extractTokenFromPath(pathname, "success/payment/");
 
       const orderId =
         searchParams.get("order_id") ||
         searchParams.get("orderId") ||
-        checkoutData?.orderId;
+        storedOrderId ||
+        "unknown";
 
       return {
         type: "success" as const,
@@ -150,7 +132,7 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       const reason =
         searchParams.get("error") ||
         searchParams.get("reason") ||
-        "Payment processing failed";
+        "عملية الدفع فشلت";
 
       return {
         type: "failed" as const,
@@ -158,27 +140,17 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       };
     }
 
-    // Check for checkout restoration needed
-    if (
-      pathname === "/checkout" &&
-      searchParams.get("payment_failed") === "true"
-    ) {
-      return {
-        type: "checkout_restoration" as const,
-      };
-    }
-
     return { type: "none" as const };
   };
 
-  const extractFromPath = (
+  const extractTokenFromPath = (
     pathname: string,
     pattern: string
   ): string | null => {
     const index = pathname.indexOf(pattern);
     if (index !== -1) {
       const afterPattern = pathname.substring(index + pattern.length);
-      const segments = afterPattern.split("/");
+      const segments = afterPattern.split("?")[0].split("/");
       return segments[0] || null;
     }
     return null;
@@ -247,79 +219,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
     startFailureRedirectCountdown();
   };
 
-  const handleCheckoutRestoration = async () => {
-    console.log("🔄 Starting checkout restoration...");
-
-    if (!hasFailedPayment()) {
-      console.log("No failed payment state found");
-      return;
-    }
-
-    if (!canAttemptRestoration()) {
-      toast.error("تم تجاوز الحد الأقصى لمحاولات الاستعادة");
-      clearPaymentState();
-      return;
-    }
-
-    try {
-      const {
-        checkoutData: restoredData,
-        isValid,
-        validationMessage,
-      } = restoreCheckoutWithValidation();
-
-      if (!restoredData) {
-        console.log("No checkout data available for restoration");
-        return;
-      }
-
-      if (!isValid) {
-        toast.warning(validationMessage, { duration: 5000 });
-        incrementRestorationAttempt();
-        return;
-      }
-
-      // Restore cart if empty and we have items
-      if (cartStore.items.length === 0 && restoredData.items?.length > 0) {
-        const result = await restoreCart(
-          restoredData.items,
-          user?.id || null,
-          cartStore
-        );
-
-        if (result.success) {
-          toast.success(
-            `تم استعادة ${result.restoredItemsCount} عنصر من السلة السابقة`,
-            { duration: 4000 }
-          );
-        } else {
-          toast.warning(
-            `تم استعادة ${result.restoredItemsCount} من ${restoredData.items.length} عنصر`,
-            { duration: 4000 }
-          );
-        }
-      }
-
-      // Show restoration success
-      toast.success("تم استعادة بيانات طلبك بنجاح! يمكنك المحاولة مرة أخرى", {
-        duration: 4000,
-      });
-
-      incrementRestorationAttempt();
-
-      // Clean up URL parameters
-      setTimeout(() => {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("payment_failed");
-        window.history.replaceState({}, "", url.toString());
-      }, 2000);
-    } catch (error) {
-      console.error("Restoration failed:", error);
-      toast.error("فشل في استعادة بيانات الطلب السابق");
-      incrementRestorationAttempt();
-    }
-  };
-
   const startSuccessRedirectCountdown = () => {
     let countdown = Math.ceil(autoRedirectDelay / 1000);
     setRedirectCountdown(countdown);
@@ -340,7 +239,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
 
       toast.loading("جاري التوجيه إلى الطلبات الحالية...", { duration: 1000 });
 
-      // Clear payment state and navigate
       setTimeout(() => {
         clearPaymentState();
         navigate("/current-orders", {
@@ -375,7 +273,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
 
       toast.loading("جاري العودة لصفحة الدفع...", { duration: 1000 });
 
-      // Navigate back to checkout with restoration flag
       setTimeout(() => {
         navigate("/checkout?payment_failed=true", {
           replace: true,
@@ -388,6 +285,35 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       }, 1000);
     }, autoRedirectDelay);
   };
+
+  // Handle the "Return to Site" button click from backend pages
+  useEffect(() => {
+    const handleReturnToSite = () => {
+      const currentUrl = window.location.href.toLowerCase();
+
+      if (currentUrl.includes("success/payment")) {
+        handleSuccessfulPayment("backend_success", storedOrderId || "unknown");
+      } else if (
+        currentUrl.includes("failed/payment") ||
+        currentUrl.includes("failure/payment")
+      ) {
+        handleFailedPayment("عملية الدفع فشلت");
+      }
+    };
+
+    // Listen for messages from the backend page
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data === "return_to_site") {
+        handleReturnToSite();
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [storedOrderId]);
 
   // Render countdown UI if redirecting
   if (redirectCountdown !== null) {
@@ -443,7 +369,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
     );
   }
 
-  // This component renders nothing when not redirecting
   return null;
 };
 

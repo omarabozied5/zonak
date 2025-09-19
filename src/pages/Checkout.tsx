@@ -1,4 +1,4 @@
-// Updated Checkout.tsx with proper padding and margins restored
+// Updated Checkout.tsx with cashback integration
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -36,6 +36,13 @@ interface OrderValidation {
   merchantId?: number;
 }
 
+// Cashback data interface
+interface CashbackData {
+  id: number;
+  discount: number;
+  max_daily_cashback: number | null;
+}
+
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,21 +66,47 @@ const Checkout: React.FC = () => {
   const placeId = items.length > 0 ? items[0].placeId : "";
   const merchantId = items.length > 0 ? items[0].restaurantId : "";
 
-  // State for offers
+  // State for offers and cashback data
   const [offersData, setOffersData] = useState<any[]>([]);
   const [offersLoading, setOffersLoading] = useState<boolean>(false);
+  const [cashbackData, setCashbackData] = useState<CashbackData | null>(null);
+  const [cashbackBranch, setCashbackBranch] = useState<number>(0);
+  const [maxCashbackPerOrder, setMaxCashbackPerOrder] = useState<number | null>(
+    null
+  );
+  const [totalCashbackToday, setTotalCashbackToday] = useState<number>(0);
 
-  // Function to fetch offers
+  // Function to fetch offers and cashback data
   const fetchOffers = async () => {
     if (!merchantId || !placeId) return;
 
     setOffersLoading(true);
     try {
       const response = await apiService.fetchCartOrderInfo(merchantId, placeId);
+
+      // Set offers data
       setOffersData(response.offers || []);
+
+      // Extract cashback data from API response
+      setCashbackData(
+        response.cashback
+          ? {
+              id: response.cashback.id,
+              discount: response.cashback.discount || 0,
+              max_daily_cashback: response.cashback.max_daily_cashback,
+            }
+          : null
+      );
+      setCashbackBranch(response.cashback_branch || 0);
+      setMaxCashbackPerOrder(response.max || null);
+      setTotalCashbackToday(response.cash || 0);
     } catch (error) {
       console.error("Error fetching offers:", error);
       setOffersData([]);
+      setCashbackData(null);
+      setCashbackBranch(0);
+      setMaxCashbackPerOrder(null);
+      setTotalCashbackToday(0);
     } finally {
       setOffersLoading(false);
     }
@@ -138,8 +171,6 @@ const Checkout: React.FC = () => {
     fetchRestaurantDetails();
   }, [items]);
 
-  // Add this useEffect to monitor restaurant state changes
-
   // Apply restored state when available
   useEffect(() => {
     if (isRestoring) {
@@ -164,26 +195,6 @@ const Checkout: React.FC = () => {
       return;
     }
   }, [isAuthenticated, items.length, navigate]);
-
-  // Log discount information for debugging
-  // useEffect(() => {
-  //   if (totalItemDiscounts > 0 || couponDiscountAmount > 0) {
-  //     console.log("Checkout discount breakdown:", {
-  //       originalTotal: originalTotalPrice,
-  //       itemDiscounts: totalItemDiscounts,
-  //       subtotalAfterItemDiscounts: totalPrice,
-  //       couponDiscount: couponDiscountAmount,
-  //       finalTotal: total,
-  //       totalSavings: totalItemDiscounts + couponDiscountAmount,
-  //     });
-  //   }
-  // }, [
-  //   totalItemDiscounts,
-  //   originalTotalPrice,
-  //   totalPrice,
-  //   couponDiscountAmount,
-  //   total,
-  // ]);
 
   if (!isAuthenticated || items.length === 0) return null;
 
@@ -290,8 +301,6 @@ const Checkout: React.FC = () => {
         },
       };
 
-      // console.log("Building order payload...");
-
       const orderPayload = buildOrderPayload(
         items,
         placeId!,
@@ -302,18 +311,11 @@ const Checkout: React.FC = () => {
         couponDiscountAmount
       );
 
-      // console.log(
-      //   "Final order payload:",
-      //   JSON.stringify(orderPayload, null, 2)
-      // );
-
       const response: OrderResponse = await apiService.submitOrder(
         orderPayload
       );
 
       if (response.success) {
-        // console.log("Order submitted successfully:", response);
-
         const orderId =
           response.order_id || response.data?.order_id || response.data?.id;
 
@@ -339,11 +341,6 @@ const Checkout: React.FC = () => {
               toast.success("تم إنشاء الطلب! جاري توجيهك لصفحة الدفع...", {
                 duration: 3000,
               });
-
-              // console.log(
-              //   "🔳 Redirecting to payment URL:",
-              //   paymentResponse.data
-              // );
 
               setTimeout(() => {
                 window.location.href = paymentResponse.data;
@@ -481,6 +478,11 @@ const Checkout: React.FC = () => {
           <div>
             <LoyaltyBanner
               totalSavings={totalItemDiscounts + couponDiscountAmount}
+              orderTotal={total}
+              cashbackBranch={cashbackBranch}
+              cashbackData={cashbackData}
+              maxCashbackPerOrder={maxCashbackPerOrder}
+              totalCashbackReceivedToday={totalCashbackToday}
             />
           </div>
         </div>

@@ -154,7 +154,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
 
   return (
     <div className="w-full" dir="rtl">
-      <Card className="w-full bg-white rounded-[20px] border-0 shadow-none overflow-hidden">
+      <Card className="w-full bg-white  border-0 shadow-none overflow-hidden">
         <CardContent className="p-0">
           {/* Main Content */}
           <div className="px-[35px] pt-[18px] pb-6">

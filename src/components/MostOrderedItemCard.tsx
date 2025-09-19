@@ -133,7 +133,11 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
   };
 
   const handleRemoveFromCart = () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      toast.error("يجب تسجيل الدخول");
+      setShowLoginModal(true);
+      return;
+    }
 
     // Find the first cart item for this menu item
     const cartItem = items.find((cartItem) => {
@@ -206,20 +210,11 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
                 <div className="absolute bottom-0 right-0 z-20">
                   <button
                     onClick={handleAddToCart}
-                    disabled={!canAddToCart}
-                    className={`w-8 h-8 rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-all ${
-                      canAddToCart
-                        ? "bg-white hover:bg-gray-50"
-                        : "bg-gray-100 cursor-not-allowed opacity-60"
+                    className={`w-8 h-8 rounded-full shadow-md border border-gray-200 flex items-center justify-center transition-all bg-white hover:bg-gray-50 ${
+                      !isItemAvailable ? "opacity-60 cursor-not-allowed" : ""
                     }`}
                   >
-                    <span
-                      className={`text-base font-bold ${
-                        canAddToCart ? "text-black" : "text-gray-400"
-                      }`}
-                    >
-                      +
-                    </span>
+                    <span className="text-base font-bold text-black">+</span>
                   </button>
                 </div>
               )}
@@ -229,7 +224,6 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
                 <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
                   <button
                     onClick={handleAddToCart}
-                    disabled={!canAddToCart}
                     className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
                   >
                     <span className="text-base font-bold text-black">+</span>
@@ -252,7 +246,6 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
                 <div className="bg-white rounded-full px-3 py-1 flex items-center justify-between shadow-md border border-gray-200 w-full max-w-[90px]">
                   <button
                     onClick={handleAddToCart}
-                    disabled={!canAddToCart}
                     className="w-5 h-5 flex items-center justify-center transition-all hover:bg-gray-50 rounded-full"
                   >
                     <span className="text-base font-bold text-black">+</span>
