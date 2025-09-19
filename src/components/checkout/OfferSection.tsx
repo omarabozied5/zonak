@@ -7,29 +7,61 @@ interface OffersSectionProps {
   loading?: boolean;
 }
 
-// Mock data for fallback during development
-const mockOffers = [
-  {
-    id: 1,
-    offer_type: 3,
-    offer_details: "إشتري قهوة اليوم واحصل على تشيز كيك بنصف السعر",
-    end_date: "2024-12-31",
-    main_offer: true,
-    main_offer_order: 1,
-  },
-  {
-    id: 2,
-    offer_type: 1,
-    discount: 20,
-    product_name: "منتجات العناية",
-    end_date: "2024-11-30",
-    main_offer: false,
-    main_offer_order: 2,
-  },
-];
+// Offer type constants
+const OFFER_TYPES = {
+  PRICE_CHANGE: 0, // كان وصار
+  DISCOUNT_PERCENTAGE: 1, // نسبة خصم
+  CASHBACK: 3, // كاش باك
+} as const;
+
+// Helper function to get offer display text based on type
+const getOfferDisplayText = (offer) => {
+  const validUntil = offer.end_date
+    ? `ساري حتى ${new Date(offer.end_date).toLocaleDateString("ar-EG")}`
+    : "عرض محدود";
+
+  switch (offer.offer_type) {
+    case OFFER_TYPES.CASHBACK:
+      return {
+        rightLabelTop: "كاش",
+        rightLabelBottom: "بـــــاك",
+        title: `كاش باك ${offer.discount}% علي جميع المنتجات من الكاشير`,
+        validUntil,
+      };
+
+    case OFFER_TYPES.PRICE_CHANGE:
+      const oldPrice = offer.old_price || 0;
+      const newPrice = offer.new_price || 0;
+      return {
+        rightLabelTop: "كان",
+        rightLabelBottom: "وصار",
+        title: `كان ب ${oldPrice} ج.م و صار ${newPrice} ج.م`,
+        validUntil,
+      };
+
+    case OFFER_TYPES.DISCOUNT_PERCENTAGE:
+      return {
+        rightLabelTop: `${offer.discount}%`,
+        rightLabelBottom: "خصم",
+        title:
+          offer.product_name || offer.offer_details || `خصم ${offer.discount}%`,
+        validUntil,
+      };
+
+    default:
+      return {
+        rightLabelTop: "عرض",
+        rightLabelBottom: "خاص",
+        title: offer.product_name || offer.offer_details || "عرض خاص",
+        validUntil,
+      };
+  }
+};
 
 // Updated offer card to match CartOfferSection UI
 const OfferCard = ({ offer, isActive = false, onClick }) => {
+  const displayData = getOfferDisplayText(offer);
+
   const getOfferText = () => {
     switch (offer.offer_type) {
       case 0: // Price change
@@ -43,18 +75,13 @@ const OfferCard = ({ offer, isActive = false, onClick }) => {
     }
   };
 
-  const getOfferDescription = () => {
-    if (offer.offer_details) return offer.offer_details;
-    if (offer.description_ar) return offer.description_ar;
-    if (offer.product_name) return offer.product_name;
-    return "منتجات مختارة";
-  };
-
   return (
     <div
       onClick={() => onClick(offer)}
-      className={`relative w-26 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-gray-100 shadow-sm ${
-        isActive ? "border border-[#FBD252]" : "border border-gray-200"
+      className={`relative w-full h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-gray-100 shadow-sm ${
+        isActive
+          ? "bg-[#FBD252]/15 border border-[#FBD252] "
+          : "border border-gray-200"
       }`}
       dir="rtl"
       style={{ overflow: "visible" }}
@@ -91,7 +118,7 @@ const OfferCard = ({ offer, isActive = false, onClick }) => {
       <div className="flex items-center h-full px-2">
         {/* Right section - Offer type */}
         <div className="flex-shrink-0 w-12 text-right">
-          <div className="text-gray-800 font-light text-xs leading-tight">
+          <div className="text-gray-800 font-bold text-md leading-tight">
             {getOfferText()}
           </div>
         </div>
@@ -99,17 +126,9 @@ const OfferCard = ({ offer, isActive = false, onClick }) => {
         {/* Main content */}
         <div className="flex-1 px-2 min-w-0">
           <p className="text-gray-800 font-medium text-xs truncate">
-            {getOfferDescription()}
+            {displayData.title}
           </p>
-          <p className="text-gray-600 text-xs">
-            صالح حتى{" "}
-            {offer.end_date
-              ? new Date(offer.end_date).toLocaleDateString("ar-EG", {
-                  month: "short",
-                  day: "numeric",
-                })
-              : "نهاية الشهر"}
-          </p>
+          <p className="text-xs">{displayData.validUntil}</p>
         </div>
       </div>
     </div>
@@ -122,11 +141,8 @@ const OffersSection: React.FC<OffersSectionProps> = ({
 }) => {
   const [activeOfferId, setActiveOfferId] = useState<number | null>(null);
 
-  // Use provided offers or fallback to mock data for development
-  const offersToProcess = offers.length > 0 ? offers : mockOffers;
-
   // Filter and sort offers - prioritize main offers and cashback
-  const processedOffers = offersToProcess
+  const processedOffers = offers
     .filter((offer) => {
       // Only show valid offers
       if (offer.end_date) {
@@ -187,8 +203,8 @@ const OffersSection: React.FC<OffersSectionProps> = ({
   return (
     <div className="mb-6" dir="rtl">
       {/* Section Title */}
-      <div className="flex items-center justify-between px-4">
-        <h3 className="text-base font-medium text-gray-900">العروض</h3>
+      <div className="flex items-center justify-between px-2 font-bold text-md mb-2">
+        <span>العروض</span>
       </div>
 
       {/* Offers List - Horizontal Layout */}
@@ -200,7 +216,7 @@ const OffersSection: React.FC<OffersSectionProps> = ({
           {processedOffers.map((offer, index) => (
             <div
               key={`offer-${offer.id}-${index}`}
-              className="flex-shrink-0 w-72"
+              className="flex-shrink-0 w-72 mb-2"
             >
               <OfferCard
                 offer={offer}

@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +31,39 @@ const Menu = ({
   const { menuItems, loading, error } = useMenuItems(userId, placeId);
   const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // FIX: Better ID resolution with validation
+  const resolvedIds = useMemo(() => {
+    let finalPlaceId = placeId;
+    let finalMerchantId = merchantId;
+
+    // If we have restaurant data, use it as the source of truth
+    if (restaurant) {
+      finalPlaceId = restaurant.id?.toString() || placeId;
+      finalMerchantId =
+        restaurant.user_id?.toString() || merchantId || userId?.toString();
+    }
+
+    // Ensure both IDs are strings and not empty
+    const validPlaceId = finalPlaceId?.toString()?.trim() || "";
+    const validMerchantId = finalMerchantId?.toString()?.trim() || "";
+
+    // If both are missing, log warning but continue
+    if (!validPlaceId && !validMerchantId) {
+      console.warn("Menu: Both placeId and merchantId are missing", {
+        providedPlaceId: placeId,
+        providedMerchantId: merchantId,
+        userId,
+        restaurant: restaurant?.id,
+      });
+    }
+
+    return {
+      placeId: validPlaceId,
+      merchantId: validMerchantId || validPlaceId, // Use placeId as fallback
+      restaurantName: restaurantName || restaurant?.merchant_name || "مطعم",
+    };
+  }, [placeId, merchantId, userId, restaurant, restaurantName]);
 
   const categories = useMemo(() => {
     const categorySet = new Set<string>(["الكل"]);
@@ -153,71 +185,12 @@ const Menu = ({
     </Card>
   );
 
-  // Enhanced logging with all props
-  React.useEffect(() => {
-    console.log("Menu component props:", {
-      userId,
-      restaurantName,
-      placeId,
-      merchantId,
-      categoryId,
-      restaurantId: restaurant?.id,
-    });
-
-    // Validation warnings
-    if (!userId) {
-      console.error("❌ userId is required for Menu component");
-    }
-    if (!placeId) {
-      console.warn("⚠️ placeId is missing - this may affect menu loading");
-    }
-    if (!merchantId) {
-      console.warn("⚠️ merchantId is missing");
-    }
-  }, [userId, restaurantName, placeId, merchantId, categoryId, restaurant]);
-
-  // Additional debug info
-  React.useEffect(() => {
-    console.log("Menu items loaded:", {
-      count: menuItems.length,
-      categories: categories.length,
-      filteredCount: filteredItems.length,
-      selectedCategory,
-      searchQuery,
-    });
-  }, [menuItems, categories, filteredItems, selectedCategory, searchQuery]);
-
   if (loading) return <LoadingState />;
   if (error) return <ErrorState error={""} />;
   if (menuItems.length === 0) return <EmptyState isFiltered={false} />;
 
   return (
     <section className="space-y-6 px-2 sm:px-4 max-w-4xl mx-auto" dir="rtl">
-      {/* <div className="text-center py-6">
-        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-          قائمة الطعام
-        </h2>
-        <p className="text-gray-600 text-base sm:text-lg">
-          اختر من مجموعة متنوعة من الأطباق الشهية
-        </p>
-      </div> */}
-      {/* Updated Search Bar */}
-      {/* <div className="flex justify-center mb-6">
-        <div className="main-container">
-          <div className="input-div">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-full bg-transparent border-none outline-none text-right text-sm"
-              style={{ direction: "rtl" }}
-            />
-          </div>
-          <span className="search-span">ابحث عن منتجات</span>
-          <div className="icon-div"></div>
-        </div>
-      </div> */}
-
       <SearchBar value={searchQuery} onChange={setSearchQuery} />
       <Tabs
         value={selectedCategory}
@@ -225,7 +198,7 @@ const Menu = ({
         className="w-full"
         dir="rtl"
       >
-        {/* Updated Categories Navigation */}
+        {/* Categories Navigation */}
         <div className="mb-6 border-b border-gray-200">
           <ScrollArea className="w-full" dir="rtl">
             <div className="flex gap-6 px-4 min-w-max">
@@ -260,90 +233,15 @@ const Menu = ({
                 key={item.id}
                 item={item}
                 restaurant={restaurant}
-                restaurantName={restaurantName}
-                placeId={placeId}
-                merchantId={merchantId || userId}
+                restaurantName={resolvedIds.restaurantName}
+                placeId={resolvedIds.placeId}
+                merchantId={resolvedIds.merchantId}
                 categoryId={item.categoryId || categoryId}
               />
             ))}
           </div>
         )}
       </Tabs>
-
-      {/* <style jsx>{`
-        :root {
-          --default-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-            Roboto, Ubuntu, "Helvetica Neue", Helvetica, Arial, "PingFang SC",
-            "Hiragino Sans GB", "Microsoft Yahei UI", "Microsoft Yahei",
-            "Source Han Sans CN", sans-serif;
-        }
-        .main-container {
-          overflow: hidden;
-        }
-        .main-container,
-        .main-container * {
-          box-sizing: border-box;
-        }
-        input,
-        select,
-        textarea,
-        button {
-          outline: 0;
-        }
-        .main-container {
-          position: relative;
-          width: 350px;
-          height: 42px;
-          margin: 0 auto;
-          background: #ffffff;
-          border: 0.5px solid #b0b0b0;
-          border-radius: 9999px;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-        .input-div {
-          position: absolute;
-          width: 292px;
-          height: 20px;
-          top: 11.5px;
-          left: 40.5px;
-          background: rgba(0, 0, 0, 0);
-          z-index: 1;
-        }
-        .search-span {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          position: absolute;
-          width: 92px;
-          height: 20px;
-          top: 10px;
-          left: 176px;
-          color: #989898;
-          font-family: Bahij TheSansArabic, var(--default-font-family);
-          font-size: 14px;
-          font-weight: 500;
-          line-height: 20px;
-          text-align: right;
-          white-space: nowrap;
-          z-index: 2;
-          pointer-events: none;
-          transition: opacity 0.2s;
-        }
-        .input-div input:focus + .search-span,
-        .input-div input:not(:placeholder-shown) + .search-span {
-          opacity: 0;
-        }
-        .icon-div {
-          position: absolute;
-          width: 16px;
-          height: 24px;
-          top: 12.5px;
-          left: 316.5px;
-          background: url(https://codia-f2c.s3.us-west-1.amazonaws.com/image/2025-08-21/10nw4Tu6Jf.png)
-            no-repeat center;
-          background-size: cover;
-        }
-      `}</style> */}
     </section>
   );
 };

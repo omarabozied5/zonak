@@ -59,11 +59,16 @@ const ItemDetails = () => {
 
   // Get final restaurant context - prefer editing item's data over URL params
   const finalPlaceId =
-    isEditMode && editingItem ? editingItem.placeId : urlPlaceId;
+    itemDetails?.placeId ||
+    (isEditMode && editingItem ? editingItem.placeId : urlPlaceId);
   const finalMerchantId =
-    isEditMode && editingItem ? editingItem.restaurantId : urlMerchantId;
+    itemDetails?.merchantId ||
+    (isEditMode && editingItem ? editingItem.restaurantId : urlMerchantId);
   const finalRestaurantName =
-    isEditMode && editingItem ? editingItem.restaurantName : urlRestaurantName;
+    itemDetails?.restaurantName ||
+    (isEditMode && editingItem
+      ? editingItem.restaurantName
+      : urlRestaurantName);
 
   const isItemAvailable =
     itemDetails?.is_available === true || itemDetails?.is_available === 1;
@@ -300,6 +305,15 @@ const ItemDetails = () => {
   };
 
   const handleAddToCart = () => {
+    console.log("🔍 ItemDetails - URL Params:", {
+      urlPlaceId: urlPlaceId,
+      urlMerchantId: urlMerchantId,
+      urlRestaurantName: urlRestaurantName,
+      searchParamsRaw: searchParams.toString(),
+      finalPlaceId: finalPlaceId,
+      finalMerchantId: finalMerchantId,
+      finalRestaurantName: finalRestaurantName,
+    });
     // Check authentication first
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
@@ -426,6 +440,36 @@ const ItemDetails = () => {
   const basePrice = itemDetails.price * quantity;
   const optionsPrice = calculateOptionsTotal();
   const totalPrice = calculateTotalPrice();
+
+  console.log("🔍 Complete Debug State:", {
+    // Data structure
+    optionGroups: itemDetails?.optionGroups,
+
+    // Selection state
+    selectedOptions,
+    selectedOptional,
+
+    // Validation checks
+    requiredGroups: itemDetails?.optionGroups?.filter(
+      (group) => group.type === "pick"
+    ),
+    canAddToCartResult: canAddToCart(),
+
+    // Individual validation pieces
+    isAuthenticated,
+    isItemAvailable,
+    canAddToCartFinal,
+
+    // Check each required group individually
+    requiredGroupsValidation: itemDetails?.optionGroups
+      ?.filter((group) => group.type === "pick")
+      ?.map((group) => ({
+        groupId: group.id,
+        groupTitle: group.title,
+        hasSelection: !!selectedOptions[group.id],
+        selectedValue: selectedOptions[group.id],
+      })),
+  });
 
   return (
     <>

@@ -6,6 +6,14 @@ export const useItemDetails = (itemId: string | undefined) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // helper function to normalize option group type
+  const normalizeOptionType = (type: string): "pick" | "optional" => {
+    if (type === "addition" || type === "addition_without_quantity") {
+      return "optional";
+    }
+    return "pick";
+  };
+
   const fetchItemDetails = async () => {
     if (!itemId) return;
 
@@ -20,7 +28,17 @@ export const useItemDetails = (itemId: string | undefined) => {
 
     try {
       const details = await itemService.fetchItemDetails(numericId);
-      setItemDetails(details);
+
+      // 🟢 map option_groups → optionGroups
+      const normalizedDetails: ItemDetails = {
+        ...details,
+        optionGroups: details.optionGroups?.map((group: any) => ({
+          ...group,
+          type: normalizeOptionType(group.type),
+        })),
+      };
+
+      setItemDetails(normalizedDetails);
     } catch (err) {
       console.error("Error fetching item details:", err);
       setError("فشل في تحميل تفاصيل العنصر");

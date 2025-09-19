@@ -108,7 +108,9 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
       className={`w-full bg-transparent rounded-lg shadow-sm  ${className}`}
       dir="rtl"
     >
-      <h1>ملخص الطلب</h1>
+      <div className="px-1 pt-3 font-bold text-md">
+        <span>ملخص الطلب</span>
+      </div>
       {/* Restaurant Header with Toggle */}
       <div
         className="flex items-center bg-white justify-between py-1 my-3 px-4 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
@@ -149,7 +151,7 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
 
             {/* Cart Summary */}
             <div className="text-xs text-gray-600 mt-1 font-medium">
-              {totalItems} منتج{totalItems > 1 ? "ات" : ""} • {" "}
+              {totalItems} منتج{totalItems > 1 ? "ات" : ""} •{" "}
               {totalPrice.toFixed(2)} ر.س
               {totalItemDiscounts > 0 && (
                 <span className="text-green-600 mr-2">

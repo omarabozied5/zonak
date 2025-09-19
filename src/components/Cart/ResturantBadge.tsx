@@ -52,7 +52,6 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
 
       try {
         const response = await apiService.fetchRestaurantDetails(placeId);
-        console.log("RestaurantBadge - API Response:", response);
 
         if ((response.success || response.status === 200) && response.data) {
           setRestaurant(response.data);
@@ -63,14 +62,6 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
             response
           );
         }
-      } catch (err) {
-        console.error("RestaurantBadge - Error fetching restaurant details:", {
-          error: err,
-          placeId,
-          merchantId,
-          restaurantName,
-          user,
-        });
       } finally {
         setLoading(false);
       }
@@ -100,14 +91,14 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
     // Filter out empty/invalid images
     const filtered = allImages.filter((img) => img && img.trim() !== "");
 
-    console.log("RestaurantBadge - Image processing:", {
-      restaurantRawImages: restaurant?.user?.profile_image,
-      userRawImages: user?.profile_image,
-      restaurantImages,
-      userImages,
-      allImages,
-      filtered,
-    });
+    // console.log("RestaurantBadge - Image processing:", {
+    //   restaurantRawImages: restaurant?.user?.profile_image,
+    //   userRawImages: user?.profile_image,
+    //   restaurantImages,
+    //   userImages,
+    //   allImages,
+    //   filtered,
+    // });
 
     return filtered;
   }, [restaurant, user]);
@@ -116,7 +107,7 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
     validImages.length > 0 && !imageError ? validImages[0] : null;
 
   const handleImageError = useCallback(() => {
-    console.log("RestaurantBadge - Image failed to load:", restaurantImage);
+    // console.log("RestaurantBadge - Image failed to load:", restaurantImage);
     setImageError(true);
   }, [restaurantImage]);
 
@@ -126,12 +117,12 @@ const RestaurantBadge: React.FC<RestaurantBadgeProps> = ({
     }
   }, [onClick]);
 
-  console.log("RestaurantBadge - Final render state:", {
-    restaurantImage,
-    validImages,
-    imageError,
-    loading,
-  });
+  // console.log("RestaurantBadge - Final render state:", {
+  //   restaurantImage,
+  //   validImages,
+  //   imageError,
+  //   loading,
+  // });
 
   return (
     <div

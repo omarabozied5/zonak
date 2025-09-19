@@ -50,15 +50,53 @@ const RestaurantCard = React.memo(
           </div>
 
           {/* Discount Badge - Top Left */}
-          <div className="absolute top-3 left-3">
-            <div className="bg-[#FFD14A] text-black rounded-lg px-2 py-1 font-bold text-sm shadow-lg">
-              10%
-              <div className="text-xs">كاش باك</div>
-            </div>
-          </div>
+          {(() => {
+            // Debug: Log the restaurant data to console
+            console.log("Restaurant data:", restaurant.merchant_name, {
+              cashback_offer: restaurant.cashback_offer,
+              place_main_offer: restaurant.place?.main_offer,
+            });
+
+            // Check for cashback offer first
+            if (restaurant.cashback_offer?.discount) {
+              return (
+                <div className="absolute top-3 right-3">
+                  <div className="backdrop-blur-md bg-white/20 rounded-lg px-2 py-1 font-bold text-sm shadow-md flex flex-col items-center leading-tight">
+                    <span className="text-base" style={{ color: "#F7BD01" }}>
+                      {restaurant.cashback_offer.discount}%
+                    </span>
+                    <span className="text-[11px]" style={{ color: "#F7BD01" }}>
+                      كاش باك
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            // Check for main offer as fallback
+            if (
+              restaurant.place?.main_offer?.offer_type === 3 &&
+              restaurant.place.main_offer.discount
+            ) {
+              return (
+                <div className="absolute top-1 right-1">
+                  <div className="backdrop-blur-md bg-black/20 rounded-md px-4 py-3 font-bold  shadow-md flex flex-col items-center leading-tight">
+                    <span className=" text-[25px]" style={{ color: "#F7BD01" }}>
+                      {restaurant.place.main_offer.discount}%
+                    </span>
+                    <span className="text-[12px]" style={{ color: "#F7BD01" }}>
+                      كاش باك
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
 
           {/* Status Badge - Top Right */}
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 left-3">
             <div
               className={`rounded-full px-3 py-1 text-xs font-bold shadow-lg ${
                 isBusy ? "bg-red-500 text-white" : "bg-green-500 text-white"
@@ -91,32 +129,50 @@ const RestaurantCard = React.memo(
 
         <CardContent className="p-4">
           <div className="space-y-2">
-            {/* Restaurant Name */}
-            <h3 className="text-lg font-bold text-gray-900 line-clamp-1 text-right">
-              {restaurant.merchant_name}
-            </h3>
+            {/* Header Row: Right side (Image + Name + Address) | Left side (Rating) */}
+            <div className="flex items-center justify-between">
+              {/* Right Side */}
+              <div className="flex items-center space-x-3 space-x-reverse">
+                <img
+                  src={
+                    restaurant.profile_image ||
+                    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                  }
+                  alt={restaurant.merchant_name}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+                <div className="flex flex-col items-end">
+                  <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
+                    {restaurant.merchant_name}
+                  </h3>
+                  <p className="text-xs text-gray-600 line-clamp-1">
+                    {restaurant.category_name || "مطعم"} • {restaurant.taddress}
+                  </p>
+                </div>
+              </div>
 
-            {/* Category and Location */}
-            <div className="text-right">
-              <p className="text-sm text-gray-600 line-clamp-1">
-                {restaurant.category_name || "مطعم"} • {restaurant.taddress}
-              </p>
-            </div>
-
-            {/* Delivery Time */}
-            <div className="flex items-center justify-start space-x-2 space-x-reverse text-gray-600">
-              <span className="text-sm">
-                {restaurant.distance > 0
-                  ? `${restaurant.distance.toFixed(1)} كم • `
-                  : ""}
-                25-35 دقيقة
-              </span>
+              {/* Left Side - Rating */}
+              <div className="flex items-center text-xs text-gray-600">
+                <span className="ml-1">{restaurant.rating || "4.3"}</span>
+                <svg
+                  className="w-4 h-4 text-yellow-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                <span className="text-gray-400 ml-1">
+                  ({restaurant.rating_count || "270"})
+                </span>
+              </div>
             </div>
 
             {/* Promotional Text */}
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3">
-              <p className="text-xs text-yellow-800 text-center font-medium">
-                ⚡ اشتر اليوم واحصل على خصم مجانا طباخك بالبيت
+              <p className="text-[11px] text-yellow-800 text-center font-medium">
+                ⚡{" "}
+                {restaurant.promo_text ||
+                  "اشتر اليوم واحصل على خصم مجانا طباخك بالبيت"}
                 <span className="text-yellow-600"> كوبونك</span>
               </p>
             </div>
@@ -158,14 +214,14 @@ const Home = () => {
     hideResults,
   } = useSearch(latitude, longitude);
 
-  console.log(
-    "Home component - restaurants:",
-    restaurants,
-    "loading:",
-    loading,
-    "error:",
-    error
-  );
+  // console.log(
+  //   "Home component - restaurants:",
+  //   restaurants,
+  //   "loading:",
+  //   loading,
+  //   "error:",
+  //   error
+  // );
 
   // Memoized handlers to prevent recreation on every render
   const handleRetry = useCallback(() => {
@@ -175,7 +231,7 @@ const Home = () => {
   const handleRestaurantClick = useCallback(
     (user_id: number) => {
       navigate(`/restaurant/${user_id}`);
-      console.log("Navigating to restaurant:", user_id);
+      // console.log("Navigating to restaurant:", user_id);
     },
     [navigate]
   );

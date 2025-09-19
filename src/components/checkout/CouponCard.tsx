@@ -15,7 +15,7 @@ interface CouponCardProps {
 const AppliedCouponCard = ({ coupon, onRemove }) => {
   return (
     <div
-      className="relative w-3/5 sm:w-72 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-yellow-100 shadow-sm border border-yellow-400"
+      className="relative w-3/5 sm:w-72 h-16 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-sm bg-[#FBD252]/5 shadow-sm border border-yellow-400"
       dir="rtl"
       style={{ overflow: "visible" }}
     >
@@ -144,9 +144,7 @@ const CouponCard: React.FC<CouponCardProps> = ({
     <div className="mb-6" dir="rtl">
       {/* Section Title */}
       <div className="flex items-center justify-between px-2 sm:px-4 mb-4">
-        <h3 className="text-sm sm:text-base font-medium text-gray-900">
-          القسائم
-        </h3>
+        <span className="text-md sm:text-base font-bold ">القسائم</span>
       </div>
 
       {/* Coupons List - Horizontal Layout */}

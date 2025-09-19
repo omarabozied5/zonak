@@ -176,7 +176,7 @@ export const authService = {
    */
   async loginAfterOTPVerification(phone: string, password: string) {
     try {
-      console.log("🔑 Performing final login after OTP verification...");
+      // console.log("🔑 Performing final login after OTP verification...");
 
       // Call the real login API again to get updated token with verified status
       const result = await realAuthService.loginWithPassword(phone, password);
@@ -185,7 +185,7 @@ export const authService = {
         throw new Error("Failed to complete login after verification");
       }
 
-      console.log("✅ Final login successful, user data:", result.userData);
+      // console.log("✅ Final login successful, user data:", result.userData);
 
       // Return the real user data from the backend
       const user: ExistingUser = {

@@ -61,35 +61,70 @@ const MenuCard = ({
       setShowLoginModal(true);
       return;
     }
+
     if (!restaurantStatus.canOrder) {
       toast.error(restaurantStatus.statusMessage);
       return;
     }
+
     if (!isItemAvailable) {
       toast.error("هذا العنصر غير متوفر حالياً");
       return;
     }
 
     if (hasOptions) {
-      const searchParams = new URLSearchParams({
-        placeId: placeId?.toString() || "",
-        merchantId: merchantId?.toString() || "",
-        restaurantName: restaurantName,
-      });
-      navigate(`/item/${item.id}?${searchParams}`);
+      // FIX: Better validation and parameter passing
+      const searchParams = new URLSearchParams();
+
+      // Validate required parameters
+      const validPlaceId = placeId?.toString()?.trim() || "";
+      const validMerchantId = merchantId?.toString()?.trim() || "";
+      const validRestaurantName = restaurantName?.trim() || "مطعم";
+
+      // At least one ID must be present
+      if (!validPlaceId && !validMerchantId) {
+        console.error("Missing both placeId and merchantId:", {
+          placeId,
+          merchantId,
+        });
+        toast.error("معلومات المطعم مفقودة - لا يمكن فتح تفاصيل العنصر");
+        return;
+      }
+
+      // Always set both parameters, use the available one as fallback
+      searchParams.set("placeId", validPlaceId || validMerchantId);
+      searchParams.set("merchantId", validMerchantId || validPlaceId);
+      searchParams.set("restaurantName", validRestaurantName);
+
+      const navigationUrl = `/item/${item.id}?${searchParams.toString()}`;
+      // console.log("Navigating to item details:", {
+      //   itemId: item.id,
+      //   placeId: validPlaceId,
+      //   merchantId: validMerchantId,
+      //   restaurantName: validRestaurantName,
+      //   fullUrl: navigationUrl,
+      // });
+
+      navigate(navigationUrl);
       return;
     }
 
-    const cartItem = createCartItem({
-      item,
-      restaurantName,
-      placeId: placeId || "0",
-      merchantId: merchantId,
-      quantity: 1,
-    });
+    // For items without options, create cart item directly
+    try {
+      const cartItem = createCartItem({
+        item,
+        restaurantName: restaurantName || "مطعم",
+        placeId: placeId || merchantId || "0", // Fallback to merchantId if placeId missing
+        merchantId: merchantId || placeId || "0", // Fallback to placeId if merchantId missing
+        quantity: 1,
+      });
 
-    addItem(cartItem);
-    toast.success(`تم إضافة ${item.name} إلى السلة`);
+      addItem(cartItem);
+      toast.success(`تم إضافة ${item.name} إلى السلة`);
+    } catch (error) {
+      console.error("Error creating cart item:", error);
+      toast.error("حدث خطأ أثناء إضافة العنصر إلى السلة");
+    }
   };
 
   const handleIncreaseQuantity = () => {
@@ -201,6 +236,7 @@ const MenuCard = ({
                     onClick={handleAddToCart}
                     size="sm"
                     className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+                    disabled={!canAddToCart}
                   >
                     <Plus className="h-4 w-4 ml-1" />
                     أضف

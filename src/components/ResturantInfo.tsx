@@ -111,9 +111,9 @@ const RestaurantInfo: React.FC<RestaurantInfoProps> = ({
   rating,
   branches,
 }) => {
-  const handleDirections = () => {
-    console.log("Directions clicked");
-  };
+  // const handleDirections = () => {
+  //   console.log("Directions clicked");
+  // };
 
   const handleCall = () => {
     if (restaurant.phone) {

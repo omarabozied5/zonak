@@ -46,13 +46,13 @@ export const useFormValidation = () => {
         return false;
       }
 
-      console.log("✅ Form validation passed:", {
-        userName: fullName,
-        phone: user.phone,
-        itemsCount: items.length,
-        total: total,
-        paymentType: paymentType === 1 ? "Cash on Delivery" : "Pay Online",
-      });
+      // console.log("✅ Form validation passed:", {
+      //   userName: fullName,
+      //   phone: user.phone,
+      //   itemsCount: items.length,
+      //   total: total,
+      //   paymentType: paymentType === 1 ? "Cash on Delivery" : "Pay Online",
+      // });
 
       return true;
     },

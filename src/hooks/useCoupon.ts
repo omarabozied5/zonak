@@ -100,12 +100,12 @@ export const useCoupon = ({
         `تم تطبيق خصم ${discountText} - وفرت ${discount.toFixed(2)} ر.س`
       );
 
-      console.log("Coupon applied successfully:", {
-        code: validatedCoupon.code,
-        discountType: validatedCoupon.discount_type,
-        discountValue: validatedCoupon.discount_value,
-        calculatedDiscount: discount,
-      });
+      // console.log("Coupon applied successfully:", {
+      //   code: validatedCoupon.code,
+      //   discountType: validatedCoupon.discount_type,
+      //   discountValue: validatedCoupon.discount_value,
+      //   calculatedDiscount: discount,
+      // });
     } catch (error) {
       console.error("Coupon validation failed:", error);
       toast.error(
@@ -118,7 +118,7 @@ export const useCoupon = ({
 
   // Remove coupon handler
   const removeCoupon = useCallback(() => {
-    console.log("Removing coupon:", appliedCoupon?.code);
+    // console.log("Removing coupon:", appliedCoupon?.code);
     setAppliedCoupon(null);
     setCouponCode("");
     toast.success("تم إلغاء رمز الخصم");

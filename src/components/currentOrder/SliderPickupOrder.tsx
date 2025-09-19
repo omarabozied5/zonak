@@ -43,16 +43,21 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
       <div className="relative w-full">
         {/* Background line */}
         <div className="absolute top-[14px] right-[14px] left-[14px] h-px bg-[#d9d9d9]" />
-        
+
         {/* Active progress line segments */}
         {statusIndex >= 1 && (
-          <div 
+          <div
             className="absolute top-[14px] h-px bg-[#fbd252]"
             style={{
-              right: '118px',
-              width: statusIndex === 1 ? '0px' : 
-                     statusIndex === 2 ? '104px' :
-                     statusIndex === 3 ? '208px' : '312px'
+              right: "118px",
+              width:
+                statusIndex === 1
+                  ? "0px"
+                  : statusIndex === 2
+                  ? "104px"
+                  : statusIndex === 3
+                  ? "208px"
+                  : "312px",
             }}
           />
         )}
@@ -62,18 +67,23 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
           {/* Step 1: تأكيد المتجر */}
           <div className="relative">
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2 bg-white"
               style={{
-                backgroundColor: statusIndex === -1 || statusIndex >= 1 ? activeColor : "white",
-                borderColor: statusIndex === -1 || statusIndex >= 1 ? activeColor : inactiveColor,
+                borderColor:
+                  statusIndex === -1 || statusIndex >= 1
+                    ? activeColor
+                    : inactiveColor,
               }}
             >
-              <img 
-                src="/true.png" 
-                alt="check" 
-                className="w-4 h-4" 
+              <img
+                src="/true.png"
+                alt="check"
+                className="w-4 h-4"
                 style={{
-                  filter: statusIndex === -1 || statusIndex >= 1 ? "none" : "grayscale(100%)",
+                  filter:
+                    statusIndex === -1 || statusIndex >= 1
+                      ? "none"
+                      : "grayscale(100%)",
                 }}
               />
             </div>
@@ -82,16 +92,16 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
           {/* Step 2: تجهيز */}
           <div className="relative">
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2 bg-white"
               style={{
-                backgroundColor: statusIndex >= 2 ? activeColor : "white",
+                // backgroundColor: statusIndex >= 2 ? activeColor : "white",
                 borderColor: statusIndex >= 2 ? activeColor : inactiveColor,
               }}
             >
-              <img 
-                src="/prepare.png" 
-                alt="prepare" 
-                className="w-4 h-4" 
+              <img
+                src="/prepare.png"
+                alt="prepare"
+                className="w-4 h-4"
                 style={{
                   filter: statusIndex >= 2 ? "none" : "grayscale(100%)",
                 }}
@@ -102,16 +112,16 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
           {/* Step 3: جاهز */}
           <div className="relative">
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2 bg-white"
               style={{
-                backgroundColor: statusIndex >= 3 ? activeColor : "white",
+                // backgroundColor: statusIndex >= 3 ? activeColor : "white",
                 borderColor: statusIndex >= 3 ? activeColor : inactiveColor,
               }}
             >
-              <img 
-                src="/ready.png" 
-                alt="ready" 
-                className="w-4 h-4" 
+              <img
+                src="/ready.png"
+                alt="ready"
+                className="w-4 h-4"
                 style={{
                   filter: statusIndex >= 3 ? "none" : "grayscale(100%)",
                 }}
@@ -122,16 +132,16 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
           {/* Step 4: تم الإستلام */}
           <div className="relative">
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center border-2"
+              className="w-7 h-7 rounded-full flex items-center justify-center border-2 bg-white"
               style={{
-                backgroundColor: statusIndex >= 4 ? activeColor : "white",
+                // backgroundColor: statusIndex >= 4 ? activeColor : "white",
                 borderColor: statusIndex >= 4 ? activeColor : inactiveColor,
               }}
             >
-              <img 
-                src="/done.png" 
-                alt="done" 
-                className="w-4 h-4" 
+              <img
+                src="/done.png"
+                alt="done"
+                className="w-4 h-4"
                 style={{
                   filter: statusIndex >= 4 ? "none" : "grayscale(100%)",
                 }}
@@ -147,7 +157,10 @@ const SliderPickupOrder: React.FC<SliderPickupOrderProps> = ({
           <span
             className="text-[10px] font-medium leading-[15.732px] font-['Bahij_TheSansArabic']"
             style={{
-              color: statusIndex === -1 || statusIndex >= 1 ? activeColor : inactiveColor,
+              color:
+                statusIndex === -1 || statusIndex >= 1
+                  ? activeColor
+                  : inactiveColor,
             }}
           >
             {statusIndex === -1

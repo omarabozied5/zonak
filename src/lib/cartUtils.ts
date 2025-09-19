@@ -1,4 +1,4 @@
-// utils/cartUtils.ts - Enhanced with discount calculation
+// utils/cartUtils.ts - Fixed with better ID handling
 import { MenuItem } from "@/hooks/useMenuItems";
 import { MostOrderedItem } from "@/hooks/useMostOrderedItems";
 import { CartItem } from "@/types/types";
@@ -46,10 +46,28 @@ export const createCartItem = ({
   const imageUrl = item.images?.[0]?.image_url || "/api/placeholder/400/300";
   const allImages = item.images?.map((img) => img.image_url) || [];
 
-  // FIX: Always prioritize placeId first for consistency
-  // This ensures the same restaurant always gets the same ID regardless of which component adds the item
-  const restaurantId = merchantId?.toString() || ""; // Use actual merchant ID
-  const actualPlaceId = placeId?.toString() || "";
+  // FIX: Better ID handling with validation and fallbacks
+  const validateAndConvertId = (id?: string | number): string => {
+    if (id === null || id === undefined) return "";
+    const stringId = id.toString().trim();
+    return stringId === "0" || stringId === "" ? "" : stringId;
+  };
+
+  const actualPlaceId = validateAndConvertId(placeId);
+  const actualMerchantId = validateAndConvertId(merchantId);
+
+  // Ensure we have at least one valid ID
+  if (!actualPlaceId && !actualMerchantId) {
+    console.warn("Warning: Both placeId and merchantId are missing/invalid:", {
+      placeId,
+      merchantId,
+      item: item.name,
+    });
+  }
+
+  // Use merchantId as primary restaurant identifier, fallback to placeId
+  const restaurantId = actualMerchantId || actualPlaceId;
+  const finalPlaceId = actualPlaceId || actualMerchantId;
 
   const cartItem: CartItem = {
     id: uniqueId,
@@ -74,7 +92,7 @@ export const createCartItem = ({
     categoryId: categoryId,
     restaurantId: restaurantId,
     restaurantName: restaurantName,
-    placeId: actualPlaceId || "",
+    placeId: finalPlaceId,
     isAvailable: item.is_available === 1,
     selectedOptions: undefined,
     totalPrice: currentPrice * quantity, // Use current price for total
@@ -84,13 +102,14 @@ export const createCartItem = ({
     hasRequiredOptions: false,
   };
 
-  // Log discount information for debugging
-  if (discountAmount > 0) {
-    console.log(`Item discount applied: ${item.name}`, {
-      originalPrice: originalPrice,
-      currentPrice: currentPrice,
-      discountAmount: discountAmount,
-      discountPercentage: discountPercentage.toFixed(1) + "%",
+  // Log for debugging when IDs are missing
+  if (!restaurantId) {
+    console.error("Created cart item with missing restaurant ID:", {
+      itemName: item.name,
+      providedPlaceId: placeId,
+      providedMerchantId: merchantId,
+      finalRestaurantId: restaurantId,
+      finalPlaceId: finalPlaceId,
     });
   }
 

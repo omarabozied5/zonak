@@ -89,9 +89,11 @@ const MostOrderedItems: React.FC<MostOrderedItemsProps> = ({
                 item={item}
                 index={index}
                 restaurant={restaurant}
-                restaurantName={restaurantName || ""}
-                placeId={placeId}
-                merchantId={userId}
+                restaurantName={
+                  restaurantName || restaurant?.merchant_name || "مطعم"
+                }
+                placeId={placeId || restaurant?.id}
+                merchantId={userId || restaurant?.user_id}
                 categoryId={item.categories?.[0]?.id || 0}
                 onAddToCart={onAddToCart}
               />
