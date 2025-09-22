@@ -67,30 +67,37 @@ const Cart = () => {
   // Fetch restaurant details and offers
   useEffect(() => {
     const fetchRestaurantData = async () => {
-      if (items.length > 0 && items[0].placeId) {
+      if (items.length > 0 && items[0].placeId && items[0].restaurantId) {
         try {
           setLoadingOffers(true);
 
-          // Fetch restaurant details (which includes valid_offers)
-          const response = await apiService.fetchRestaurantDetails(
-            items[0].placeId
-          );
+          // Use the same endpoint as checkout page for consistent offers
+          const [restaurantResponse, offersResponse] = await Promise.all([
+            // Fetch restaurant details
+            apiService.fetchRestaurantDetails(items[0].placeId),
+            // Fetch offers from cart order info (same as checkout)
+            apiService.fetchCartOrderInfo(
+              items[0].restaurantId,
+              items[0].placeId
+            ),
+          ]);
 
-          if (response.message === "success" && response.data) {
-            setRestaurant(response.data);
+          // Set restaurant data
+          if (
+            restaurantResponse.message === "success" &&
+            restaurantResponse.data
+          ) {
+            setRestaurant(restaurantResponse.data);
+          }
 
-            // Extract offers from restaurant data
-            if (
-              response.data.valid_offers &&
-              response.data.valid_offers.length > 0
-            ) {
-              setOffers(response.data.valid_offers);
-            } else {
-              setOffers([]);
-            }
+          // Set offers from cart order info (consistent with checkout)
+          if (offersResponse.offers && offersResponse.offers.length > 0) {
+            setOffers(offersResponse.offers);
+          } else {
+            setOffers([]);
           }
         } catch (error) {
-          console.error("Error fetching restaurant details:", error);
+          console.error("Error fetching restaurant data:", error);
           setOffers([]);
         } finally {
           setLoadingOffers(false);
@@ -100,7 +107,6 @@ const Cart = () => {
 
     fetchRestaurantData();
   }, [items]);
-
   // Redirect unauthenticated users
   useEffect(() => {
     if (!isAuthenticated) {
