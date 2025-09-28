@@ -229,13 +229,13 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
                     {/* Product Image */}
                     <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                       <img
-                        src={item.image || "/api/placeholder/48/48"}
+                        src={item.image || "/zonak.png"}
                         alt={item.name}
                         className="w-full h-full object-cover"
                         loading="lazy"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = "/api/placeholder/48/48";
+                          target.src = "/zonak.png";
                         }}
                       />
                     </div>
