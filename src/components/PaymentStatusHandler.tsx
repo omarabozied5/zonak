@@ -171,12 +171,53 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       description: "سيتم توجيهك إلى صفحة الطلبات الحالية",
     });
 
-    // 🎯 CRITICAL: Clear cart only on successful payment
+    // 🎯 CRITICAL: Clear cart immediately and verify
+    const clearCartWithRetry = async (maxRetries = 3) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const itemsBeforeClear = cartStore.items.length;
+          console.log(
+            `Cart clear attempt ${attempt}: Items before = ${itemsBeforeClear}`
+          );
+
+          cartStore.clearCart();
+
+          // Give a small delay to ensure state update
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          const itemsAfterClear = cartStore.items.length;
+          console.log(
+            `Cart clear attempt ${attempt}: Items after = ${itemsAfterClear}`
+          );
+
+          if (itemsAfterClear === 0) {
+            console.log(`✅ Cart successfully cleared on attempt ${attempt}`);
+            return true;
+          }
+
+          if (attempt === maxRetries) {
+            console.error(
+              `❌ Failed to clear cart after ${maxRetries} attempts`
+            );
+            return false;
+          }
+
+          // Wait before retry
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        } catch (error) {
+          console.error(`Cart clear attempt ${attempt} failed:`, error);
+          if (attempt === maxRetries) {
+            return false;
+          }
+        }
+      }
+      return false;
+    };
+
     try {
-      cartStore.clearCart();
-      console.log("✅ Cart cleared after successful payment");
+      await clearCartWithRetry();
     } catch (error) {
-      console.error("❌ Error clearing cart:", error);
+      console.error("Critical error during cart clearing:", error);
     }
 
     // Call custom callback if provided
@@ -241,12 +282,21 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
 
       setTimeout(() => {
         clearPaymentState();
+        // Force cart clear one more time before navigation
+        try {
+          cartStore.clearCart();
+          console.log("🔄 Final cart clear before navigation to orders");
+        } catch (error) {
+          console.error("Final cart clear error:", error);
+        }
+
         navigate("/current-orders", {
           replace: true,
           state: {
             fromSuccessfulPayment: true,
             paymentSuccess: true,
             timestamp: Date.now(),
+            cartCleared: true, // Flag to indicate cart was cleared
           },
         });
       }, 1000);
@@ -358,6 +408,17 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
               const targetUrl = isSuccess
                 ? "/current-orders"
                 : "/checkout?payment_failed=true";
+
+              if (isSuccess) {
+                // Ensure cart is cleared before manual navigation
+                try {
+                  cartStore.clearCart();
+                  console.log("🔄 Manual cart clear before navigation");
+                } catch (error) {
+                  console.error("Manual cart clear error:", error);
+                }
+              }
+
               navigate(targetUrl, { replace: true });
             }}
             className="mt-4 px-4 py-2 bg-[#FFAA01] text-white rounded hover:bg-[#FFAA01]/90 transition-colors"

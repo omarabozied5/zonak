@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -9,31 +9,56 @@ const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const cartStore = useCartStore(user?.id);
-  const { clearPaymentState } = usePaymentStore();
+  const { clearPaymentState, setPaymentStatus } = usePaymentStore();
   const [countdown, setCountdown] = useState(3);
+  const processedRef = useRef(false);
 
   useEffect(() => {
-    let isMounted = true;
+    // Prevent multiple executions
+    if (processedRef.current) return;
+    processedRef.current = true;
 
     const processSuccess = async () => {
-      if (!isMounted) return;
+      console.log("Processing payment success...");
 
-      // CRITICAL: Clear cart on successful payment
+      // Set payment status to success immediately
+      setPaymentStatus("success");
+
+      // CRITICAL: Clear cart immediately and synchronously
       try {
+        // Get current cart state for logging
+        const currentItems = cartStore.items;
+        console.log("Cart items before clearing:", currentItems.length);
+
+        // Clear the cart
         cartStore.clearCart();
-        console.log("✅ Cart cleared after successful payment");
+
+        // Verify cart is cleared
+        const itemsAfterClear = cartStore.items;
+        console.log("Cart items after clearing:", itemsAfterClear.length);
+
+        if (itemsAfterClear.length === 0) {
+          console.log("✅ Cart successfully cleared after payment success");
+        } else {
+          console.error("❌ Cart not properly cleared, forcing clear again");
+          // Force clear again if needed
+          cartStore.clearCart();
+        }
       } catch (error) {
         console.error("Error clearing cart:", error);
+        // Force clear even if there's an error
+        try {
+          cartStore.clearCart();
+        } catch (retryError) {
+          console.error("Failed to clear cart on retry:", retryError);
+        }
       }
 
-      // Clear payment state after delay
-      if (isMounted) {
-        setTimeout(() => {
-          if (isMounted) {
-            clearPaymentState();
-          }
-        }, 5000);
-      }
+      // Clear payment state after a delay
+      setTimeout(() => {
+        clearPaymentState();
+        console.log("Payment state cleared");
+      }, 2000);
     };
 
     // Process success immediately
@@ -41,14 +66,10 @@ const PaymentSuccess: React.FC = () => {
 
     // Start countdown timer
     const timer = setInterval(() => {
-      if (!isMounted) return;
-
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          if (isMounted) {
-            navigate("/current-orders", { replace: true });
-          }
+          navigate("/current-orders", { replace: true });
           return 0;
         }
         return prev - 1;
@@ -56,10 +77,9 @@ const PaymentSuccess: React.FC = () => {
     }, 1000);
 
     return () => {
-      isMounted = false;
       clearInterval(timer);
     };
-  }, []); // Empty dependency array to run only once
+  }, []); // Empty dependency array - run only once
 
   return (
     <div
