@@ -167,7 +167,7 @@ const RestaurantDetails: React.FC = () => {
     if (restaurantStatus.canOrder) return null;
 
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 mb-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <Alert
           className={`border ${
             restaurantStatus.reasonClosed === "busy"
@@ -224,50 +224,53 @@ const RestaurantDetails: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC]/10 via-white to-[#FFD700]/5">
       <Navigation />
 
-      {/* Restaurant Information - Pass all data */}
-      <div className="">
-        <RestaurantInfo
-          restaurant={restaurant}
-          rating={rating}
-          branches={branches}
-        />
-      </div>
-
-      <RestaurantStatusBanner restaurant={restaurant} />
-
-      {/* Ticket-Style Offers Section */}
-      {restaurant.valid_offers && restaurant.valid_offers.length > 0 && (
-        <div className="p-3">
-          <OffersSection
-            offers={restaurant.valid_offers}
-            onOfferClick={handleOfferClick}
-            onViewAllClick={handleViewAllOffers}
-            maxDisplayCount={3} // Show max 3 offers in restaurant details
-            showOnlyValid={true} // Only show valid offers
+      {/* Desktop Layout Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        {/* Restaurant Information */}
+        <div className="w-full">
+          <RestaurantInfo
+            restaurant={restaurant}
+            rating={rating}
+            branches={branches}
           />
         </div>
-      )}
 
-      {/* Most Ordered Items */}
-      <div className="mx-0">
-        <MostOrderedItems
-          userId={restaurant.user_id.toString()}
-          placeId={id || restaurant.id.toString()} // Use URL id as primary, restaurant.id as fallback
-          restaurant={restaurant}
-          restaurantName={restaurant.merchant_name}
-        />
-      </div>
+        <RestaurantStatusBanner restaurant={restaurant} />
 
-      {/* Menu */}
-      <div className="max-w-7xl mx-auto px-0 sm:px-4 lg:px-8 mb-6 sm:mb-8">
-        <Menu
-          userId={restaurant.user_id.toString()}
-          merchantId={restaurant.user_id} // Use user_id as merchantId
-          restaurantName={restaurant.merchant_name}
-          restaurant={restaurant}
-          placeId={id} // URL param (restaurant ID from route)
-          categoryId={menuItems[0]?.categories?.[0]?.id || 0}
-        />
+        {/* Offers Section - Desktop Optimized */}
+        {restaurant.valid_offers && restaurant.valid_offers.length > 0 && (
+          <div className="w-full">
+            <OffersSection
+              offers={restaurant.valid_offers}
+              onOfferClick={handleOfferClick}
+              onViewAllClick={handleViewAllOffers}
+              maxDisplayCount={3} // Show max 3 offers in restaurant details
+              showOnlyValid={true} // Only show valid offers
+            />
+          </div>
+        )}
+
+        {/* Most Ordered Items - Desktop Centered */}
+        <div className="w-full">
+          <MostOrderedItems
+            userId={restaurant.user_id.toString()}
+            placeId={id || restaurant.id.toString()} // Use URL id as primary, restaurant.id as fallback
+            restaurant={restaurant}
+            restaurantName={restaurant.merchant_name}
+          />
+        </div>
+
+        {/* Menu - Desktop Layout */}
+        <div className="w-full">
+          <Menu
+            userId={restaurant.user_id.toString()}
+            merchantId={restaurant.user_id} // Use user_id as merchantId
+            restaurantName={restaurant.merchant_name}
+            restaurant={restaurant}
+            placeId={id} // URL param (restaurant ID from route)
+            categoryId={menuItems[0]?.categories?.[0]?.id || 0}
+          />
+        </div>
       </div>
 
       {/* Floating Cart */}
