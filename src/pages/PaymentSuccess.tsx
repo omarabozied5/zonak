@@ -17,25 +17,25 @@ const PaymentSuccess: React.FC = () => {
     if (processedRef.current) return;
     processedRef.current = true;
 
-    const processSuccess = async () => {
+    const handleSuccess = async () => {
       console.log("Processing payment success...");
 
+      // Update payment status
       setPaymentStatus("success");
 
-      // Clear cart both in-memory and persisted
+      // Clear cart store & localStorage
       cartStore.clearCart();
       clearUserCart(user?.id);
-      console.log("✅ Cart cleared from store and localStorage");
+      console.log("✅ Cart cleared");
 
-      // Clear payment state after delay
-      setTimeout(() => {
-        clearPaymentState();
-      }, 2000);
+      // Clear payment state
+      clearPaymentState();
+      console.log("🧹 Payment state cleared");
     };
 
-    processSuccess();
+    handleSuccess();
 
-    // Countdown redirect
+    // Countdown timer to redirect
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -48,7 +48,7 @@ const PaymentSuccess: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [user?.id, cartStore, clearPaymentState, navigate, setPaymentStatus]);
+  }, [cartStore, clearPaymentState, navigate, setPaymentStatus, user?.id]);
 
   return (
     <div
