@@ -1,58 +1,50 @@
-// PaymentSuccess.tsx
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePaymentStore } from "@/stores/usePaymentStore";
 import { CheckCircle } from "lucide-react";
-import { toast } from "sonner";
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuthStore();
   const cartStore = useCartStore(user?.id);
   const { clearPaymentState, setPaymentStatus } = usePaymentStore();
 
   const [countdown, setCountdown] = useState(3);
+  const [cartCleared, setCartCleared] = useState(false);
 
   useEffect(() => {
-    // 1️⃣ Set payment status to success
+    // 1️⃣ Update payment status once
     setPaymentStatus("success");
+    console.log("💳 Payment status updated: success");
 
-    // 2️⃣ Clear cart immediately
-    cartStore.clearCart();
-    console.log("✅ Cart cleared:", cartStore.items);
+    // 2️⃣ Clear cart safely if not already cleared
+    if (!cartCleared && cartStore.items.length > 0) {
+      cartStore.clearCart();
+      setCartCleared(true);
+      console.log("✅ Cart cleared");
+    }
 
-    // 3️⃣ Clear payment state immediately
+    // 3️⃣ Clear payment state
     clearPaymentState();
+    console.log("🧹 Payment state cleared");
 
-    // 4️⃣ Show success toast
-    toast.success("تم الدفع بنجاح! 🎉", {
-      description: "سيتم توجيهك إلى صفحة الطلبات الحالية",
-      duration: 4000,
-    });
-
-    // 5️⃣ Countdown and redirect
+    // 4️⃣ Countdown and redirect
+    let remaining = 3;
+    setCountdown(remaining);
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigate("/current-orders", { replace: true });
-          return 0;
-        }
-        return prev - 1;
-      });
+      remaining -= 1;
+      setCountdown(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(timer);
+        navigate("/current-orders", { replace: true });
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [cartStore, clearPaymentState, navigate, setPaymentStatus]);
-
-  const handleGoNow = () => {
-    cartStore.clearCart(); // Ensure cart is cleared before manual navigation
-    clearPaymentState();
-    navigate("/current-orders", { replace: true });
-  };
+  }, []); // Run only once on mount
 
   return (
     <div
@@ -82,7 +74,7 @@ const PaymentSuccess: React.FC = () => {
         </div>
 
         <button
-          onClick={handleGoNow}
+          onClick={() => navigate("/current-orders", { replace: true })}
           className="mt-8 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           الذهاب إلى الطلبات الآن
