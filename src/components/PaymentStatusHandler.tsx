@@ -51,8 +51,8 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
     const searchParams = new URLSearchParams(window.location.search);
 
     // Create unique key for this navigation
-    const navigationKey = `${pathname}-${searchParams.toString()}-${Date.now()}`;
-
+    // Remove Date.now()
+    const navigationKey = `${pathname}-${searchParams.toString()}`;
     if (processedRef.current.has(navigationKey)) {
       return;
     }

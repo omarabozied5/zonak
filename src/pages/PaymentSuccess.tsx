@@ -1,41 +1,39 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+// PaymentSuccess.tsx
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePaymentStore } from "@/stores/usePaymentStore";
 import { CheckCircle } from "lucide-react";
+import { toast } from "sonner";
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const cartStore = useCartStore(user?.id);
   const { clearPaymentState, setPaymentStatus } = usePaymentStore();
+
   const [countdown, setCountdown] = useState(3);
-  const processedRef = useRef(false);
 
   useEffect(() => {
-    // Prevent multiple executions
-    if (processedRef.current) return;
-    processedRef.current = true;
+    // 1️⃣ Set payment status to success
+    setPaymentStatus("success");
 
-    const processSuccess = async () => {
-      console.log("Processing payment success...");
-      setPaymentStatus("success");
+    // 2️⃣ Clear cart immediately
+    cartStore.clearCart();
+    console.log("✅ Cart cleared:", cartStore.items);
 
-      // Just clear the cart - Zustand handles the rest
-      cartStore.clearCart();
-      console.log("✅ Cart clear command issued");
+    // 3️⃣ Clear payment state immediately
+    clearPaymentState();
 
-      // Clear payment state after delay
-      setTimeout(() => {
-        clearPaymentState();
-      }, 2000);
-    };
+    // 4️⃣ Show success toast
+    toast.success("تم الدفع بنجاح! 🎉", {
+      description: "سيتم توجيهك إلى صفحة الطلبات الحالية",
+      duration: 4000,
+    });
 
-    // Process success immediately
-    processSuccess();
-
-    // Start countdown timer
+    // 5️⃣ Countdown and redirect
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -47,10 +45,14 @@ const PaymentSuccess: React.FC = () => {
       });
     }, 1000);
 
-    return () => {
-      clearInterval(timer);
-    };
-  }, []); // Empty dependency array - run only once
+    return () => clearInterval(timer);
+  }, [cartStore, clearPaymentState, navigate, setPaymentStatus]);
+
+  const handleGoNow = () => {
+    cartStore.clearCart(); // Ensure cart is cleared before manual navigation
+    clearPaymentState();
+    navigate("/current-orders", { replace: true });
+  };
 
   return (
     <div
@@ -80,7 +82,7 @@ const PaymentSuccess: React.FC = () => {
         </div>
 
         <button
-          onClick={() => navigate("/current-orders", { replace: true })}
+          onClick={handleGoNow}
           className="mt-8 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           الذهاب إلى الطلبات الآن
