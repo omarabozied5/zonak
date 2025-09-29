@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCartStore } from "@/stores/useCartStore";
+import { useCartStore, clearUserCart } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePaymentStore } from "@/stores/usePaymentStore";
 import { CheckCircle } from "lucide-react";
@@ -10,41 +10,45 @@ const PaymentSuccess: React.FC = () => {
   const { user } = useAuthStore();
   const cartStore = useCartStore(user?.id);
   const { clearPaymentState, setPaymentStatus } = usePaymentStore();
-
   const [countdown, setCountdown] = useState(3);
-  const [cartCleared, setCartCleared] = useState(false);
+  const processedRef = useRef(false);
 
   useEffect(() => {
-    // 1️⃣ Update payment status once
-    setPaymentStatus("success");
-    console.log("💳 Payment status updated: success");
+    if (processedRef.current) return;
+    processedRef.current = true;
 
-    // 2️⃣ Clear cart safely if not already cleared
-    if (!cartCleared && cartStore.items.length > 0) {
+    const processSuccess = async () => {
+      console.log("Processing payment success...");
+
+      setPaymentStatus("success");
+
+      // Clear cart both in-memory and persisted
       cartStore.clearCart();
-      setCartCleared(true);
-      console.log("✅ Cart cleared");
-    }
+      clearUserCart(user?.id);
+      console.log("✅ Cart cleared from store and localStorage");
 
-    // 3️⃣ Clear payment state
-    clearPaymentState();
-    console.log("🧹 Payment state cleared");
+      // Clear payment state after delay
+      setTimeout(() => {
+        clearPaymentState();
+      }, 2000);
+    };
 
-    // 4️⃣ Countdown and redirect
-    let remaining = 3;
-    setCountdown(remaining);
+    processSuccess();
+
+    // Countdown redirect
     const timer = setInterval(() => {
-      remaining -= 1;
-      setCountdown(remaining);
-
-      if (remaining <= 0) {
-        clearInterval(timer);
-        navigate("/current-orders", { replace: true });
-      }
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate("/current-orders", { replace: true });
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []); // Run only once on mount
+  }, [user?.id, cartStore, clearPaymentState, navigate, setPaymentStatus]);
 
   return (
     <div
