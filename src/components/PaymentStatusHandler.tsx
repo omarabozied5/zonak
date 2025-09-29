@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { usePaymentStore } from "@/stores/usePaymentStore";
-import { useCartStore } from "@/stores/useCartStore";
+import { useCartStore, clearUserCart } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 interface PaymentStatusHandlerProps {
@@ -51,7 +51,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
     const searchParams = new URLSearchParams(window.location.search);
 
     // Create unique key for this navigation
-    // Remove Date.now()
     const navigationKey = `${pathname}-${searchParams.toString()}`;
     if (processedRef.current.has(navigationKey)) {
       return;
@@ -90,26 +89,23 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
     pathname: string,
     searchParams: URLSearchParams
   ) => {
-    // SUCCESS PATTERNS - Based on your backend response
+    // SUCCESS PATTERNS
     const successPatterns = [
       pathname.includes("/success/payment/"),
       currentUrl.includes("success/payment"),
-      // Check if we're on a success page based on the encrypted token pattern
       /\/success\/payment\/[a-zA-Z0-9+/=]+/.test(pathname),
     ];
 
-    // FAILURE PATTERNS - Based on common failure URLs
+    // FAILURE PATTERNS
     const failurePatterns = [
       pathname.includes("/failed/payment/"),
       pathname.includes("/failure/payment/"),
       currentUrl.includes("failed/payment"),
       currentUrl.includes("failure/payment"),
-      // Check for failure token pattern
       /\/failed\/payment\/[a-zA-Z0-9+/=]+/.test(pathname),
     ];
 
     if (successPatterns.some((pattern) => pattern)) {
-      // Extract payment ID and order ID from URL or params
       const paymentId =
         searchParams.get("paymentId") ||
         searchParams.get("Id") ||
@@ -171,54 +167,8 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
       description: "سيتم توجيهك إلى صفحة الطلبات الحالية",
     });
 
-    // 🎯 CRITICAL: Clear cart immediately and verify
-    const clearCartWithRetry = async (maxRetries = 3) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const itemsBeforeClear = cartStore.items.length;
-          console.log(
-            `Cart clear attempt ${attempt}: Items before = ${itemsBeforeClear}`
-          );
-
-          cartStore.clearCart();
-
-          // Give a small delay to ensure state update
-          await new Promise((resolve) => setTimeout(resolve, 100));
-
-          const itemsAfterClear = cartStore.items.length;
-          console.log(
-            `Cart clear attempt ${attempt}: Items after = ${itemsAfterClear}`
-          );
-
-          if (itemsAfterClear === 0) {
-            console.log(`✅ Cart successfully cleared on attempt ${attempt}`);
-            return true;
-          }
-
-          if (attempt === maxRetries) {
-            console.error(
-              `❌ Failed to clear cart after ${maxRetries} attempts`
-            );
-            return false;
-          }
-
-          // Wait before retry
-          await new Promise((resolve) => setTimeout(resolve, 200));
-        } catch (error) {
-          console.error(`Cart clear attempt ${attempt} failed:`, error);
-          if (attempt === maxRetries) {
-            return false;
-          }
-        }
-      }
-      return false;
-    };
-
-    try {
-      await clearCartWithRetry();
-    } catch (error) {
-      console.error("Critical error during cart clearing:", error);
-    }
+    // 🎯 CRITICAL: Clear cart with enhanced retry mechanism
+    await clearCartWithRetry();
 
     // Call custom callback if provided
     if (onPaymentSuccess) {
@@ -227,6 +177,82 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
 
     // Start countdown and redirect
     startSuccessRedirectCountdown();
+  };
+
+  const clearCartWithRetry = async (maxRetries = 5): Promise<boolean> => {
+    console.log("🧹 Starting cart clearing with retry mechanism...");
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const itemsBeforeClear = cartStore.items.length;
+        console.log(
+          `Cart clear attempt ${attempt}/${maxRetries}: Items before = ${itemsBeforeClear}`
+        );
+
+        // Clear cart
+        cartStore.clearCart();
+
+        // IMPORTANT: Force a React state flush with longer delay
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        // Verify cleared
+        const itemsAfterClear = cartStore.items.length;
+        console.log(
+          `Cart clear attempt ${attempt}/${maxRetries}: Items after = ${itemsAfterClear}`
+        );
+
+        if (itemsAfterClear === 0) {
+          console.log(`✅ Cart successfully cleared on attempt ${attempt}`);
+
+          // Double-check localStorage was cleared
+          const storageKey = `cart-storage-${user?.id || "guest"}`;
+          const storageData = localStorage.getItem(storageKey);
+
+          if (storageData) {
+            console.warn("⚠️ localStorage still has data, clearing manually");
+            localStorage.removeItem(storageKey);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+
+          // Triple-check with clearUserCart
+          clearUserCart(user?.id);
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Final verification
+          const finalCheck = cartStore.items.length;
+          if (finalCheck === 0) {
+            console.log("✅✅ Cart clearing verified successfully");
+            return true;
+          }
+        }
+
+        if (attempt === maxRetries) {
+          console.error(`❌ Failed to clear cart after ${maxRetries} attempts`);
+          // Force clear one last time
+          cartStore.clearCart();
+          clearUserCart(user?.id);
+          localStorage.removeItem(`cart-storage-${user?.id || "guest"}`);
+          return false;
+        }
+
+        // Wait before retry
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      } catch (error) {
+        console.error(`Cart clear attempt ${attempt} failed:`, error);
+        if (attempt === maxRetries) {
+          // Emergency clear
+          try {
+            cartStore.clearCart();
+            clearUserCart(user?.id);
+            localStorage.removeItem(`cart-storage-${user?.id || "guest"}`);
+          } catch (emergencyError) {
+            console.error("Emergency clear failed:", emergencyError);
+          }
+          return false;
+        }
+      }
+    }
+    return false;
   };
 
   const handleFailedPayment = async (reason?: string) => {
@@ -280,12 +306,13 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
 
       toast.loading("جاري التوجيه إلى الطلبات الحالية...", { duration: 1000 });
 
-      setTimeout(() => {
+      setTimeout(async () => {
         clearPaymentState();
-        // Force cart clear one more time before navigation
+
+        // Final cart clear before navigation
+        console.log("🔄 Final cart clear before navigation to orders");
         try {
-          cartStore.clearCart();
-          console.log("🔄 Final cart clear before navigation to orders");
+          await clearCartWithRetry(3);
         } catch (error) {
           console.error("Final cart clear error:", error);
         }
@@ -296,7 +323,7 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
             fromSuccessfulPayment: true,
             paymentSuccess: true,
             timestamp: Date.now(),
-            cartCleared: true, // Flag to indicate cart was cleared
+            cartCleared: true,
           },
         });
       }, 1000);
@@ -336,35 +363,6 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
     }, autoRedirectDelay);
   };
 
-  // Handle the "Return to Site" button click from backend pages
-  useEffect(() => {
-    const handleReturnToSite = () => {
-      const currentUrl = window.location.href.toLowerCase();
-
-      if (currentUrl.includes("success/payment")) {
-        handleSuccessfulPayment("backend_success", storedOrderId || "unknown");
-      } else if (
-        currentUrl.includes("failed/payment") ||
-        currentUrl.includes("failure/payment")
-      ) {
-        handleFailedPayment("عملية الدفع فشلت");
-      }
-    };
-
-    // Listen for messages from the backend page
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data === "return_to_site") {
-        handleReturnToSite();
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-
-    return () => {
-      window.removeEventListener("message", handleMessage);
-    };
-  }, [storedOrderId]);
-
   // Render countdown UI if redirecting
   if (redirectCountdown !== null) {
     const isSuccess = location.pathname.includes("success");
@@ -399,7 +397,7 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
           </div>
 
           <button
-            onClick={() => {
+            onClick={async () => {
               if (redirectTimeoutRef.current) {
                 clearTimeout(redirectTimeoutRef.current);
               }
@@ -411,12 +409,8 @@ const PaymentStatusHandler: React.FC<PaymentStatusHandlerProps> = ({
 
               if (isSuccess) {
                 // Ensure cart is cleared before manual navigation
-                try {
-                  cartStore.clearCart();
-                  console.log("🔄 Manual cart clear before navigation");
-                } catch (error) {
-                  console.error("Manual cart clear error:", error);
-                }
+                console.log("🔄 Manual cart clear before navigation");
+                await clearCartWithRetry(3);
               }
 
               navigate(targetUrl, { replace: true });
