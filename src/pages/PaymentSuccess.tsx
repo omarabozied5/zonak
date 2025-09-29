@@ -41,6 +41,7 @@ const PaymentSuccess: React.FC = () => {
         if (prev <= 1) {
           clearInterval(timer);
           navigate("/current-orders", { replace: true });
+          cartStore.clearCart();
           return 0;
         }
         return prev - 1;
