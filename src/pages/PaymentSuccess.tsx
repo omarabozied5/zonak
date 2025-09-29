@@ -13,29 +13,53 @@ const PaymentSuccess: React.FC = () => {
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
-    // CRITICAL: Clear cart on successful payment
-    cartStore.clearCart();
-    console.log("✅ Cart cleared after successful payment");
+    let isMounted = true;
 
-    // Clear payment state
-    setTimeout(() => {
-      clearPaymentState();
-    }, 5000);
+    const processSuccess = async () => {
+      if (!isMounted) return;
+
+      // CRITICAL: Clear cart on successful payment
+      try {
+        cartStore.clearCart();
+        console.log("✅ Cart cleared after successful payment");
+      } catch (error) {
+        console.error("Error clearing cart:", error);
+      }
+
+      // Clear payment state after delay
+      if (isMounted) {
+        setTimeout(() => {
+          if (isMounted) {
+            clearPaymentState();
+          }
+        }, 5000);
+      }
+    };
+
+    // Process success immediately
+    processSuccess();
 
     // Start countdown timer
     const timer = setInterval(() => {
+      if (!isMounted) return;
+
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          navigate("/current-orders", { replace: true });
+          if (isMounted) {
+            navigate("/current-orders", { replace: true });
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [cartStore, clearPaymentState, navigate]);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, []); // Empty dependency array to run only once
 
   return (
     <div
