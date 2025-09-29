@@ -20,44 +20,15 @@ const PaymentSuccess: React.FC = () => {
 
     const processSuccess = async () => {
       console.log("Processing payment success...");
-
-      // Set payment status to success immediately
       setPaymentStatus("success");
 
-      // CRITICAL: Clear cart immediately and synchronously
-      try {
-        // Get current cart state for logging
-        const currentItems = cartStore.items;
-        console.log("Cart items before clearing:", currentItems.length);
+      // Just clear the cart - Zustand handles the rest
+      cartStore.clearCart();
+      console.log("✅ Cart clear command issued");
 
-        // Clear the cart
-        cartStore.clearCart();
-
-        // Verify cart is cleared
-        const itemsAfterClear = cartStore.items;
-        console.log("Cart items after clearing:", itemsAfterClear.length);
-
-        if (itemsAfterClear.length === 0) {
-          console.log("✅ Cart successfully cleared after payment success");
-        } else {
-          console.error("❌ Cart not properly cleared, forcing clear again");
-          // Force clear again if needed
-          cartStore.clearCart();
-        }
-      } catch (error) {
-        console.error("Error clearing cart:", error);
-        // Force clear even if there's an error
-        try {
-          cartStore.clearCart();
-        } catch (retryError) {
-          console.error("Failed to clear cart on retry:", retryError);
-        }
-      }
-
-      // Clear payment state after a delay
+      // Clear payment state after delay
       setTimeout(() => {
         clearPaymentState();
-        console.log("Payment state cleared");
       }, 2000);
     };
 
