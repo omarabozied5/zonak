@@ -20,28 +20,85 @@ const CurrentOrders: React.FC = () => {
   const cartStore = useCartStore(user?.id);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
 
-  // Clear cart only once when arriving from successful payment
+  // CRITICAL: Clear cart when arriving from successful payment
   useEffect(() => {
     const state = location.state as any;
 
-    if (state?.fromSuccessfulPayment && !state?.processed) {
-      cartStore.clearCart();
-      clearUserCart(user?.id);
+    if (
+      state?.fromSuccessfulPayment ||
+      state?.paymentSuccess ||
+      state?.cartWasCleared ||
+      state?.cartCleared
+    ) {
+      console.log(
+        "🧹 CurrentOrders: Clearing cart on arrival from payment success",
+        {
+          fromSuccessfulPayment: state.fromSuccessfulPayment,
+          paymentSuccess: state.paymentSuccess,
+          cartWasCleared: state.cartWasCleared,
+          cartCleared: state.cartCleared,
+        }
+      );
 
-      // Mark as processed to prevent repeated clearing
+      // Clear cart multiple times to ensure it takes
+      const clearCartMultipleTimes = async () => {
+        try {
+          // First clear
+          cartStore.clearCart();
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Second clear
+          cartStore.clearCart();
+          clearUserCart(user?.id);
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Third clear
+          cartStore.clearCart();
+
+          // Verify
+          const finalItemCount = cartStore.items.length;
+          console.log(`Cart verification: ${finalItemCount} items remaining`);
+
+          if (finalItemCount > 0) {
+            console.warn("Cart still has items, forcing final clear");
+            cartStore.clearCart();
+            clearUserCart(user?.id);
+            localStorage.removeItem(`cart-storage-${user?.id || "guest"}`);
+          }
+
+          console.log("✅ Cart successfully cleared in CurrentOrders");
+        } catch (error) {
+          console.error("Error clearing cart in CurrentOrders:", error);
+        }
+      };
+
+      clearCartMultipleTimes();
+
+      // Replace history state to prevent back button issues
       window.history.replaceState(
-        { ...state, processed: true },
+        {
+          ...state,
+          processed: true,
+        },
         document.title
       );
     }
   }, [location.state, cartStore, user?.id]);
 
-  // Fetch orders on mount
+  // Initial data fetching
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
 
-    orderStore.fetchCurrentOrders();
-  }, [isAuthenticated, user?.id, orderStore.fetchCurrentOrders]);
+    const fetchData = async () => {
+      try {
+        await orderStore.fetchCurrentOrders();
+      } catch (error) {
+        // Error is handled by the store
+      }
+    };
+
+    fetchData();
+  }, [isAuthenticated, user?.id]);
 
   // Update local state when store changes
   useEffect(() => {
@@ -52,16 +109,17 @@ const CurrentOrders: React.FC = () => {
 
     const orders = orderStore.getActiveOrders();
     setActiveOrders(orders);
-  }, [orderStore.orders, isAuthenticated, user?.id]);
+  }, [orderStore.orders, orderStore.loading, isAuthenticated, user?.id]);
 
   const handleRefresh = useCallback(async () => {
-    await orderStore.fetchCurrentOrders();
-  }, [orderStore.fetchCurrentOrders]);
+    try {
+      await orderStore.fetchCurrentOrders();
+    } catch (error) {
+      // Error is handled by the store
+    }
+  }, [orderStore]);
 
-  const handleBackButton = () => {
-    navigate("/", { replace: true });
-  };
-
+  // Don't render if not authenticated
   if (!isAuthenticated || !user) {
     return null;
   }
@@ -70,11 +128,24 @@ const CurrentOrders: React.FC = () => {
     navigate("/");
   };
 
+  // Override back button behavior
+  const handleBackButton = () => {
+    // Clear any remaining cart data before going back
+    cartStore.clearCart();
+    clearUserCart(user?.id);
+
+    // Navigate to home instead of previous page
+    navigate("/", { replace: true });
+  };
+
+  const isLoading = orderStore.loading;
+
   return (
     <div
       className="w-full max-w-[393px] mx-auto min-h-screen bg-white"
       dir="rtl"
     >
+      {/* Header Section */}
       <div className="w-full bg-white pb-4">
         <div className="flex items-center justify-between px-6 pt-2 mt-2">
           <BackButton onClick={handleBackButton} />
@@ -85,14 +156,17 @@ const CurrentOrders: React.FC = () => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="px-0 py-2">
+        {/* Error State */}
         {orderStore.error && (
           <div className="px-4">
             <ErrorState error={orderStore.error} onRetry={handleRefresh} />
           </div>
         )}
 
-        {orderStore.loading ? (
+        {/* Loading State */}
+        {isLoading ? (
           <div className="px-4">
             <LoadingState />
           </div>
@@ -102,6 +176,7 @@ const CurrentOrders: React.FC = () => {
           </div>
         ) : (
           <>
+            {/* Orders List */}
             <div className="space-y-2">
               {activeOrders.map((order, index) => (
                 <div key={order.id}>
@@ -111,10 +186,11 @@ const CurrentOrders: React.FC = () => {
               ))}
             </div>
 
+            {/* Refresh Button */}
             <div className="px-4 mt-4">
               <RefreshButton
                 onRefresh={handleRefresh}
-                loading={orderStore.loading}
+                loading={isLoading}
                 hasOrders={activeOrders.length > 0}
               />
             </div>
