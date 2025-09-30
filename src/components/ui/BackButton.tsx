@@ -1,22 +1,33 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface BackButtonProps {
-  className?: string; // allow extra styling
-  showOnHome?: boolean; // optionally show on "/" (default false)
+  className?: string;
+  showOnHome?: boolean;
+  onClick?: () => void;
 }
 
 const BackButton: React.FC<BackButtonProps> = ({
   className = "",
   showOnHome = false,
+  onClick,
 }) => {
+  const navigate = useNavigate();
   const location = useLocation();
 
   if (!showOnHome && location.pathname === "/") return null;
 
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(-1);
+    }
+  };
+
   return (
     <button
-      onClick={() => window.history.back()}
+      onClick={handleClick}
       className={`p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm ${className}`}
       aria-label="Go back"
     >
@@ -25,7 +36,6 @@ const BackButton: React.FC<BackButtonProps> = ({
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
       >
         <path
           strokeLinecap="round"
