@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useOrderStore, Order } from "../hooks/useOrderStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -15,137 +21,110 @@ import BackButton from "@/components/ui/BackButton";
 const CurrentOrders: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAuthStore();
+
+  // Memoize selectors to prevent unnecessary re-renders
+  const user = useAuthStore(useCallback((state) => state.user, []));
+  const isAuthenticated = useAuthStore(
+    useCallback((state) => state.isAuthenticated, [])
+  );
+
   const orderStore = useOrderStore(user?.id || null);
   const cartStore = useCartStore(user?.id);
+
+  // Use ref to track if initial load is complete
+  const initialLoadRef = useRef(false);
+  const cartClearedRef = useRef(false);
+
+  // Single state for orders
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
 
-  // CRITICAL: Clear cart when arriving from successful payment
+  // OPTIMIZED: Clear cart only once on mount if coming from payment success
   useEffect(() => {
-    const state = location.state as any;
+    if (cartClearedRef.current) return;
 
-    if (
+    const state = location.state as any;
+    const shouldClearCart =
       state?.fromSuccessfulPayment ||
       state?.paymentSuccess ||
       state?.cartWasCleared ||
-      state?.cartCleared
-    ) {
-      console.log(
-        "🧹 CurrentOrders: Clearing cart on arrival from payment success",
-        {
-          fromSuccessfulPayment: state.fromSuccessfulPayment,
-          paymentSuccess: state.paymentSuccess,
-          cartWasCleared: state.cartWasCleared,
-          cartCleared: state.cartCleared,
-        }
-      );
+      state?.cartCleared;
 
-      // Clear cart multiple times to ensure it takes
-      const clearCartMultipleTimes = async () => {
-        try {
-          // First clear
-          cartStore.clearCart();
-          await new Promise((resolve) => setTimeout(resolve, 100));
+    if (shouldClearCart) {
+      cartClearedRef.current = true;
 
-          // Second clear
-          cartStore.clearCart();
-          clearUserCart(user?.id);
-          await new Promise((resolve) => setTimeout(resolve, 100));
+      // Single cart clear operation
+      cartStore.clearCart();
+      clearUserCart(user?.id);
 
-          // Third clear
-          cartStore.clearCart();
-
-          // Verify
-          const finalItemCount = cartStore.items.length;
-          console.log(`Cart verification: ${finalItemCount} items remaining`);
-
-          if (finalItemCount > 0) {
-            console.warn("Cart still has items, forcing final clear");
-            cartStore.clearCart();
-            clearUserCart(user?.id);
-            localStorage.removeItem(`cart-storage-${user?.id || "guest"}`);
-          }
-
-          console.log("✅ Cart successfully cleared in CurrentOrders");
-        } catch (error) {
-          console.error("Error clearing cart in CurrentOrders:", error);
-        }
-      };
-
-      clearCartMultipleTimes();
-
-      // Replace history state to prevent back button issues
-      window.history.replaceState(
-        {
-          ...state,
-          processed: true,
-        },
-        document.title
-      );
+      // Replace state immediately to prevent re-processing
+      window.history.replaceState({ processed: true }, document.title);
     }
-  }, [location.state, cartStore, user?.id]);
+  }, []); // Empty deps - run once on mount
 
-  // Initial data fetching
+  // OPTIMIZED: Fetch orders only once on mount
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
+    if (!isAuthenticated || !user?.id || initialLoadRef.current) return;
+
+    initialLoadRef.current = true;
 
     const fetchData = async () => {
       try {
         await orderStore.fetchCurrentOrders();
       } catch (error) {
-        // Error is handled by the store
+        console.error("Failed to fetch orders:", error);
       }
     };
 
     fetchData();
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id]); // Only depend on auth changes
 
-  // Update local state when store changes
+  // OPTIMIZED: Memoize active orders computation
+  const computedActiveOrders = useMemo(() => {
+    if (!isAuthenticated || !user?.id) return [];
+    return orderStore.getActiveOrders();
+  }, [orderStore.orders, isAuthenticated, user?.id]);
+
+  // OPTIMIZED: Update local state only when computed orders change
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) {
-      setActiveOrders([]);
-      return;
-    }
+    setActiveOrders(computedActiveOrders);
+  }, [computedActiveOrders]);
 
-    const orders = orderStore.getActiveOrders();
-    setActiveOrders(orders);
-  }, [orderStore.orders, orderStore.loading, isAuthenticated, user?.id]);
-
+  // OPTIMIZED: Memoized refresh handler
   const handleRefresh = useCallback(async () => {
     try {
       await orderStore.fetchCurrentOrders();
     } catch (error) {
-      // Error is handled by the store
+      console.error("Refresh failed:", error);
     }
   }, [orderStore]);
 
-  // Don't render if not authenticated
+  // OPTIMIZED: Memoized navigation handlers
+  const handleNavigateToRestaurants = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
+
+  const handleBackButton = useCallback(() => {
+    // Clear cart state before navigating
+    if (!cartClearedRef.current) {
+      cartStore.clearCart();
+      clearUserCart(user?.id);
+    }
+    navigate("/", { replace: true });
+  }, [navigate, cartStore, user?.id]);
+
+  // Early return for unauthenticated users
   if (!isAuthenticated || !user) {
     return null;
   }
 
-  const handleNavigateToRestaurants = () => {
-    navigate("/");
-  };
-
-  // Override back button behavior
-  const handleBackButton = () => {
-    // Clear any remaining cart data before going back
-    cartStore.clearCart();
-    clearUserCart(user?.id);
-
-    // Navigate to home instead of previous page
-    navigate("/", { replace: true });
-  };
-
-  const isLoading = orderStore.loading;
+  const isLoading = orderStore.loading && !initialLoadRef.current;
 
   return (
     <div
       className="w-full max-w-[393px] mx-auto min-h-screen bg-white"
       dir="rtl"
     >
-      {/* Header Section */}
+      {/* Header Section - Static, no re-renders needed */}
       <div className="w-full bg-white pb-4">
         <div className="flex items-center justify-between px-6 pt-2 mt-2">
           <BackButton onClick={handleBackButton} />
@@ -165,7 +144,7 @@ const CurrentOrders: React.FC = () => {
           </div>
         )}
 
-        {/* Loading State */}
+        {/* Loading State - Only show on initial load */}
         {isLoading ? (
           <div className="px-4">
             <LoadingState />
@@ -176,21 +155,14 @@ const CurrentOrders: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Orders List */}
-            <div className="space-y-2">
-              {activeOrders.map((order, index) => (
-                <div key={order.id}>
-                  {index > 0 && <div className="h-1 bg-[#f6f6f6]" />}
-                  <OrderCard order={order} />
-                </div>
-              ))}
-            </div>
+            {/* Orders List - Memoized rendering */}
+            <OrdersList orders={activeOrders} />
 
             {/* Refresh Button */}
             <div className="px-4 mt-4">
               <RefreshButton
                 onRefresh={handleRefresh}
-                loading={isLoading}
+                loading={orderStore.loading}
                 hasOrders={activeOrders.length > 0}
               />
             </div>
@@ -200,5 +172,33 @@ const CurrentOrders: React.FC = () => {
     </div>
   );
 };
+
+// OPTIMIZED: Separate memoized component for orders list
+const OrdersList = React.memo<{ orders: Order[] }>(
+  ({ orders }) => {
+    return (
+      <div className="space-y-2">
+        {orders.map((order, index) => (
+          <div key={order.id}>
+            {index > 0 && <div className="h-1 bg-[#f6f6f6]" />}
+            <OrderCard order={order} />
+          </div>
+        ))}
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: only re-render if order IDs or count change
+    if (prevProps.orders.length !== nextProps.orders.length) return false;
+
+    return prevProps.orders.every(
+      (order, index) =>
+        order.id === nextProps.orders[index]?.id &&
+        order.status === nextProps.orders[index]?.status
+    );
+  }
+);
+
+OrdersList.displayName = "OrdersList";
 
 export default CurrentOrders;
