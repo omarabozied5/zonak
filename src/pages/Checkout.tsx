@@ -1,23 +1,19 @@
-// Updated Checkout.tsx with cashback integration
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useOrderStore } from "@/hooks/useOrderStore";
 import { usePaymentStore } from "@/stores/usePaymentStore";
 
-// Components
 import CheckoutHeader from "../components/checkout/CheckoutHeader";
 import OffersSection from "../components/checkout/OfferSection";
 import CouponCard from "../components/checkout/CouponCard";
-import OrderSummaryCard from "../components/checkout/OrderSummaryCard";
 import PriceBreakdown from "../components/checkout/PriceBreakdown";
 import PaymentMethodCard from "../components/checkout/PaymentMethodCard";
 import LoyaltyBanner from "../components/checkout/LoyaltyBanner";
 import CheckoutCTAButton from "../components/checkout/CheckoutCTAButton";
 
-// Hooks and Utils
 import { useCoupon } from "../hooks/useCoupon";
 import { useFormValidation } from "../hooks/useCheckout";
 import { useCheckoutRestoration } from "../hooks/useCheckoutRestoration";
@@ -27,7 +23,7 @@ import {
   calculateOriginalTotal,
 } from "../lib/cartUtils";
 import { apiService, buildOrderPayload } from "../services/apiService";
-import { OrderResponse, CartItem, User, Restaurant } from "../types/types";
+import { OrderResponse, CartItem, Restaurant } from "../types/types";
 import CheckoutRestaurantHeader from "@/components/checkout/CheckoutRestaurantHeader";
 
 interface OrderValidation {
@@ -36,7 +32,6 @@ interface OrderValidation {
   merchantId?: number;
 }
 
-// Cashback data interface
 interface CashbackData {
   id: number;
   discount: number;
@@ -46,7 +41,6 @@ interface CashbackData {
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuthStore();
   const cartStore = useCartStore(user?.id);
   const { items, totalPrice, clearCart } = cartStore;
@@ -55,18 +49,9 @@ const Checkout: React.FC = () => {
   const paymentStore = usePaymentStore();
 
   const [notes, setNotes] = useState<string>("");
-  const [isLoadingRestaurant, setIsLoadingRestaurant] =
-    useState<boolean>(false);
-
   const [paymentType, setPaymentType] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-
-  // Get placeId and merchantId from first item
-  const placeId = items.length > 0 ? items[0].placeId : "";
-  const merchantId = items.length > 0 ? items[0].restaurantId : "";
-
-  // State for offers and cashback data
   const [offersData, setOffersData] = useState<any[]>([]);
   const [offersLoading, setOffersLoading] = useState<boolean>(false);
   const [cashbackData, setCashbackData] = useState<CashbackData | null>(null);
@@ -76,41 +61,8 @@ const Checkout: React.FC = () => {
   );
   const [totalCashbackToday, setTotalCashbackToday] = useState<number>(0);
 
-  // Function to fetch offers and cashback data
-  const fetchOffers = async () => {
-    if (!merchantId || !placeId) return;
-
-    setOffersLoading(true);
-    try {
-      const response = await apiService.fetchCartOrderInfo(merchantId, placeId);
-
-      // Set offers data
-      setOffersData(response.offers || []);
-
-      // Extract cashback data from API response
-      setCashbackData(
-        response.cashback
-          ? {
-              id: response.cashback.id,
-              discount: response.cashback.discount || 0,
-              max_daily_cashback: response.cashback.max_daily_cashback,
-            }
-          : null
-      );
-      setCashbackBranch(response.cashback_branch || 0);
-      setMaxCashbackPerOrder(response.max || null);
-      setTotalCashbackToday(response.cash || 0);
-    } catch (error) {
-      console.error("Error fetching offers:", error);
-      setOffersData([]);
-      setCashbackData(null);
-      setCashbackBranch(0);
-      setMaxCashbackPerOrder(null);
-      setTotalCashbackToday(0);
-    } finally {
-      setOffersLoading(false);
-    }
-  };
+  const placeId = items.length > 0 ? items[0].placeId : "";
+  const merchantId = items.length > 0 ? items[0].restaurantId : "";
 
   const {
     couponCode,
@@ -125,7 +77,6 @@ const Checkout: React.FC = () => {
     placeId,
   });
 
-  // Use the restoration hook
   const { restorationState, applyRestoredState, isRestoring } =
     useCheckoutRestoration(user?.id || null, cartStore, {
       notes,
@@ -133,7 +84,6 @@ const Checkout: React.FC = () => {
       couponCode,
     });
 
-  // Calculate discount information
   const totalItemDiscounts = calculateTotalItemDiscounts(items);
   const originalTotalPrice = calculateOriginalTotal(items);
   const couponDiscountAmount = calculateDiscountAmount(
@@ -142,47 +92,74 @@ const Checkout: React.FC = () => {
   );
   const total = totalPrice - couponDiscountAmount;
 
-  // Fetch offers when component mounts or when merchantId/placeId changes
+  // Fetch offers on mount
   useEffect(() => {
-    if (merchantId && placeId) {
-      fetchOffers();
-    }
-  }, [merchantId, placeId]);
+    if (!merchantId || !placeId) return;
 
-  useEffect(() => {
-    const fetchRestaurantDetails = async () => {
-      if (items.length > 0 && items[0].placeId) {
-        try {
-          const response = await apiService.fetchRestaurantDetails(
-            items[0].placeId
-          );
-
-          if (response.message === "success" && response.data) {
-            setRestaurant(response.data);
-          } else {
-            toast.error("تعذر تحميل بيانات المطعم حالياً");
-          }
-        } catch (error) {
-          toast.error("حدث خطأ أثناء تحميل بيانات المطعم");
-        }
+    const fetchOffers = async () => {
+      setOffersLoading(true);
+      try {
+        const response = await apiService.fetchCartOrderInfo(
+          merchantId,
+          placeId
+        );
+        setOffersData(response.offers || []);
+        setCashbackData(
+          response.cashback
+            ? {
+                id: response.cashback.id,
+                discount: response.cashback.discount || 0,
+                max_daily_cashback: response.cashback.max_daily_cashback,
+              }
+            : null
+        );
+        setCashbackBranch(response.cashback_branch || 0);
+        setMaxCashbackPerOrder(response.max || null);
+        setTotalCashbackToday(response.cash || 0);
+      } catch (error) {
+        setOffersData([]);
+        setCashbackData(null);
+      } finally {
+        setOffersLoading(false);
       }
     };
 
-    fetchRestaurantDetails();
-  }, [items]);
+    fetchOffers();
+  }, [merchantId, placeId]);
 
-  // Apply restored state when available
+  // Fetch restaurant details on mount
+  useEffect(() => {
+    if (!items.length || !items[0].placeId) return;
+
+    const fetchRestaurant = async () => {
+      try {
+        const response = await apiService.fetchRestaurantDetails(
+          items[0].placeId
+        );
+        if (response.message === "success" && response.data) {
+          setRestaurant(response.data);
+        }
+      } catch (error) {
+        toast.error("تعذر تحميل بيانات المطعم");
+      }
+    };
+
+    fetchRestaurant();
+  }, [items.length]);
+
+  // Apply restored state
   useEffect(() => {
     if (isRestoring) {
       applyRestoredState(
         setNotes,
         setPaymentType,
         setCouponCode,
-        setAppliedCoupon || (() => {})
+        setAppliedCoupon
       );
     }
   }, [isRestoring, applyRestoredState]);
 
+  // Auth and cart validation
   useEffect(() => {
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول أولاً");
@@ -192,7 +169,6 @@ const Checkout: React.FC = () => {
     if (items.length === 0) {
       toast.error("السلة فارغة");
       navigate("/cart");
-      return;
     }
   }, [isAuthenticated, items.length, navigate]);
 
@@ -210,21 +186,13 @@ const Checkout: React.FC = () => {
 
     const firstItem = items[0];
 
-    if (
-      !firstItem.restaurantId ||
-      firstItem.restaurantId.toString().trim() === ""
-    ) {
+    if (!firstItem.restaurantId || !firstItem.placeId) {
       toast.error("معرف المطعم مفقود - يرجى إعادة اختيار العناصر");
       return { isValid: false };
     }
 
-    if (!firstItem.placeId || firstItem.placeId.toString().trim() === "") {
-      toast.error("معرف الفرع مفقود - يرجى إعادة اختيار العناصر");
-      return { isValid: false };
-    }
-
-    const invalidItems = items.filter((item: CartItem) => {
-      return (
+    const invalidItems = items.filter(
+      (item: CartItem) =>
         !item.id ||
         !item.categoryId ||
         item.categoryId === 0 ||
@@ -233,11 +201,10 @@ const Checkout: React.FC = () => {
         !item.totalPriceWithModifiers ||
         isNaN(item.totalPriceWithModifiers) ||
         item.quantity <= 0
-      );
-    });
+    );
 
     if (invalidItems.length > 0) {
-      toast.error("بعض العناصر في السلة غير صالحة - يرجى إعادة إضافة العناصر");
+      toast.error("بعض العناصر في السلة غير صالحة");
       return { isValid: false };
     }
 
@@ -278,7 +245,6 @@ const Checkout: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      // Create comprehensive checkout data snapshot
       const checkoutData = {
         items: [...items],
         totalPrice,
@@ -349,43 +315,31 @@ const Checkout: React.FC = () => {
               return;
             }
           } catch (paymentError) {
-            console.error("Payment URL error:", paymentError);
             toast.error("فشل في فتح صفحة الدفع");
             return;
           }
         } else {
+          // Cash payment - clear cart immediately
           clearCart();
           toast.success(response.message || "تم تأكيد طلبك بنجاح!");
 
           navigate("/current-orders", {
+            replace: true,
             state: {
               orderId: orderId,
-              message: "تم إرسال طلبك بنجاح",
-              justSubmitted: true,
+              fromSuccessfulPayment: true,
               timestamp: Date.now(),
-              paymentType: paymentType,
-              orderDetails: {
-                total: total,
-                itemsCount: items.length,
-                totalSavings: totalItemDiscounts + couponDiscountAmount,
-                restaurantName: items[0]?.restaurantName || "المطعم",
-                couponUsed: appliedCoupon?.code || null,
-              },
             },
           });
         }
 
         setTimeout(() => {
-          orderStore.fetchCurrentOrders().catch((error) => {
-            console.error("Background order refresh failed:", error);
-          });
+          orderStore.fetchCurrentOrders();
         }, 1000);
       } else {
-        console.error("Order submission failed:", response);
         toast.error(response.message || "فشل في إرسال الطلب");
       }
     } catch (error) {
-      console.error("Order submission error:", error);
       toast.error("حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى");
     } finally {
       setIsProcessing(false);
@@ -397,23 +351,19 @@ const Checkout: React.FC = () => {
       <div className="w-full max-w-full sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto bg-gray-50 relative">
         <CheckoutHeader onBack={handleBack} />
 
-        {/* Show restoration indicator */}
         {isRestoring && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg mx-3 sm:mx-4 mt-4 mb-3">
             <p className="text-blue-700 text-sm p-3">
-              🔄 جاري استعادة بيانات الطلب السابق...
+              جاري استعادة بيانات الطلب السابق...
             </p>
           </div>
         )}
 
-        {/* Main content with proper spacing */}
         <div className="px-3 sm:px-4 md:px-5 pb-32 sm:pb-36 relative space-y-4 sm:space-y-5">
-          {/* العروض Section */}
           <div className="pt-4 sm:pt-5">
             <OffersSection offers={offersData} loading={offersLoading} />
           </div>
 
-          {/* القسائم Section */}
           <div>
             <CouponCard
               appliedCoupon={appliedCoupon}
@@ -425,36 +375,19 @@ const Checkout: React.FC = () => {
             />
           </div>
 
-          {/* ملخص الطلب Section */}
           <div>
-            {isLoadingRestaurant ? (
-              <div className="bg-white rounded-lg p-3 sm:p-4">
-                <div className="flex items-center justify-between">
-                  <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="text-right">
-                      <div className="h-4 w-16 sm:w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
-                      <div className="h-3 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
-                    </div>
-                    <div className="w-8 sm:w-10 h-8 sm:h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <CheckoutRestaurantHeader
-                merchantId={merchantId}
-                restaurantName={items[0]?.restaurantName || "مطعم"}
-                placeId={placeId}
-                items={items}
-                totalPrice={totalPrice}
-                totalItemDiscounts={totalItemDiscounts}
-                defaultExpanded={false}
-                onAddMoreItems={() => navigate("/restaurant/" + placeId)}
-              />
-            )}
+            <CheckoutRestaurantHeader
+              merchantId={merchantId}
+              restaurantName={items[0]?.restaurantName || "مطعم"}
+              placeId={placeId}
+              items={items}
+              totalPrice={totalPrice}
+              totalItemDiscounts={totalItemDiscounts}
+              defaultExpanded={false}
+              onAddMoreItems={() => navigate("/restaurant/" + placeId)}
+            />
           </div>
 
-          {/* Price Breakdown */}
           <div>
             <PriceBreakdown
               totalPrice={totalPrice}
@@ -465,7 +398,6 @@ const Checkout: React.FC = () => {
             />
           </div>
 
-          {/* طريقة الدفع Section */}
           <div>
             <PaymentMethodCard
               paymentType={paymentType}
@@ -474,7 +406,6 @@ const Checkout: React.FC = () => {
             />
           </div>
 
-          {/* Loyalty Points Banner */}
           <div>
             <LoyaltyBanner
               totalSavings={totalItemDiscounts + couponDiscountAmount}
@@ -487,7 +418,6 @@ const Checkout: React.FC = () => {
           </div>
         </div>
 
-        {/* Fixed Bottom CTA Button */}
         <CheckoutCTAButton
           total={total}
           isProcessing={isProcessing}

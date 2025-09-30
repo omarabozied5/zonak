@@ -7,11 +7,11 @@ const PaymentFailed: React.FC = () => {
   const navigate = useNavigate();
   const { setPaymentStatus, markPaymentReturnDetected } = usePaymentStore();
   const [countdown, setCountdown] = useState(3);
-  const hasProcessed = useRef(false);
+  const processedRef = useRef(false);
 
   useEffect(() => {
-    if (hasProcessed.current) return;
-    hasProcessed.current = true;
+    if (processedRef.current) return;
+    processedRef.current = true;
 
     setPaymentStatus("failed");
     markPaymentReturnDetected();
@@ -31,7 +31,7 @@ const PaymentFailed: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [navigate, setPaymentStatus, markPaymentReturnDetected]);
 
   return (
     <div

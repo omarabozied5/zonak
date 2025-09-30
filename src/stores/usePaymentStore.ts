@@ -20,7 +20,6 @@ export interface PaymentState {
     paymentType: number;
     notes: string;
     userInfo: any;
-    // Additional form state preservation
     formState?: {
       notes: string;
       paymentType: number;
@@ -30,7 +29,6 @@ export interface PaymentState {
 
   paymentInitiatedAt: number | null;
   lastUpdated: number | null;
-  // Track navigation away from app
   leftAppForPayment: boolean;
   paymentReturnDetected: boolean;
 }
@@ -61,7 +59,6 @@ interface PaymentStore extends PaymentState {
   incrementRestorationAttempt: () => void;
   canAttemptRestoration: () => boolean;
 
-  // New methods for better state management
   markLeftAppForPayment: () => void;
   markPaymentReturnDetected: () => void;
   shouldShowRestorationPrompt: () => boolean;
@@ -72,7 +69,6 @@ interface PaymentStore extends PaymentState {
   }) => void;
 }
 
-// Helper function to create cart snapshot with more details
 const createCartSnapshot = (items: CartItem[]): string => {
   const snapshot = items.map((item) => ({
     id: item.id,
@@ -84,7 +80,6 @@ const createCartSnapshot = (items: CartItem[]): string => {
     restaurantId: item.restaurantId,
     placeId: item.placeId,
     name: item.name,
-    // Include timestamps for validation
     addedAt: item.addedAt,
     lastModified: item.lastModified,
   }));
@@ -96,44 +91,31 @@ const createCartSnapshot = (items: CartItem[]): string => {
   });
 };
 
-// Enhanced validation function
 const validateCartSnapshot = (items: CartItem[], snapshot: string): boolean => {
   try {
     const parsed = JSON.parse(snapshot);
     const snapshotItems = parsed.items || [];
 
     if (items.length !== snapshotItems.length) {
-      console.log("Cart length mismatch", {
-        current: items.length,
-        snapshot: snapshotItems.length,
-      });
       return false;
     }
 
-    // Check if snapshot is too old (more than 1 hour)
     const snapshotAge = Date.now() - (parsed.timestamp || 0);
     if (snapshotAge > 60 * 60 * 1000) {
-      console.log("Cart snapshot too old", { age: snapshotAge });
       return false;
     }
 
     return items.every((currentItem, index) => {
       const snapshotItem = snapshotItems[index];
-      const isValid =
+      return (
         currentItem.id === snapshotItem.id &&
         currentItem.quantity === snapshotItem.quantity &&
         currentItem.price === snapshotItem.price &&
         currentItem.restaurantId === snapshotItem.restaurantId &&
-        currentItem.placeId === snapshotItem.placeId;
-
-      if (!isValid) {
-        console.log("Item validation failed", { currentItem, snapshotItem });
-      }
-
-      return isValid;
+        currentItem.placeId === snapshotItem.placeId
+      );
     });
   } catch (error) {
-    console.error("Snapshot validation error:", error);
     return false;
   }
 };
@@ -169,13 +151,6 @@ export const usePaymentStore = create<PaymentStore>()(
           restorationAttempts: 0,
           leftAppForPayment: true,
           paymentReturnDetected: false,
-        });
-
-        console.log("💳 Payment initiated:", {
-          orderId,
-          itemsCount: checkoutData?.items.length,
-          total: checkoutData?.total,
-          coupon: checkoutData?.appliedCoupon?.code,
         });
       },
 
@@ -233,7 +208,6 @@ export const usePaymentStore = create<PaymentStore>()(
           };
         }
 
-        // Check if payment session is too old (more than 2 hours)
         if (
           paymentInitiatedAt &&
           Date.now() - paymentInitiatedAt > 2 * 60 * 60 * 1000
@@ -245,7 +219,6 @@ export const usePaymentStore = create<PaymentStore>()(
           };
         }
 
-        // Validate cart snapshot if available
         if (cartSnapshot && checkoutData.items) {
           const isValid = validateCartSnapshot(
             checkoutData.items,
@@ -276,16 +249,12 @@ export const usePaymentStore = create<PaymentStore>()(
         });
 
         if (status === "success") {
-          // Auto-clear after success with delay
           setTimeout(() => {
             get().clearPaymentState();
-          }, 10000); // 10 seconds
+          }, 10000);
         } else if (status === "failed") {
-          // Mark that user returned from failed payment
           set({ paymentReturnDetected: true });
         }
-
-        console.log("💳 Payment status updated:", status);
       },
 
       incrementRestorationAttempt: () => {
@@ -317,8 +286,6 @@ export const usePaymentStore = create<PaymentStore>()(
           leftAppForPayment: false,
           paymentReturnDetected: false,
         });
-
-        console.log("🧹 Payment state cleared");
       },
 
       isPaymentInProgress: () => {
@@ -343,7 +310,7 @@ export const usePaymentStore = create<PaymentStore>()(
     }),
     {
       name: "payment-storage",
-      version: 2, // Increment version for new fields
+      version: 2,
       partialize: (state) => ({
         orderId: state.orderId,
         paymentUrl: state.paymentUrl,
