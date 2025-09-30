@@ -20,70 +20,26 @@ const CurrentOrders: React.FC = () => {
   const cartStore = useCartStore(user?.id);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
 
+  // Stable function to clear cart
+  const clearCart = useCallback(() => {
+    cartStore.clearCart();
+    clearUserCart(user?.id);
+  }, [cartStore, user?.id]);
+
   // CRITICAL: Clear cart when arriving from successful payment
   useEffect(() => {
     const state = location.state as any;
 
-    if (
-      state?.fromSuccessfulPayment ||
-      state?.paymentSuccess ||
-      state?.cartWasCleared ||
-      state?.cartCleared
-    ) {
-      console.log(
-        "🧹 CurrentOrders: Clearing cart on arrival from payment success",
-        {
-          fromSuccessfulPayment: state.fromSuccessfulPayment,
-          paymentSuccess: state.paymentSuccess,
-          cartWasCleared: state.cartWasCleared,
-          cartCleared: state.cartCleared,
-        }
-      );
+    if (!state?.fromSuccessfulPayment) return;
+    if (state.processed) return; // Already cleared
 
-      // Clear cart multiple times to ensure it takes
-      const clearCartMultipleTimes = async () => {
-        try {
-          // First clear
-          cartStore.clearCart();
-          await new Promise((resolve) => setTimeout(resolve, 100));
+    console.log("🧹 Clearing cart on arrival from payment success");
 
-          // Second clear
-          cartStore.clearCart();
-          clearUserCart(user?.id);
-          await new Promise((resolve) => setTimeout(resolve, 100));
+    clearCart();
 
-          // Third clear
-          cartStore.clearCart();
-
-          // Verify
-          const finalItemCount = cartStore.items.length;
-          console.log(`Cart verification: ${finalItemCount} items remaining`);
-
-          if (finalItemCount > 0) {
-            console.warn("Cart still has items, forcing final clear");
-            cartStore.clearCart();
-            clearUserCart(user?.id);
-            localStorage.removeItem(`cart-storage-${user?.id || "guest"}`);
-          }
-
-          console.log("✅ Cart successfully cleared in CurrentOrders");
-        } catch (error) {
-          console.error("Error clearing cart in CurrentOrders:", error);
-        }
-      };
-
-      clearCartMultipleTimes();
-
-      // Replace history state to prevent back button issues
-      window.history.replaceState(
-        {
-          ...state,
-          processed: true,
-        },
-        document.title
-      );
-    }
-  }, [location.state, cartStore, user?.id]);
+    // Mark state as processed to prevent future clears
+    window.history.replaceState({ ...state, processed: true }, document.title);
+  }, [location.state, clearCart]);
 
   // Initial data fetching
   useEffect(() => {
@@ -93,12 +49,12 @@ const CurrentOrders: React.FC = () => {
       try {
         await orderStore.fetchCurrentOrders();
       } catch (error) {
-        // Error is handled by the store
+        // Error handled by store
       }
     };
 
     fetchData();
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, orderStore]);
 
   // Update local state when store changes
   useEffect(() => {
@@ -106,39 +62,32 @@ const CurrentOrders: React.FC = () => {
       setActiveOrders([]);
       return;
     }
-
-    const orders = orderStore.getActiveOrders();
-    setActiveOrders(orders);
+    setActiveOrders(orderStore.getActiveOrders());
   }, [orderStore.orders, orderStore.loading, isAuthenticated, user?.id]);
 
   const handleRefresh = useCallback(async () => {
     try {
       await orderStore.fetchCurrentOrders();
     } catch (error) {
-      // Error is handled by the store
+      // Error handled by store
     }
   }, [orderStore]);
 
-  // Don't render if not authenticated
-  if (!isAuthenticated || !user) {
-    return null;
-  }
+  // Override back button behavior
+  const handleBackButton = () => {
+    clearCart();
+    navigate("/", { replace: true });
+  };
 
+  // Navigate to restaurants if no orders
   const handleNavigateToRestaurants = () => {
     navigate("/");
   };
 
-  // Override back button behavior
-  const handleBackButton = () => {
-    // Clear any remaining cart data before going back
-    cartStore.clearCart();
-    clearUserCart(user?.id);
-
-    // Navigate to home instead of previous page
-    navigate("/", { replace: true });
-  };
-
   const isLoading = orderStore.loading;
+
+  // Don't render if not authenticated
+  if (!isAuthenticated || !user) return null;
 
   return (
     <div

@@ -52,10 +52,10 @@ const RestaurantCard = React.memo(
           {/* Discount Badge - Top Left */}
           {(() => {
             // Debug: Log the restaurant data to console
-            console.log("Restaurant data:", restaurant.merchant_name, {
-              cashback_offer: restaurant.cashback_offer,
-              place_main_offer: restaurant.place?.main_offer,
-            });
+            // console.log("Restaurant data:", restaurant.merchant_name, {
+            //   cashback_offer: restaurant.cashback_offer,
+            //   place_main_offer: restaurant.place?.main_offer,
+            // });
 
             // Check for cashback offer first
             if (restaurant.cashback_offer?.discount) {
