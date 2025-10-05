@@ -26,20 +26,84 @@ const RestaurantCard = React.memo(
     restaurant: any;
     onRestaurantClick: (user_id: number) => void;
   }) => {
-    // DETAILED DEBUG: Log the exact value and type
-    console.log(`\n=== ${restaurant.merchant_name} ===`);
-    console.log("Raw is_busy value:", restaurant.is_busy);
-    console.log("Type of is_busy:", typeof restaurant.is_busy);
-    console.log("is_busy === 0:", restaurant.is_busy === 0);
-    console.log('is_busy === "0":', restaurant.is_busy === "0");
-    console.log("is_busy == 0:", restaurant.is_busy == 0);
-
-    // Fixed logic: is_busy: 0 means busy, is_busy: 1 means available
     const isBusy = restaurant.is_busy === 0;
 
-    console.log("Final isBusy:", isBusy);
-    console.log("Will show:", isBusy ? "RED مشغول" : "GREEN متاح");
-    console.log("===================\n");
+    // Generate dynamic offer text
+    const getOfferText = React.useMemo(() => {
+      const offers = restaurant.place?.valid_offers || [];
+      const cashbackOffer = restaurant.cashback_offer;
+      const mainOffer = restaurant.place?.main_offer;
+
+      if (!cashbackOffer && !mainOffer && offers.length === 0) return null;
+
+      let offerDescription = "";
+      let remainingCount = 0;
+
+      // Priority 1: Cashback offer
+      if (cashbackOffer) {
+        offerDescription =
+          cashbackOffer.offer_details ||
+          cashbackOffer.description ||
+          `كاش باك ${cashbackOffer.discount}%`;
+        remainingCount = offers.length;
+      }
+      // Priority 2: Main offer
+      else if (mainOffer) {
+        if (
+          mainOffer.offer_type === 0 &&
+          mainOffer.old_price &&
+          mainOffer.new_price
+        ) {
+          // Price offer
+          offerDescription = `${mainOffer.product_name || "منتج"} - ${
+            mainOffer.new_price
+          } ريال بدلاً من ${mainOffer.old_price}`;
+        } else if (mainOffer.offer_type === 1 && mainOffer.discount) {
+          // Discount offer
+          offerDescription = `خصم ${mainOffer.discount}%`;
+        } else if (mainOffer.offer_type === 3 && mainOffer.discount) {
+          // Cashback offer
+          offerDescription = `كاش باك ${mainOffer.discount}%`;
+        } else {
+          offerDescription =
+            mainOffer.offer_details || mainOffer.description || "عرض خاص";
+        }
+        remainingCount = offers.length - 1; // Subtract main offer
+      }
+      // Priority 3: First valid offer
+      else if (offers.length > 0) {
+        const firstOffer = offers[0];
+        if (
+          firstOffer.offer_type === 0 &&
+          firstOffer.old_price &&
+          firstOffer.new_price
+        ) {
+          offerDescription = `${firstOffer.product_name || "منتج"} - ${
+            firstOffer.new_price
+          } ريال`;
+        } else if (firstOffer.discount) {
+          offerDescription = `خصم ${firstOffer.discount}%`;
+        } else {
+          offerDescription = "عرض خاص";
+        }
+        remainingCount = offers.length - 1;
+      }
+
+      // Build final text
+      let finalText = offerDescription;
+      if (remainingCount > 0) {
+        finalText += ` + ${remainingCount} ${
+          remainingCount === 1 ? "عرض آخر" : "عروض أخرى"
+        }`;
+      }
+
+      return finalText;
+    }, [
+      restaurant.cashback_offer,
+      restaurant.place?.valid_offers,
+      restaurant.place?.main_offer,
+      restaurant.merchant_name,
+    ]);
 
     return (
       <Card
@@ -61,7 +125,7 @@ const RestaurantCard = React.memo(
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
           </div>
 
-          {/* Discount Badge - Top Left */}
+          {/* Discount Badge - Top Right */}
           {(() => {
             if (restaurant.cashback_offer?.discount) {
               return (
@@ -99,15 +163,12 @@ const RestaurantCard = React.memo(
             return null;
           })()}
 
-          {/* Status Badge - Top Right - WITH DEBUG INFO */}
+          {/* Status Badge - Top Left */}
           <div className="absolute top-3 left-3">
             <div
               className={`rounded-full px-3 py-1 text-xs font-bold shadow-lg ${
                 isBusy ? "bg-red-500 text-white" : "bg-green-500 text-white"
               }`}
-              title={`is_busy raw value: ${
-                restaurant.is_busy
-              }, type: ${typeof restaurant.is_busy}`}
             >
               {isBusy ? "مشغول" : "متاح"}
             </div>
@@ -166,15 +227,14 @@ const RestaurantCard = React.memo(
               </div>
             </div>
 
-            {/* Promotional Text */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3">
-              <p className="text-[11px] text-yellow-800 text-center font-medium">
-                ⚡{" "}
-                {restaurant.promo_text ||
-                  "اشتر اليوم واحصل على خصم مجانا طباخك بالبيت"}
-                <span className="text-yellow-600"> كوبونك</span>
-              </p>
-            </div>
+            {/* Dynamic Promotional Text */}
+            {getOfferText && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3">
+                <p className="text-[11px] text-yellow-800 text-center font-medium">
+                  ⚡ {getOfferText}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -379,7 +439,7 @@ const Home = () => {
                   لا توجد مطاعم متاحة حالياً
                 </h3>
                 <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto px-4">
-                  نعمل على إضافة المزيد من المطاعم المميزة. تحقق مرة أخرى
+                  نعمل على إضافة المزيد من المطاعم الممي��ة. تحقق مرة أخرى
                   قريباً!
                 </p>
               </div>
