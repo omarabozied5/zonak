@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 interface SearchBarProps {
   value: string;
@@ -13,6 +13,10 @@ export default function SearchBar({
   onChange,
   placeholder = "ابحث عن منتجات",
 }: SearchBarProps) {
+  const handleClear = () => {
+    onChange("");
+  };
+
   return (
     <div className="flex justify-center mb-4">
       <div className="relative w-full max-w-md">
@@ -27,10 +31,20 @@ export default function SearchBar({
                      focus:border-gray-400 focus:ring-1 focus:ring-gray-200
                      placeholder:text-gray-400"
         />
-        <Search
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-          size={18}
-        />
+        {value ? (
+          <button
+            onClick={handleClear}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Clear search"
+          >
+            <X size={18} />
+          </button>
+        ) : (
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+        )}
       </div>
     </div>
   );

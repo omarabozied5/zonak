@@ -1,4 +1,4 @@
-// hooks/useCoupon.ts - Updated to use real API
+// hooks/useCoupon.ts - Updated to use real API with user-friendly error messages
 import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { ValidatedCoupon, calculateDiscountAmount } from "@/lib/couponUtils";
@@ -28,6 +28,63 @@ interface UseCouponReturn {
   hasCoupon: boolean;
   canApplyCoupon: boolean;
 }
+
+// Helper function to map error codes to user-friendly messages
+const getErrorMessage = (error: any): string => {
+  // Extract error code from various possible error structures
+  const errorCode =
+    error?.response?.data?.error ||
+    error?.response?.data?.code ||
+    error?.code ||
+    error?.message;
+
+  // Convert to string for comparison
+  const errorStr = String(errorCode);
+
+  // Map error codes to user-friendly Arabic messages
+  if (errorStr === "101" || errorStr.includes("101")) {
+    return "الرجاء إدخال كوبون صالح";
+  }
+
+  if (
+    errorStr === "102" ||
+    errorStr.includes("102") ||
+    errorStr.includes("expired")
+  ) {
+    return "هذا الكوبون منتهي الصلاحية";
+  }
+
+  if (
+    errorStr === "103" ||
+    errorStr.includes("103") ||
+    errorStr.includes("already used")
+  ) {
+    return "لقد استخدمت هذا الكوبون من قبل";
+  }
+
+  if (
+    errorStr === "104" ||
+    errorStr.includes("104") ||
+    errorStr.includes("minimum")
+  ) {
+    return "الحد الأدنى للطلب غير مستوفى";
+  }
+
+  if (errorStr.includes("invalid") || errorStr.includes("not found")) {
+    return "الرجاء إدخال كوبون صالح";
+  }
+
+  if (errorStr.includes("not active") || errorStr.includes("inactive")) {
+    return "هذا الكوبون غير نشط حالياً";
+  }
+
+  if (errorStr.includes("limit") || errorStr.includes("exceeded")) {
+    return "تم تجاوز حد استخدام هذا الكوبون";
+  }
+
+  // Default error message
+  return "رمز الخصم غير صحيح";
+};
 
 export const useCoupon = ({
   totalPrice,
@@ -108,9 +165,10 @@ export const useCoupon = ({
       // });
     } catch (error) {
       console.error("Coupon validation failed:", error);
-      toast.error(
-        error instanceof Error ? error.message : "رمز الخصم غير صحيح"
-      );
+
+      // Use the helper function to get user-friendly error message
+      const userFriendlyError = getErrorMessage(error);
+      toast.error(userFriendlyError);
     } finally {
       setIsValidating(false);
     }

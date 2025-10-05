@@ -40,7 +40,7 @@ export const useItemDetails = (itemId: string | undefined) => {
 
       setItemDetails(normalizedDetails);
     } catch (err) {
-      console.error("Error fetching item details:", err);
+      // console.error("Error fetching item details:", err);
       setError("فشل في تحميل تفاصيل العنصر");
     } finally {
       setLoading(false);

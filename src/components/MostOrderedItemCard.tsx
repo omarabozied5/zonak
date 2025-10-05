@@ -98,13 +98,13 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
       searchParams.set("restaurantName", validRestaurantName);
 
       const navigationUrl = `/item/${item.id}?${searchParams.toString()}`;
-      console.log("Navigating to item details:", {
-        itemId: item.id,
-        placeId: finalPlaceId,
-        merchantId: finalMerchantId,
-        restaurantName: validRestaurantName,
-        fullUrl: navigationUrl,
-      });
+      // console.log("Navigating to item details:", {
+      //   itemId: item.id,
+      //   placeId: finalPlaceId,
+      //   merchantId: finalMerchantId,
+      //   restaurantName: validRestaurantName,
+      //   fullUrl: navigationUrl,
+      // });
 
       navigate(navigationUrl);
       return;
@@ -127,7 +127,7 @@ const MostOrderedItemCard: React.FC<MostOrderedItemCardProps> = ({
         onAddToCart(item);
       }
     } catch (error) {
-      console.error("Error creating cart item:", error);
+      // console.error("Error creating cart item:", error);
       toast.error("حدث خطأ أثناء إضافة العنصر إلى السلة");
     }
   };

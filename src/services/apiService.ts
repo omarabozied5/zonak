@@ -187,7 +187,7 @@ export const apiService = {
 
       // Validate response structure
       if (!response.data) {
-        console.error("❌ No data in response");
+        // console.error("❌ No data in response");
         throw new Error("No data received from server");
       }
 
@@ -652,7 +652,7 @@ export const useOffers = (
       const errorMessage =
         err instanceof Error ? err.message : "Failed to fetch offers";
       setError(errorMessage);
-      console.error("Error fetching offers:", err);
+      // console.error("Error fetching offers:", err);
     } finally {
       setLoading(false);
     }
@@ -678,7 +678,7 @@ export const dataHelpers = {
       id: Number(order.id),
       merchantName: String(order.merchant_name || ""),
       userId: Number(order.user_id),
-      isBusy: Boolean(order.is_busy),
+      isBusy: Number(order.is_busy) === 1 ? false : true, // Keep as number,
       enableDelivery: Boolean(order.enable_delivery),
       profileImage: String(order.profile_image || ""),
       distance:

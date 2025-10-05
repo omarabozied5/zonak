@@ -69,11 +69,11 @@ export const itemService = {
     merchantId?: string | number
   ): Promise<ItemDetails> => {
     try {
-      console.log("Fetching item details for:", {
-        itemId,
-        placeId,
-        merchantId,
-      });
+      // console.log("Fetching item details for:", {
+      //   itemId,
+      //   placeId,
+      //   merchantId,
+      // });
 
       // Build query parameters
       const params: Record<string, string | number> = {};
@@ -174,7 +174,7 @@ export const itemService = {
 
       return transformedData;
     } catch (error) {
-      console.error("Error fetching item details:", error);
+      // console.error("Error fetching item details:", error);
       throw error;
     }
   },

@@ -101,7 +101,7 @@ const Checkout: React.FC = () => {
       setMaxCashbackPerOrder(response.max || null);
       setTotalCashbackToday(response.cash || 0);
     } catch (error) {
-      console.error("Error fetching offers:", error);
+      // console.error("Error fetching offers:", error);
       setOffersData([]);
       setCashbackData(null);
       setCashbackBranch(0);
@@ -349,7 +349,7 @@ const Checkout: React.FC = () => {
               return;
             }
           } catch (paymentError) {
-            console.error("Payment URL error:", paymentError);
+            // console.error("Payment URL error:", paymentError);
             toast.error("فشل في فتح صفحة الدفع");
             return;
           }
@@ -377,15 +377,15 @@ const Checkout: React.FC = () => {
 
         setTimeout(() => {
           orderStore.fetchCurrentOrders().catch((error) => {
-            console.error("Background order refresh failed:", error);
+            // console.error("Background order refresh failed:", error);
           });
         }, 1000);
       } else {
-        console.error("Order submission failed:", response);
+        // console.error("Order submission failed:", response);
         toast.error(response.message || "فشل في إرسال الطلب");
       }
     } catch (error) {
-      console.error("Order submission error:", error);
+      // console.error("Order submission error:", error);
       toast.error("حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى");
     } finally {
       setIsProcessing(false);

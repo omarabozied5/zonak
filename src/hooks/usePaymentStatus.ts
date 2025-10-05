@@ -128,7 +128,7 @@ export const usePaymentStatus = (config: PaymentStatusConfig = {}) => {
 
   const handlePaymentSuccess = useCallback(
     async (paymentId: string, orderId: string) => {
-      console.log("🎉 Payment Success Handler:", { paymentId, orderId });
+      // console.log("🎉 Payment Success Handler:", { paymentId, orderId });
 
       setPaymentStatus("success");
       markPaymentReturnDetected();
@@ -141,12 +141,12 @@ export const usePaymentStatus = (config: PaymentStatusConfig = {}) => {
       // CRITICAL: Clear cart only on successful payment
       try {
         cartStore.clearCart();
-        console.log("✅ Cart cleared after successful payment");
+        // console.log("✅ Cart cleared after successful payment");
 
         // Optional: Clear any saved checkout data
         setTimeout(() => clearPaymentState(), 5000);
       } catch (error) {
-        console.error("Error clearing cart:", error);
+        // console.error("Error clearing cart:", error);
       }
 
       // Call custom callback
@@ -184,7 +184,7 @@ export const usePaymentStatus = (config: PaymentStatusConfig = {}) => {
 
   const handlePaymentFailed = useCallback(
     async (reason?: string) => {
-      console.log("❌ Payment Failed Handler:", { reason });
+      // console.log("❌ Payment Failed Handler:", { reason });
 
       setPaymentStatus("failed");
       markPaymentReturnDetected();
@@ -236,10 +236,10 @@ export const usePaymentStatus = (config: PaymentStatusConfig = {}) => {
   );
 
   const handleRestoreCheckout = useCallback(async () => {
-    console.log("🔄 Restore Checkout Handler");
+    // console.log("🔄 Restore Checkout Handler");
 
     if (!hasFailedPayment()) {
-      console.log("No failed payment to restore");
+      // console.log("No failed payment to restore");
       return;
     }
 
@@ -264,7 +264,7 @@ export const usePaymentStatus = (config: PaymentStatusConfig = {}) => {
         });
       }
     } catch (error) {
-      console.error("Restoration error:", error);
+      // console.error("Restoration error:", error);
       toast.error("خطأ في استعادة بيانات الطلب");
     }
   }, [hasFailedPayment, restoreCheckoutWithValidation, onRestoreNeeded]);

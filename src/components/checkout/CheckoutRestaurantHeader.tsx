@@ -60,7 +60,7 @@ const CheckoutRestaurantHeader: React.FC<CheckoutRestaurantDropdownProps> = ({
           setRestaurant(response.data);
         }
       } catch (err) {
-        console.error("Error fetching restaurant details:", err);
+        // console.error("Error fetching restaurant details:", err);
       } finally {
         setLoading(false);
       }

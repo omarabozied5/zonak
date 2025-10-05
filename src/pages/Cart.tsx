@@ -314,7 +314,7 @@ const Cart = () => {
           {loadingOffers && (
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FBD252] mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600">جاري تحميل العروض...</p>
+              <p className="text-sm text-gray-600">جاري التحميل...</p>
             </div>
           )}
 

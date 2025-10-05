@@ -83,10 +83,10 @@ const MenuCard = ({
 
       // At least one ID must be present
       if (!validPlaceId && !validMerchantId) {
-        console.error("Missing both placeId and merchantId:", {
-          placeId,
-          merchantId,
-        });
+        // console.error("Missing both placeId and merchantId:", {
+        //   placeId,
+        //   merchantId,
+        // });
         toast.error("معلومات المطعم مفقودة - لا يمكن فتح تفاصيل العنصر");
         return;
       }
@@ -122,7 +122,7 @@ const MenuCard = ({
       addItem(cartItem);
       toast.success(`تم إضافة ${item.name} إلى السلة`);
     } catch (error) {
-      console.error("Error creating cart item:", error);
+      // console.error("Error creating cart item:", error);
       toast.error("حدث خطأ أثناء إضافة العنصر إلى السلة");
     }
   };
@@ -220,21 +220,22 @@ const MenuCard = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-r-lg"
-                      onClick={handleDecreaseQuantity}
+                      className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-l-lg"
+                      onClick={handleIncreaseQuantity}
                     >
-                      <Minus className="h-4 w-4" />
+                      <Plus className="h-4 w-4" />
                     </Button>
+
                     <span className="font-semibold text-sm min-w-[32px] text-center px-2">
                       {itemQuantity}
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-l-lg"
-                      onClick={handleIncreaseQuantity}
+                      className="h-8 w-8 p-0 hover:bg-gray-200 text-gray-600 rounded-r-lg"
+                      onClick={handleDecreaseQuantity}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Minus className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (

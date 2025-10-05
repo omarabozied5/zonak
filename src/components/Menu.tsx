@@ -27,40 +27,26 @@ const Menu = ({
   categoryId,
   restaurant,
 }: MenuProps) => {
-  // Pass both userId and placeId to the hook
   const { menuItems, loading, error } = useMenuItems(userId, placeId);
   const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // FIX: Better ID resolution with validation
   const resolvedIds = useMemo(() => {
     let finalPlaceId = placeId;
     let finalMerchantId = merchantId;
 
-    // If we have restaurant data, use it as the source of truth
     if (restaurant) {
       finalPlaceId = restaurant.id?.toString() || placeId;
       finalMerchantId =
         restaurant.user_id?.toString() || merchantId || userId?.toString();
     }
 
-    // Ensure both IDs are strings and not empty
     const validPlaceId = finalPlaceId?.toString()?.trim() || "";
     const validMerchantId = finalMerchantId?.toString()?.trim() || "";
 
-    // If both are missing, log warning but continue
-    if (!validPlaceId && !validMerchantId) {
-      console.warn("Menu: Both placeId and merchantId are missing", {
-        providedPlaceId: placeId,
-        providedMerchantId: merchantId,
-        userId,
-        restaurant: restaurant?.id,
-      });
-    }
-
     return {
       placeId: validPlaceId,
-      merchantId: validMerchantId || validPlaceId, // Use placeId as fallback
+      merchantId: validMerchantId || validPlaceId,
       restaurantName: restaurantName || restaurant?.merchant_name || "مطعم",
     };
   }, [placeId, merchantId, userId, restaurant, restaurantName]);
@@ -101,11 +87,7 @@ const Menu = ({
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      items = items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          item.description?.toLowerCase().includes(query)
-      );
+      items = items.filter((item) => item.name.toLowerCase().includes(query));
     }
 
     return items;
@@ -190,7 +172,10 @@ const Menu = ({
   if (menuItems.length === 0) return <EmptyState isFiltered={false} />;
 
   return (
-    <section className="space-y-6 px-2 sm:px-4 max-w-4xl mx-auto" dir="rtl">
+    <section
+      className="space-y-6 px-2 sm:px-4 max-w-4xl mx-auto pb-32"
+      dir="rtl"
+    >
       <SearchBar value={searchQuery} onChange={setSearchQuery} />
       <Tabs
         value={selectedCategory}
@@ -200,13 +185,13 @@ const Menu = ({
       >
         {/* Categories Navigation */}
         <div className="mb-6 border-b border-gray-200">
-          <ScrollArea className="w-full" dir="rtl">
+          <div className="overflow-x-auto scrollbar-hide" dir="rtl">
             <div className="flex gap-6 px-4 min-w-max">
               {categories.map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`relative pb-2 text-xs font-semibold transition-colors ${
+                  className={`relative pb-2 text-xs font-semibold transition-colors whitespace-nowrap ${
                     selectedCategory === category
                       ? "text-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#F7BD01] after:rounded-full"
                       : "text-gray-500 hover:text-black"
@@ -216,7 +201,7 @@ const Menu = ({
                 </button>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Results count */}

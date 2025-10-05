@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import { ValidatedCoupon } from "../../lib/couponUtils";
 
 interface CouponCardProps {
@@ -130,14 +130,42 @@ const CouponCard: React.FC<CouponCardProps> = ({
   isValidating,
 }) => {
   const [showInput, setShowInput] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const handleAddCouponClick = () => {
     setShowInput(true);
+    setErrorMessage("");
   };
 
   const handleApplyCoupon = async () => {
-    await applyCoupon();
-    setShowInput(false);
+    try {
+      setErrorMessage("");
+      await applyCoupon();
+      setShowInput(false);
+    } catch (error: any) {
+      // Handle error and show user-friendly message
+      const errorCode = error?.response?.data?.error || error?.message;
+
+      // Map error codes to user-friendly messages
+      let displayError = "الرجاء إدخال كوبون صالح";
+
+      if (errorCode === "101" || errorCode === 101) {
+        displayError = "الرجاء إدخال كوبون صالح";
+      } else if (errorCode === "102" || errorCode === 102) {
+        displayError = "هذا الكوبون منتهي الصلاحية";
+      } else if (errorCode === "103" || errorCode === 103) {
+        displayError = "لقد استخدمت هذا الكوبون من قبل";
+      } else if (errorCode === "104" || errorCode === 104) {
+        displayError = "الحد الأدنى للطلب غير مستوفى";
+      } else if (
+        typeof errorCode === "string" &&
+        errorCode.includes("invalid")
+      ) {
+        displayError = "الرجاء إدخال كوبون صالح";
+      }
+
+      setErrorMessage(displayError);
+    }
   };
 
   return (
@@ -172,9 +200,16 @@ const CouponCard: React.FC<CouponCardProps> = ({
           <div className="flex gap-2">
             <input
               value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
+              onChange={(e) => {
+                setCouponCode(e.target.value);
+                setErrorMessage(""); // Clear error when typing
+              }}
               placeholder="أدخل رمز الخصم"
-              className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:border-yellow-400 focus:outline-none"
+              className={`flex-1 p-2 border rounded-lg text-sm focus:outline-none ${
+                errorMessage
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-gray-300 focus:border-yellow-400"
+              }`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !isValidating && couponCode.trim()) {
                   handleApplyCoupon();
@@ -191,12 +226,24 @@ const CouponCard: React.FC<CouponCardProps> = ({
               {isValidating ? "جاري التحقق..." : "تطبيق"}
             </button>
             <button
-              onClick={() => setShowInput(false)}
+              onClick={() => {
+                setShowInput(false);
+                setErrorMessage("");
+                setCouponCode("");
+              }}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
             >
               إلغاء
             </button>
           </div>
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-600">{errorMessage}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

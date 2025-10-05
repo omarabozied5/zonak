@@ -301,9 +301,7 @@ export const clearUserCart = (userId: string | null) => {
       if (typeof window.gc === "function") {
         window.gc();
       }
-    } catch (error) {
-      console.error("Error clearing cart localStorage:", error);
-    }
+    } catch (error) {}
   }
 };
 

@@ -62,7 +62,7 @@ export const useSearch = (
       category_name: order.category_name,
       profile_image: order.profile_image,
       is_favor: order.place?.is_favor || false,
-      is_busy: order.is_busy || 1,
+      is_busy: order.is_busy ?? 1,
       enable_delivery: order.enable_delivery || 0,
       place: order.place,
     };

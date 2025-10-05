@@ -26,8 +26,20 @@ const RestaurantCard = React.memo(
     restaurant: any;
     onRestaurantClick: (user_id: number) => void;
   }) => {
-    // Fixed logic: is_busy: 1 means available, is_busy: 0 means busy
+    // DETAILED DEBUG: Log the exact value and type
+    console.log(`\n=== ${restaurant.merchant_name} ===`);
+    console.log("Raw is_busy value:", restaurant.is_busy);
+    console.log("Type of is_busy:", typeof restaurant.is_busy);
+    console.log("is_busy === 0:", restaurant.is_busy === 0);
+    console.log('is_busy === "0":', restaurant.is_busy === "0");
+    console.log("is_busy == 0:", restaurant.is_busy == 0);
+
+    // Fixed logic: is_busy: 0 means busy, is_busy: 1 means available
     const isBusy = restaurant.is_busy === 0;
+
+    console.log("Final isBusy:", isBusy);
+    console.log("Will show:", isBusy ? "RED مشغول" : "GREEN متاح");
+    console.log("===================\n");
 
     return (
       <Card
@@ -51,13 +63,6 @@ const RestaurantCard = React.memo(
 
           {/* Discount Badge - Top Left */}
           {(() => {
-            // Debug: Log the restaurant data to console
-            // console.log("Restaurant data:", restaurant.merchant_name, {
-            //   cashback_offer: restaurant.cashback_offer,
-            //   place_main_offer: restaurant.place?.main_offer,
-            // });
-
-            // Check for cashback offer first
             if (restaurant.cashback_offer?.discount) {
               return (
                 <div className="absolute top-3 right-3">
@@ -73,15 +78,14 @@ const RestaurantCard = React.memo(
               );
             }
 
-            // Check for main offer as fallback
             if (
               restaurant.place?.main_offer?.offer_type === 3 &&
               restaurant.place.main_offer.discount
             ) {
               return (
                 <div className="absolute top-1 right-1">
-                  <div className="backdrop-blur-md bg-black/20 rounded-md px-4 py-3 font-bold  shadow-md flex flex-col items-center leading-tight">
-                    <span className=" text-[25px]" style={{ color: "#F7BD01" }}>
+                  <div className="backdrop-blur-md bg-black/20 rounded-md px-4 py-3 font-bold shadow-md flex flex-col items-center leading-tight">
+                    <span className="text-[25px]" style={{ color: "#F7BD01" }}>
                       {restaurant.place.main_offer.discount}%
                     </span>
                     <span className="text-[12px]" style={{ color: "#F7BD01" }}>
@@ -95,12 +99,15 @@ const RestaurantCard = React.memo(
             return null;
           })()}
 
-          {/* Status Badge - Top Right */}
+          {/* Status Badge - Top Right - WITH DEBUG INFO */}
           <div className="absolute top-3 left-3">
             <div
               className={`rounded-full px-3 py-1 text-xs font-bold shadow-lg ${
                 isBusy ? "bg-red-500 text-white" : "bg-green-500 text-white"
               }`}
+              title={`is_busy raw value: ${
+                restaurant.is_busy
+              }, type: ${typeof restaurant.is_busy}`}
             >
               {isBusy ? "مشغول" : "متاح"}
             </div>
@@ -117,14 +124,6 @@ const RestaurantCard = React.memo(
               </div>
             </div>
           )}
-
-          {/* Delivery Info Badge - Bottom Right */}
-          {/* <div className="absolute bottom-3 right-3">
-            <div className="bg-[#FF6B6B] text-white rounded-full px-3 py-1 text-xs font-bold shadow-lg">
-              50+ ريال
-              <div className="text-xs opacity-90">أجور توصيل</div>
-            </div>
-          </div> */}
         </div>
 
         <CardContent className="p-4">
@@ -214,15 +213,6 @@ const Home = () => {
     hideResults,
   } = useSearch(latitude, longitude);
 
-  // console.log(
-  //   "Home component - restaurants:",
-  //   restaurants,
-  //   "loading:",
-  //   loading,
-  //   "error:",
-  //   error
-  // );
-
   // Memoized handlers to prevent recreation on every render
   const handleRetry = useCallback(() => {
     fetchRestaurants();
@@ -231,7 +221,6 @@ const Home = () => {
   const handleRestaurantClick = useCallback(
     (user_id: number) => {
       navigate(`/restaurant/${user_id}`);
-      // console.log("Navigating to restaurant:", user_id);
     },
     [navigate]
   );

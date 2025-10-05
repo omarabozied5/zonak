@@ -70,9 +70,7 @@ const CurrentOrders: React.FC = () => {
     const fetchData = async () => {
       try {
         await orderStore.fetchCurrentOrders();
-      } catch (error) {
-        console.error("Failed to fetch orders:", error);
-      }
+      } catch (error) {}
     };
 
     fetchData();
@@ -93,9 +91,7 @@ const CurrentOrders: React.FC = () => {
   const handleRefresh = useCallback(async () => {
     try {
       await orderStore.fetchCurrentOrders();
-    } catch (error) {
-      console.error("Refresh failed:", error);
-    }
+    } catch (error) {}
   }, [orderStore]);
 
   // OPTIMIZED: Memoized navigation handlers
