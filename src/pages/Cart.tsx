@@ -1,4 +1,4 @@
-// Enhanced Cart.tsx with responsive design fixes
+// Enhanced Cart.tsx with multi-restaurant validation
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore, CartItem as StoreCartItem } from "@/stores/useCartStore";
@@ -14,6 +14,7 @@ import CartCTAButton from "@/components/Cart/CartCTAButton";
 import CartEmptyState from "@/components/Cart/EmptyCartState";
 import CartRestaurantDropdown from "@/components/Cart/CartResturantDropDown";
 import CartOfferSection from "@/components/Cart/CartOfferSection";
+import MultiRestaurantWarning from "@/components/Cart/MultiRestaurantWarning";
 
 import { CartItem, Restaurant, ValidOffersItem } from "../types/types";
 import { apiService } from "@/services/apiService";
@@ -71,18 +72,14 @@ const Cart = () => {
         try {
           setLoadingOffers(true);
 
-          // Use the same endpoint as checkout page for consistent offers
           const [restaurantResponse, offersResponse] = await Promise.all([
-            // Fetch restaurant details
             apiService.fetchRestaurantDetails(items[0].placeId),
-            // Fetch offers from cart order info (same as checkout)
             apiService.fetchCartOrderInfo(
               items[0].restaurantId,
               items[0].placeId
             ),
           ]);
 
-          // Set restaurant data
           if (
             restaurantResponse.message === "success" &&
             restaurantResponse.data
@@ -90,7 +87,6 @@ const Cart = () => {
             setRestaurant(restaurantResponse.data);
           }
 
-          // Set offers from cart order info (consistent with checkout)
           if (offersResponse.offers && offersResponse.offers.length > 0) {
             setOffers(offersResponse.offers);
           } else {
@@ -107,6 +103,7 @@ const Cart = () => {
 
     fetchRestaurantData();
   }, [items]);
+
   // Redirect unauthenticated users
   useEffect(() => {
     if (!isAuthenticated) {
@@ -128,53 +125,19 @@ const Cart = () => {
     navigate("/");
   };
 
-  // Navigate to add more items from the same restaurant
   const handleAddMoreItems = (): void => {
     if (items.length > 0) {
       navigate(`/restaurant/${items[0].placeId}`);
     }
   };
 
-  // Handle offer click
   const handleOfferClick = (offer: ValidOffersItem): void => {
-    // Navigate to offer details or apply offer logic
-    // console.log("Offer clicked:", offer);
-    // toast.success("تم تحديد العرض بنجاح");
-    // TODO: Implement offer application logic
+    // Implement offer application logic
   };
 
-  // Fixed edit item handler with proper customization check
-  const handleEditItem = (item: CartItem): void => {
-    try {
-      // Check if item can be edited (has customizations)
-      if (!itemHasCustomizations(item)) {
-        toast.error("هذا العنصر لا يحتوي على خيارات قابلة للتعديل");
-        return;
-      }
-
-      const baseItemId = item.productId || item.id.split("-")[0];
-      setEditingItem(item.id);
-
-      // Preserve restaurant information in edit navigation
-      const editUrl = new URL(`/item/${baseItemId}`, window.location.origin);
-      editUrl.searchParams.set("edit", item.id);
-      editUrl.searchParams.set("placeId", item.placeId || "");
-      editUrl.searchParams.set("merchantId", item.restaurantId || "");
-      editUrl.searchParams.set("restaurantName", item.restaurantName || "");
-
-      navigate(editUrl.pathname + editUrl.search);
-    } catch (error) {
-      // console.error("Error editing item:", error);
-      toast.error("حدث خطأ أثناء تعديل الصنف");
-    }
-  };
-
-  // Helper function to check if item has customizations
   const itemHasCustomizations = (item: CartItem): boolean => {
-    // Check if item is marked as customizable
     if (item.isCustomizable) return true;
 
-    // Check if item has any selected options that make it customizable
     if (item.selectedOptions) {
       const hasRequiredOptions =
         item.selectedOptions.requiredOptions &&
@@ -195,8 +158,29 @@ const Cart = () => {
       );
     }
 
-    // Fallback to store's hasCustomizations function
     return hasCustomizations(item);
+  };
+
+  const handleEditItem = (item: CartItem): void => {
+    try {
+      if (!itemHasCustomizations(item)) {
+        toast.error("هذا العنصر لا يحتوي على خيارات قابلة للتعديل");
+        return;
+      }
+
+      const baseItemId = item.productId || item.id.split("-")[0];
+      setEditingItem(item.id);
+
+      const editUrl = new URL(`/item/${baseItemId}`, window.location.origin);
+      editUrl.searchParams.set("edit", item.id);
+      editUrl.searchParams.set("placeId", item.placeId || "");
+      editUrl.searchParams.set("merchantId", item.restaurantId || "");
+      editUrl.searchParams.set("restaurantName", item.restaurantName || "");
+
+      navigate(editUrl.pathname + editUrl.search);
+    } catch (error) {
+      toast.error("حدث خطأ أثناء تعديل الصنف");
+    }
   };
 
   const handleQuantityUpdate = (itemId: string, newQuantity: number): void => {
@@ -233,7 +217,11 @@ const Cart = () => {
         return;
       }
 
-      // Navigate to checkout
+      if (hasMultipleRestaurants) {
+        toast.error("يجب الطلب من مطعم واحد فقط");
+        return;
+      }
+
       navigate("/checkout");
     } catch (error) {
       console.error("Error proceeding to checkout:", error);
@@ -241,20 +229,62 @@ const Cart = () => {
     }
   };
 
-  // Check if checkout should be disabled
-  const isCheckoutDisabled = cartValidation.isCheckoutDisabled;
+  // Check for multiple restaurants
+  const getRestaurantGroups = () => {
+    const groups = new Map<
+      string,
+      { restaurantId: string; restaurantName: string; itemCount: number }
+    >();
 
-  // Log discount information for debugging
-  // React.useEffect(() => {
-  //   if (totalItemDiscounts > 0) {
-  //     console.log("Cart discount summary:", {
-  //       originalTotal: originalTotalPrice,
-  //       currentTotal: totalPrice,
-  //       itemDiscounts: totalItemDiscounts,
-  //       savings: totalItemDiscounts,
-  //     });
-  //   }
-  // }, [totalItemDiscounts, originalTotalPrice, totalPrice]);
+    items.forEach((item) => {
+      const restaurantId = item.restaurantId || item.placeId || "";
+      if (restaurantId) {
+        if (groups.has(restaurantId)) {
+          const existing = groups.get(restaurantId)!;
+          groups.set(restaurantId, {
+            ...existing,
+            itemCount: existing.itemCount + item.quantity,
+          });
+        } else {
+          groups.set(restaurantId, {
+            restaurantId,
+            restaurantName: item.restaurantName || "مطعم",
+            itemCount: item.quantity,
+          });
+        }
+      }
+    });
+
+    return Array.from(groups.values());
+  };
+
+  const restaurantGroups = getRestaurantGroups();
+  const hasMultipleRestaurants = restaurantGroups.length > 1;
+
+  // Handle clearing items from other restaurants
+  const handleClearOtherRestaurants = (keepRestaurantId: string) => {
+    try {
+      const itemsToRemove = items.filter(
+        (item) => (item.restaurantId || item.placeId) !== keepRestaurantId
+      );
+
+      itemsToRemove.forEach((item) => removeItem(item.id));
+
+      const keptRestaurant = restaurantGroups.find(
+        (r) => r.restaurantId === keepRestaurantId
+      );
+      toast.success(
+        `تم الاحتفاظ بعناصر ${keptRestaurant?.restaurantName || "المطعم"} فقط`
+      );
+    } catch (error) {
+      console.error("Error clearing other restaurants:", error);
+      toast.error("حدث خطأ أثناء تحديث السلة");
+    }
+  };
+
+  // Check if checkout should be disabled
+  const isCheckoutDisabled =
+    cartValidation.isCheckoutDisabled || hasMultipleRestaurants;
 
   // If cart is empty, show empty state
   if (cartSummary.isEmpty) {
@@ -268,16 +298,21 @@ const Cart = () => {
     );
   }
 
-  // console.log("Cart Items:", items);
-
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* Fixed Container with proper responsive sizing */}
       <div className="w-full max-w-md mx-auto bg-gray-50 relative">
         <CartCheckoutHeader onBack={handleGoBack} />
 
         {/* Main Content with proper bottom padding for fixed CTA */}
         <div className="pt-4 pb-28 space-y-4 px-4">
+          {/* Multi-Restaurant Warning - Show at the top if multiple restaurants */}
+          {hasMultipleRestaurants && (
+            <MultiRestaurantWarning
+              restaurants={restaurantGroups}
+              onClearOtherRestaurants={handleClearOtherRestaurants}
+            />
+          )}
+
           {/* Offers Section */}
           {offers.length > 0 && !loadingOffers && (
             <div className="-mx-4">
@@ -326,7 +361,7 @@ const Cart = () => {
           />
         </div>
 
-        {/* Fixed Bottom CTA Button - Positioned properly */}
+        {/* Fixed Bottom CTA Button */}
         <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md z-50">
           <CartCTAButton
             total={totalPrice}
