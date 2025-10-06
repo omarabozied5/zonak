@@ -5,12 +5,14 @@ interface BackButtonProps {
   className?: string;
   showOnHome?: boolean;
   onClick?: () => void;
+  fallbackRoute?: string; // NEW: Custom fallback route
 }
 
 const BackButton: React.FC<BackButtonProps> = ({
   className = "",
   showOnHome = false,
   onClick,
+  fallbackRoute,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,6 +22,9 @@ const BackButton: React.FC<BackButtonProps> = ({
   const handleClick = () => {
     if (onClick) {
       onClick();
+    } else if (fallbackRoute) {
+      // Use fallback route if provided (for payment flows)
+      navigate(fallbackRoute, { replace: true });
     } else {
       navigate(-1);
     }

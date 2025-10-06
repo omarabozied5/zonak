@@ -20,6 +20,7 @@ const PaymentFailed: React.FC = () => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
+          // Replace history to prevent going back to MyFatoorah
           navigate("/checkout", {
             replace: true,
             state: { fromFailedPayment: true },
@@ -33,6 +34,14 @@ const PaymentFailed: React.FC = () => {
     return () => clearInterval(timer);
   }, [navigate, setPaymentStatus, markPaymentReturnDetected]);
 
+  const handleManualReturn = () => {
+    // Replace history immediately
+    navigate("/checkout", {
+      replace: true,
+      state: { fromFailedPayment: true },
+    });
+  };
+
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-rose-50"
@@ -42,17 +51,21 @@ const PaymentFailed: React.FC = () => {
         <div className="w-24 h-24 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center animate-pulse">
           <XCircle className="w-16 h-16 text-red-600" />
         </div>
+
         <h1 className="text-3xl font-bold text-red-800 mb-4">
           فشلت عملية الدفع
         </h1>
+
         <p className="text-red-700 mb-6 text-lg">
           لم تتم عملية الدفع بنجاح، يرجى المحاولة مرة أخرى
         </p>
+
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <p className="text-red-800 text-sm">
             تم الاحتفاظ بجميع العناصر في السلة
           </p>
         </div>
+
         <div className="space-y-4">
           <div className="text-red-600 text-lg font-medium">
             جاري إعادة التوجيه للسلة...
@@ -61,13 +74,9 @@ const PaymentFailed: React.FC = () => {
             {countdown}
           </div>
         </div>
+
         <button
-          onClick={() =>
-            navigate("/checkout", {
-              replace: true,
-              state: { fromFailedPayment: true },
-            })
-          }
+          onClick={handleManualReturn}
           className="mt-8 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
           العودة للسلة الآن

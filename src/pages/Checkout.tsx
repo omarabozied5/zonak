@@ -1,6 +1,6 @@
-// Updated Checkout.tsx with cashback integration
+// Updated Checkout.tsx with payment flow navigation fixes
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -11,11 +11,11 @@ import { usePaymentStore } from "@/stores/usePaymentStore";
 import CheckoutHeader from "../components/checkout/CheckoutHeader";
 import OffersSection from "../components/checkout/OfferSection";
 import CouponCard from "../components/checkout/CouponCard";
-import OrderSummaryCard from "../components/checkout/OrderSummaryCard";
 import PriceBreakdown from "../components/checkout/PriceBreakdown";
 import PaymentMethodCard from "../components/checkout/PaymentMethodCard";
 import LoyaltyBanner from "../components/checkout/LoyaltyBanner";
 import CheckoutCTAButton from "../components/checkout/CheckoutCTAButton";
+import CheckoutRestaurantHeader from "@/components/checkout/CheckoutRestaurantHeader";
 
 // Hooks and Utils
 import { useCoupon } from "../hooks/useCoupon";
@@ -27,8 +27,7 @@ import {
   calculateOriginalTotal,
 } from "../lib/cartUtils";
 import { apiService, buildOrderPayload } from "../services/apiService";
-import { OrderResponse, CartItem, User, Restaurant } from "../types/types";
-import CheckoutRestaurantHeader from "@/components/checkout/CheckoutRestaurantHeader";
+import { OrderResponse, CartItem, Restaurant } from "../types/types";
 
 interface OrderValidation {
   isValid: boolean;
@@ -36,7 +35,6 @@ interface OrderValidation {
   merchantId?: number;
 }
 
-// Cashback data interface
 interface CashbackData {
   id: number;
   discount: number;
@@ -46,7 +44,6 @@ interface CashbackData {
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuthStore();
   const cartStore = useCartStore(user?.id);
   const { items, totalPrice, clearCart } = cartStore;
@@ -54,19 +51,19 @@ const Checkout: React.FC = () => {
   const orderStore = useOrderStore(user?.id?.toString());
   const paymentStore = usePaymentStore();
 
+  // ⭐ NEW: Detect if coming from failed payment
+  const fromFailedPayment = location.state?.fromFailedPayment || false;
+
   const [notes, setNotes] = useState<string>("");
   const [isLoadingRestaurant, setIsLoadingRestaurant] =
     useState<boolean>(false);
-
   const [paymentType, setPaymentType] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
 
-  // Get placeId and merchantId from first item
   const placeId = items.length > 0 ? items[0].placeId : "";
   const merchantId = items.length > 0 ? items[0].restaurantId : "";
 
-  // State for offers and cashback data
   const [offersData, setOffersData] = useState<any[]>([]);
   const [offersLoading, setOffersLoading] = useState<boolean>(false);
   const [cashbackData, setCashbackData] = useState<CashbackData | null>(null);
@@ -76,18 +73,12 @@ const Checkout: React.FC = () => {
   );
   const [totalCashbackToday, setTotalCashbackToday] = useState<number>(0);
 
-  // Function to fetch offers and cashback data
   const fetchOffers = async () => {
     if (!merchantId || !placeId) return;
-
     setOffersLoading(true);
     try {
       const response = await apiService.fetchCartOrderInfo(merchantId, placeId);
-
-      // Set offers data
       setOffersData(response.offers || []);
-
-      // Extract cashback data from API response
       setCashbackData(
         response.cashback
           ? {
@@ -101,7 +92,6 @@ const Checkout: React.FC = () => {
       setMaxCashbackPerOrder(response.max || null);
       setTotalCashbackToday(response.cash || 0);
     } catch (error) {
-      // console.error("Error fetching offers:", error);
       setOffersData([]);
       setCashbackData(null);
       setCashbackBranch(0);
@@ -125,7 +115,6 @@ const Checkout: React.FC = () => {
     placeId,
   });
 
-  // Use the restoration hook
   const { restorationState, applyRestoredState, isRestoring } =
     useCheckoutRestoration(user?.id || null, cartStore, {
       notes,
@@ -133,7 +122,6 @@ const Checkout: React.FC = () => {
       couponCode,
     });
 
-  // Calculate discount information
   const totalItemDiscounts = calculateTotalItemDiscounts(items);
   const originalTotalPrice = calculateOriginalTotal(items);
   const couponDiscountAmount = calculateDiscountAmount(
@@ -142,7 +130,6 @@ const Checkout: React.FC = () => {
   );
   const total = totalPrice - couponDiscountAmount;
 
-  // Fetch offers when component mounts or when merchantId/placeId changes
   useEffect(() => {
     if (merchantId && placeId) {
       fetchOffers();
@@ -156,7 +143,6 @@ const Checkout: React.FC = () => {
           const response = await apiService.fetchRestaurantDetails(
             items[0].placeId
           );
-
           if (response.message === "success" && response.data) {
             setRestaurant(response.data);
           } else {
@@ -167,11 +153,9 @@ const Checkout: React.FC = () => {
         }
       }
     };
-
     fetchRestaurantDetails();
   }, [items]);
 
-  // Apply restored state when available
   useEffect(() => {
     if (isRestoring) {
       applyRestoredState(
@@ -198,8 +182,15 @@ const Checkout: React.FC = () => {
 
   if (!isAuthenticated || items.length === 0) return null;
 
+  // ⭐ UPDATED: Smart back navigation
   const handleBack = (): void => {
-    navigate("/cart");
+    if (fromFailedPayment) {
+      // Coming from failed payment - replace history to avoid MyFatoorah
+      navigate("/cart", { replace: true });
+    } else {
+      // Normal navigation
+      navigate("/cart");
+    }
   };
 
   const validateOrderData = (): OrderValidation => {
@@ -278,7 +269,6 @@ const Checkout: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      // Create comprehensive checkout data snapshot
       const checkoutData = {
         items: [...items],
         totalPrice,
@@ -349,7 +339,6 @@ const Checkout: React.FC = () => {
               return;
             }
           } catch (paymentError) {
-            // console.error("Payment URL error:", paymentError);
             toast.error("فشل في فتح صفحة الدفع");
             return;
           }
@@ -376,16 +365,12 @@ const Checkout: React.FC = () => {
         }
 
         setTimeout(() => {
-          orderStore.fetchCurrentOrders().catch((error) => {
-            // console.error("Background order refresh failed:", error);
-          });
+          orderStore.fetchCurrentOrders().catch((error) => {});
         }, 1000);
       } else {
-        // console.error("Order submission failed:", response);
         toast.error(response.message || "فشل في إرسال الطلب");
       }
     } catch (error) {
-      // console.error("Order submission error:", error);
       toast.error("حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى");
     } finally {
       setIsProcessing(false);
@@ -395,25 +380,34 @@ const Checkout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <div className="w-full max-w-full sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto bg-gray-50 relative">
-        <CheckoutHeader onBack={handleBack} />
+        {/* ⭐ UPDATED: Pass fromFailedPayment flag */}
+        <CheckoutHeader
+          onBack={handleBack}
+          fromFailedPayment={fromFailedPayment}
+        />
 
-        {/* Show restoration indicator */}
         {isRestoring && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg mx-3 sm:mx-4 mt-4 mb-3">
             <p className="text-blue-700 text-sm p-3">
-              🔄 جاري استعادة بيانات الطلب السابق...
+              جاري استعادة بيانات الطلب السابق...
             </p>
           </div>
         )}
 
-        {/* Main content with proper spacing */}
+        {/* ⭐ NEW: Failed payment notice */}
+        {fromFailedPayment && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg mx-3 sm:mx-4 mt-4 mb-3">
+            <p className="text-amber-800 text-sm p-3">
+              💡 تم الاحتفاظ بجميع العناصر في السلة. يمكنك المحاولة مرة أخرى.
+            </p>
+          </div>
+        )}
+
         <div className="px-3 sm:px-4 md:px-5 pb-32 sm:pb-36 relative space-y-4 sm:space-y-5">
-          {/* العروض Section */}
           <div className="pt-4 sm:pt-5">
             <OffersSection offers={offersData} loading={offersLoading} />
           </div>
 
-          {/* القسائم Section */}
           <div>
             <CouponCard
               appliedCoupon={appliedCoupon}
@@ -425,7 +419,6 @@ const Checkout: React.FC = () => {
             />
           </div>
 
-          {/* ملخص الطلب Section */}
           <div>
             {isLoadingRestaurant ? (
               <div className="bg-white rounded-lg p-3 sm:p-4">
@@ -454,7 +447,6 @@ const Checkout: React.FC = () => {
             )}
           </div>
 
-          {/* Price Breakdown */}
           <div>
             <PriceBreakdown
               totalPrice={totalPrice}
@@ -465,7 +457,6 @@ const Checkout: React.FC = () => {
             />
           </div>
 
-          {/* طريقة الدفع Section */}
           <div>
             <PaymentMethodCard
               paymentType={paymentType}
@@ -474,7 +465,6 @@ const Checkout: React.FC = () => {
             />
           </div>
 
-          {/* Loyalty Points Banner */}
           <div>
             <LoyaltyBanner
               totalSavings={totalItemDiscounts + couponDiscountAmount}
@@ -487,7 +477,6 @@ const Checkout: React.FC = () => {
           </div>
         </div>
 
-        {/* Fixed Bottom CTA Button */}
         <CheckoutCTAButton
           total={total}
           isProcessing={isProcessing}
