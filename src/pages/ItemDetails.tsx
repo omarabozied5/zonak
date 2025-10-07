@@ -431,9 +431,9 @@ const ItemDetails = () => {
         className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         dir="rtl"
       >
-        <div className="w-full max-w-[390px] sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-2xl sm:rounded-3xl max-h-[92vh] sm:max-h-[90vh] flex flex-col">
+        <div className="w-full max-w-[390px] sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-2xl sm:rounded-3xl max-h-[88vh] sm:max-h-[90vh] flex flex-col">
           {/* Header - Responsive */}
-          <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-4 sm:py-4 border-b border-gray-200 flex-shrink-0">
             <Button
               variant="ghost"
               onClick={() =>
