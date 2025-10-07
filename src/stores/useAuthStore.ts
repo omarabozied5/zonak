@@ -56,9 +56,9 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         });
 
-        console.log(
-          `✅ User logged in: ${user.id} - ${user.first_name} ${user.last_name}`
-        );
+        // console.log(
+        //   `✅ User logged in: ${user.id} - ${user.first_name} ${user.last_name}`
+        // );
       },
 
       logout: () => {
@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         });
 
-        console.log("🚪 User logged out");
+        // console.log("🚪 User logged out");
       },
 
       updateUser: (userData: Partial<User>) => {
@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthState>()(
           };
 
           set({ user: updatedUser });
-          console.log(`📝 User updated: ${updatedUser.id}`);
+          // console.log(`📝 User updated: ${updatedUser.id}`);
         }
       },
 

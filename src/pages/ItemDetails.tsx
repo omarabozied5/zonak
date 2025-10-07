@@ -8,8 +8,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { X } from "lucide-react";
-import Navigation from "@/components/Navigation";
-import FloatingCart from "@/components/FloatingCart";
+
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -21,14 +20,11 @@ import { toast } from "sonner";
 import LoadingState from "../components/itemDetails/LoadingState";
 import ErrorState from "../components/itemDetails/ErrorState";
 import EditModeIndicator from "../components/itemDetails/EditModeIndicator";
-import ImageSection from "../components/itemDetails/ImageSection";
-import ItemInfo from "../components/itemDetails/ItemInfo";
+
 import OptionGroups from "../components/itemDetails/OptionGroups";
 import NotesSection from "../components/itemDetails/NotesSection";
 import QuantityCartSection from "../components/itemDetails/QuantityCartSection";
 import ConfirmationDialog from "@/components/currentOrder/ConfirmationDialog";
-import CartSummary from "@/components/itemDetails/CartSummary";
-import { it } from "node:test";
 
 const ItemDetails = () => {
   const { itemId } = useParams();
@@ -305,15 +301,15 @@ const ItemDetails = () => {
   };
 
   const handleAddToCart = () => {
-    console.log("🔍 ItemDetails - URL Params:", {
-      urlPlaceId: urlPlaceId,
-      urlMerchantId: urlMerchantId,
-      urlRestaurantName: urlRestaurantName,
-      searchParamsRaw: searchParams.toString(),
-      finalPlaceId: finalPlaceId,
-      finalMerchantId: finalMerchantId,
-      finalRestaurantName: finalRestaurantName,
-    });
+    // console.log("🔍 ItemDetails - URL Params:", {
+    //   urlPlaceId: urlPlaceId,
+    //   urlMerchantId: urlMerchantId,
+    //   urlRestaurantName: urlRestaurantName,
+    //   searchParamsRaw: searchParams.toString(),
+    //   finalPlaceId: finalPlaceId,
+    //   finalMerchantId: finalMerchantId,
+    //   finalRestaurantName: finalRestaurantName,
+    // });
     // Check authentication first
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
@@ -441,35 +437,35 @@ const ItemDetails = () => {
   const optionsPrice = calculateOptionsTotal();
   const totalPrice = calculateTotalPrice();
 
-  console.log("🔍 Complete Debug State:", {
-    // Data structure
-    optionGroups: itemDetails?.optionGroups,
+  // console.log("🔍 Complete Debug State:", {
+  //   // Data structure
+  //   optionGroups: itemDetails?.optionGroups,
 
-    // Selection state
-    selectedOptions,
-    selectedOptional,
+  //   // Selection state
+  //   selectedOptions,
+  //   selectedOptional,
 
-    // Validation checks
-    requiredGroups: itemDetails?.optionGroups?.filter(
-      (group) => group.type === "pick"
-    ),
-    canAddToCartResult: canAddToCart(),
+  //   // Validation checks
+  //   requiredGroups: itemDetails?.optionGroups?.filter(
+  //     (group) => group.type === "pick"
+  //   ),
+  //   canAddToCartResult: canAddToCart(),
 
-    // Individual validation pieces
-    isAuthenticated,
-    isItemAvailable,
-    canAddToCartFinal,
+  //   // Individual validation pieces
+  //   isAuthenticated,
+  //   isItemAvailable,
+  //   canAddToCartFinal,
 
-    // Check each required group individually
-    requiredGroupsValidation: itemDetails?.optionGroups
-      ?.filter((group) => group.type === "pick")
-      ?.map((group) => ({
-        groupId: group.id,
-        groupTitle: group.title,
-        hasSelection: !!selectedOptions[group.id],
-        selectedValue: selectedOptions[group.id],
-      })),
-  });
+  //   // Check each required group individually
+  //   requiredGroupsValidation: itemDetails?.optionGroups
+  //     ?.filter((group) => group.type === "pick")
+  //     ?.map((group) => ({
+  //       groupId: group.id,
+  //       groupTitle: group.title,
+  //       hasSelection: !!selectedOptions[group.id],
+  //       selectedValue: selectedOptions[group.id],
+  //     })),
+  // });
 
   return (
     <>
