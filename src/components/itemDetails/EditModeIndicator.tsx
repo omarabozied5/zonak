@@ -13,12 +13,12 @@ const EditModeIndicator: React.FC<EditModeIndicatorProps> = ({
   }
 
   return (
-    <div className="mb-4 sm:mb-6">
+    <div className="mb-3 sm:mb-4 md:mb-6">
       <Card className="border-[#FFAA01]/30 bg-[#FFAA01]/5">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-[#FFAA01] rounded-full"></div>
-            <span className="text-[#053468] font-medium text-sm sm:text-base">
+        <CardContent className="p-2.5 sm:p-3 md:p-4">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#FFAA01] rounded-full"></div>
+            <span className="text-[#053468] font-medium text-xs sm:text-sm md:text-base">
               وضع التعديل - يمكنك تغيير خيارات العنصر
             </span>
           </div>

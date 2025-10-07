@@ -1,12 +1,7 @@
-// Updated ItemDetails.tsx - Responsive fullscreen modal design with proper RTL and dynamic data
+// Updated ItemDetails.tsx - Responsive for iPhone 13 (No new components)
 
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  useParams,
-  useNavigate,
-  useSearchParams,
-  useLocation,
-} from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +15,6 @@ import { toast } from "sonner";
 import LoadingState from "../components/itemDetails/LoadingState";
 import ErrorState from "../components/itemDetails/ErrorState";
 import EditModeIndicator from "../components/itemDetails/EditModeIndicator";
-
 import OptionGroups from "../components/itemDetails/OptionGroups";
 import NotesSection from "../components/itemDetails/NotesSection";
 import QuantityCartSection from "../components/itemDetails/QuantityCartSection";
@@ -29,7 +23,6 @@ import ConfirmationDialog from "@/components/currentOrder/ConfirmationDialog";
 const ItemDetails = () => {
   const { itemId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { itemDetails, loading, error } = useItemDetails(itemId);
 
@@ -301,15 +294,6 @@ const ItemDetails = () => {
   };
 
   const handleAddToCart = () => {
-    // console.log("🔍 ItemDetails - URL Params:", {
-    //   urlPlaceId: urlPlaceId,
-    //   urlMerchantId: urlMerchantId,
-    //   urlRestaurantName: urlRestaurantName,
-    //   searchParamsRaw: searchParams.toString(),
-    //   finalPlaceId: finalPlaceId,
-    //   finalMerchantId: finalMerchantId,
-    //   finalRestaurantName: finalRestaurantName,
-    // });
     // Check authentication first
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لإضافة العناصر إلى السلة");
@@ -437,75 +421,45 @@ const ItemDetails = () => {
   const optionsPrice = calculateOptionsTotal();
   const totalPrice = calculateTotalPrice();
 
-  // console.log("🔍 Complete Debug State:", {
-  //   // Data structure
-  //   optionGroups: itemDetails?.optionGroups,
-
-  //   // Selection state
-  //   selectedOptions,
-  //   selectedOptional,
-
-  //   // Validation checks
-  //   requiredGroups: itemDetails?.optionGroups?.filter(
-  //     (group) => group.type === "pick"
-  //   ),
-  //   canAddToCartResult: canAddToCart(),
-
-  //   // Individual validation pieces
-  //   isAuthenticated,
-  //   isItemAvailable,
-  //   canAddToCartFinal,
-
-  //   // Check each required group individually
-  //   requiredGroupsValidation: itemDetails?.optionGroups
-  //     ?.filter((group) => group.type === "pick")
-  //     ?.map((group) => ({
-  //       groupId: group.id,
-  //       groupTitle: group.title,
-  //       hasSelection: !!selectedOptions[group.id],
-  //       selectedValue: selectedOptions[group.id],
-  //     })),
-  // });
-
   return (
     <>
       {/* Fullscreen Dark Overlay */}
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50" />
 
-      {/* Main Modal Container - Responsive */}
+      {/* Main Modal Container - iPhone 13 Optimized Responsive */}
       <div
         className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         dir="rtl"
       >
-        <div className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200">
+        <div className="w-full max-w-[390px] sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white rounded-t-2xl sm:rounded-3xl max-h-[92vh] sm:max-h-[90vh] flex flex-col">
+          {/* Header - Responsive */}
+          <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 flex-shrink-0">
             <Button
               variant="ghost"
               onClick={() =>
                 handleNavigation(() => navigate(isEditMode ? "/cart" : -1))
               }
-              className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
+              className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-gray-600 hover:text-gray-800 flex-shrink-0"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
 
-            <div className="flex items-center gap-2">
-              <div className="bg-yellow-400 text-white px-3 py-1 rounded text-sm font-bold">
+            <div className="flex items-center gap-2 flex-1 justify-end">
+              <div className="bg-yellow-400 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-bold truncate max-w-[200px] sm:max-w-none">
                 {finalRestaurantName}
               </div>
             </div>
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
               {/* Edit Mode Indicator */}
               <EditModeIndicator isEditMode={isEditMode} />
 
-              {/* Item Title - Responsive */}
-              <div className="flex items-center gap-3 text-right">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+              {/* Item Title - Compact for iPhone 13 */}
+              <div className="flex items-center gap-2 sm:gap-3 text-right">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   <img
                     src={
                       itemDetails.images[0]?.image_url ||
@@ -520,15 +474,15 @@ const ItemDetails = () => {
                     }}
                   />
                 </div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex-1">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 flex-1 leading-tight">
                   {itemDetails.name}
                 </h1>
               </div>
 
               {/* Content Grid - Two columns on larger screens */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Left Column - Options and Notes */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Option Groups */}
                   <OptionGroups
                     optionGroups={itemDetails.optionGroups}
@@ -578,7 +532,7 @@ const ItemDetails = () => {
               </div>
 
               {/* Mobile-only Quantity Cart Section */}
-              <div className="lg:hidden">
+              <div className="lg:hidden pb-2">
                 <QuantityCartSection
                   quantity={quantity}
                   setQuantity={setQuantity}

@@ -37,7 +37,7 @@ const ImageSection: React.FC<ImageSectionProps> = ({
           />
         ) : (
           <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <span className="text-gray-400 text-lg">
+            <span className="text-gray-400 text-sm sm:text-base md:text-lg">
               لا توجد صورة
             </span>
           </div>
@@ -48,28 +48,31 @@ const ImageSection: React.FC<ImageSectionProps> = ({
           <>
             <button
               onClick={() => navigateImage("prev")}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-all"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
             <button
               onClick={() => navigateImage("next")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-all"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </>
         )}
 
         {/* Badges */}
-        <div className="absolute top-4 right-4 flex gap-2">
+        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex gap-1.5 sm:gap-2">
           {isCombo && (
-            <Badge className="bg-[#E49B0F] text-white font-semibold">
+            <Badge className="bg-[#E49B0F] text-white font-semibold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
               كومبو
             </Badge>
           )}
           {!isItemActive && (
-            <Badge variant="destructive">
+            <Badge
+              variant="destructive"
+              className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5"
+            >
               غير متوفر
             </Badge>
           )}
@@ -77,12 +80,12 @@ const ImageSection: React.FC<ImageSectionProps> = ({
 
         {/* Image Indicators */}
         {images.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+          <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2">
             {images.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentImageIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
+                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all ${
                   index === currentImageIndex ? "bg-[#E49B0F]" : "bg-white/70"
                 }`}
               />
