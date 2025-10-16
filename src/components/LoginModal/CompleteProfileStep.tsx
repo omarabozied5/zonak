@@ -70,17 +70,11 @@ export const CompleteProfileStep: React.FC<CompleteProfileStepProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-[#FFAA01] to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <UserPlus className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-[#053468] mb-2">أكمل بياناتك</h2>
-        <p className="text-gray-600 text-sm mb-3">
-          أدخل اسمك الكامل لإنشاء حسابك
-        </p>
+      <div className="text-right">
+        <h2 className="text-2xl font-bold text-black mb-2">مرحبا بك في زونك</h2>
 
         {/* Phone Display */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+        {/* <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
           <p className="text-xs text-gray-600 mb-1">رقم الجوال المؤكد</p>
           <p
             className="font-medium text-[#053468] text-base"
@@ -89,7 +83,7 @@ export const CompleteProfileStep: React.FC<CompleteProfileStepProps> = ({
           >
             {formattedPhone}
           </p>
-        </div>
+        </div> */}
       </div>
 
       {/* Form */}
@@ -181,8 +175,7 @@ export const CompleteProfileStep: React.FC<CompleteProfileStepProps> = ({
             </span>
           ) : (
             <>
-              إنشاء الحساب
-              <UserPlus className="w-4 h-4 mr-2" />
+              إستمرار <UserPlus className="w-4 h-4 mr-2" />
             </>
           )}
         </Button>

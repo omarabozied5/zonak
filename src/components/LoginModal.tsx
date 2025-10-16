@@ -94,7 +94,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       setStep("otp");
       toast.success("تم إرسال رمز التحقق إلى جوالك");
     } catch (error) {
-      console.error("Send OTP error:", error);
+      // console.error("Send OTP error:", error);
       toast.error(
         error instanceof Error ? error.message : "فشل في إرسال رمز التحقق"
       );
@@ -153,7 +153,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           onSuccess?.();
         }
       } catch (error) {
-        console.error("OTP verification error:", error);
+        // console.error("OTP verification error:", error);
         toast.error(
           error instanceof Error ? error.message : "فشل في تأكيد رمز التحقق"
         );
@@ -202,7 +202,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       onClose();
       onSuccess?.();
     } catch (error) {
-      console.error("Complete profile error:", error);
+      // console.error("Complete profile error:", error);
       toast.error(
         error instanceof Error ? error.message : "فشل في إنشاء الحساب"
       );
@@ -229,7 +229,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       setOtp("");
       toast.success("تم إرسال رمز التحقق مرة أخرى");
     } catch (error) {
-      console.error("Resend OTP error:", error);
+      // console.error("Resend OTP error:", error);
       toast.error("فشل في إعادة إرسال رمز التحقق");
     } finally {
       setIsLoading(false);

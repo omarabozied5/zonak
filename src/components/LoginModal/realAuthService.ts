@@ -19,10 +19,10 @@ const decodeJWT = (token: string) => {
   try {
     const payload = token.split(".")[1];
     const decoded = JSON.parse(atob(payload));
-    console.log("Decoded JWT payload:", decoded);
+    // console.log("Decoded JWT payload:", decoded);
     return decoded;
   } catch (error) {
-    console.error("Failed to decode JWT:", error);
+    // console.error("Failed to decode JWT:", error);
     return null;
   }
 };
@@ -97,17 +97,17 @@ export class RealAuthService {
     });
 
     this.axiosInstance.interceptors.request.use((config) => {
-      console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
+      // console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
       return config;
     });
 
     this.axiosInstance.interceptors.response.use(
       (response) => {
-        console.log(`✅ ${response.status}`, response.data);
+        // console.log(`✅ ${response.status}`, response.data);
         return response;
       },
       (error) => {
-        console.error(`❌ ${error.response?.status}`, error.response?.data);
+        // console.error(`❌ ${error.response?.status}`, error.response?.data);
         return Promise.reject(error);
       }
     );
