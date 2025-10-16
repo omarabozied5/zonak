@@ -33,15 +33,27 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
   onResend,
   onValidate,
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
 
-  // Focus input on mount
+  // Focus first input on mount
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
+    if (inputRefs[0].current) {
+      inputRefs[0].current.focus();
     }
   }, []);
+
+  // Sync otpDigits with otp prop
+  useEffect(() => {
+    const digits = otp.padEnd(4, "").split("").slice(0, 4);
+    setOtpDigits(digits);
+  }, [otp]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -54,48 +66,58 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
   }, [resendCooldown]);
 
   const handleOTPInput = useCallback(
-    (value: string) => {
-      // Filter out non-digits and limit to 4 characters
-      const cleanValue = value.replace(/\D/g, "").slice(0, 4);
-      onOTPChange(cleanValue);
+    (index: number, value: string) => {
+      const cleanValue = value.replace(/\D/g, "");
 
-      // Auto-submit when 4 digits are entered
-      if (cleanValue.length === 4) {
-        setTimeout(() => {
-          onSubmit(cleanValue);
-        }, 100);
+      if (cleanValue.length > 0) {
+        const newDigits = [...otpDigits];
+        newDigits[index] = cleanValue[cleanValue.length - 1];
+        setOtpDigits(newDigits);
+
+        const newOtp = newDigits.join("");
+        onOTPChange(newOtp);
+
+        // Move to next input
+        if (index < 3 && cleanValue.length > 0) {
+          inputRefs[index + 1].current?.focus();
+        }
+
+        // Auto-submit when 4 digits are entered
+        if (newOtp.replace("", "").length === 4) {
+          setTimeout(() => {
+            onSubmit(newOtp);
+          }, 100);
+        }
       }
     },
-    [onOTPChange, onSubmit]
+    [otpDigits, onOTPChange, onSubmit]
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Allow: backspace, delete, tab, escape, enter, arrows
-      if (
-        [8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
-        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-        (e.keyCode === 65 && e.ctrlKey) ||
-        (e.keyCode === 67 && e.ctrlKey) ||
-        (e.keyCode === 86 && e.ctrlKey) ||
-        (e.keyCode === 88 && e.ctrlKey)
-      ) {
-        return;
-      }
-      // Ensure that it is a number
-      if (
-        (e.shiftKey || e.keyCode < 48 || e.keyCode > 57) &&
-        (e.keyCode < 96 || e.keyCode > 105)
-      ) {
+    (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Backspace") {
         e.preventDefault();
-      }
+        const newDigits = [...otpDigits];
 
-      // Submit on Enter if OTP is valid
-      if (e.keyCode === 13 && otp.length === 4) {
+        if (otpDigits[index]) {
+          newDigits[index] = "";
+          setOtpDigits(newDigits);
+          onOTPChange(newDigits.join(""));
+        } else if (index > 0) {
+          newDigits[index - 1] = "";
+          setOtpDigits(newDigits);
+          onOTPChange(newDigits.join(""));
+          inputRefs[index - 1].current?.focus();
+        }
+      } else if (e.key === "ArrowLeft" && index > 0) {
+        inputRefs[index - 1].current?.focus();
+      } else if (e.key === "ArrowRight" && index < 3) {
+        inputRefs[index + 1].current?.focus();
+      } else if (e.key === "Enter" && otp.length === 4) {
         onSubmit(otp);
       }
     },
-    [otp, onSubmit]
+    [otpDigits, otp, onOTPChange, onSubmit]
   );
 
   const handlePaste = useCallback(
@@ -103,15 +125,26 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
       e.preventDefault();
       const pastedText = e.clipboardData.getData("text");
       const cleanValue = pastedText.replace(/\D/g, "").slice(0, 4);
-      handleOTPInput(cleanValue);
+      const digits = cleanValue.padEnd(4, "").split("").slice(0, 4);
+      setOtpDigits(digits);
+      onOTPChange(cleanValue);
+
+      if (cleanValue.length === 4) {
+        inputRefs[3].current?.focus();
+        setTimeout(() => {
+          onSubmit(cleanValue);
+        }, 100);
+      } else if (cleanValue.length > 0) {
+        inputRefs[Math.min(cleanValue.length, 3)].current?.focus();
+      }
     },
-    [handleOTPInput]
+    [onOTPChange, onSubmit]
   );
 
   const handleResendClick = useCallback(() => {
     if (resendCooldown === 0) {
       onResend();
-      setResendCooldown(60); // Start 60-second cooldown
+      setResendCooldown(60);
     }
   }, [onResend, resendCooldown]);
 
@@ -122,7 +155,6 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
   const isSubmitDisabled = isLoading || otp.length !== 4;
   const formattedPhone = authService.formatPhoneNumber(phone);
 
-  // Get appropriate title and description based on user type
   const getContent = () => {
     if (userType === "new") {
       return {
@@ -147,132 +179,74 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <div
-          className={cn(
-            "w-16 h-16 bg-gradient-to-br rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg",
-            content.gradient
-          )}
-        >
-          {content.icon}
-        </div>
-        <h2 className="text-2xl font-bold text-[#053468] mb-2">
-          {content.title}
-        </h2>
-        <p className="text-gray-600 text-sm mb-4">{content.description}</p>
-
-        {/* Phone Display */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
-          <p className="text-sm text-gray-600 mb-1">تم إرسال رمز التحقق إلى</p>
-          <p
-            className="font-medium text-[#053468] text-base"
-            dir="ltr"
-            style={{ direction: "ltr" }}
-          >
+        <h2 className="text-base font-normal text-gray-700 mb-6 leading-relaxed">
+          أرسلنا رسالة نصية تحتوي على رمز التفعيل إلى
+          <br />
+          الرقم{" "}
+          <span className="font-medium" dir="ltr">
             {formattedPhone}
-          </p>
+          </span>
+        </h2>
+
+        {/* OTP Input Boxes */}
+        <div className="flex justify-center gap-3 mb-6" dir="ltr">
+          {[3, 2, 1, 0].map((index) => (
+            <input
+              key={index}
+              ref={inputRefs[index]}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={otpDigits[index]}
+              onChange={(e) => handleOTPInput(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              onPaste={handlePaste}
+              onBlur={handleOTPBlur}
+              maxLength={1}
+              disabled={isLoading}
+              className={cn(
+                "w-16 h-16 text-center text-2xl font-medium rounded-xl border-2 transition-all",
+                "focus:outline-none focus:ring-0",
+                validationState.otp.touched && !validationState.otp.isValid
+                  ? "border-red-500 focus:border-red-500"
+                  : otpDigits[index]
+                  ? "border-gray-300 bg-white"
+                  : "border-red-400 bg-white"
+              )}
+              autoComplete="off"
+            />
+          ))}
         </div>
-      </div>
 
-      {/* OTP Input */}
-      <div className="space-y-4">
-        <FormField
-          label="رمز التحقق (4 أرقام)"
-          icon={<Shield className="w-4 h-4" />}
-          error={
-            validationState.otp.touched && !validationState.otp.isValid
-              ? validationState.otp.message
-              : undefined
-          }
-        >
-          <Input
-            ref={inputRef}
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={otp}
-            onChange={(e) => handleOTPInput(e.target.value)}
-            onBlur={handleOTPBlur}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder="• • • •"
-            className={cn(
-              "text-center text-xl tracking-[0.8em] font-mono h-12 transition-colors",
-              validationState.otp.touched && !validationState.otp.isValid
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                : "border-gray-300 focus:border-[#FFAA01] focus:ring-[#FFAA01]"
-            )}
-            style={{ direction: "ltr" }}
-            maxLength={4}
-            disabled={isLoading}
-            autoComplete="one-time-code"
-          />
-        </FormField>
-
-        {/* Help Text */}
-        <p className="text-xs text-gray-500 text-center leading-relaxed">
-          أدخل الرمز المكون من 4 أرقام المرسل إلى هاتفك
-        </p>
+        {/* Error Message */}
+        {validationState.otp.touched && !validationState.otp.isValid && (
+          <p className="text-sm text-red-500 mb-4">
+            {validationState.otp.message ||
+              "الرمز خطأ، يرجى المحاولة مرة أخرى."}
+          </p>
+        )}
       </div>
 
       {/* Resend Section */}
-      <div className="text-center py-2">
+      <div className="text-center">
         {resendCooldown > 0 ? (
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-[#053468] rounded-full animate-spin"></div>
-            <span>
-              يمكنك طلب رمز جديد خلال{" "}
-              <span className="font-mono text-[#053468] font-bold">
-                {resendCooldown}
-              </span>{" "}
-              ثانية
+          <p className="text-sm text-gray-600">
+            أرسل رمز التفعيل{" "}
+            <span className="font-medium">
+              {String(Math.floor(resendCooldown / 60)).padStart(2, "0")}:
+              {String(resendCooldown % 60).padStart(2, "0")}
             </span>
-          </div>
+          </p>
         ) : (
           <Button
             variant="ghost"
             onClick={handleResendClick}
             disabled={isLoading}
-            className="text-sm text-[#053468] hover:text-[#FFAA01] hover:bg-transparent p-2 h-auto font-medium transition-colors"
+            className="text-sm text-[#053468] hover:text-[#FFAA01] hover:bg-transparent p-0 h-auto font-normal"
           >
-            <RotateCcw className="w-4 h-4 ml-1" />
             إرسال رمز التحقق مرة أخرى
           </Button>
         )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <Button
-          onClick={() => onSubmit(otp)}
-          disabled={isSubmitDisabled}
-          className="flex-1 bg-[#FFAA01] hover:bg-[#e69900] text-white disabled:opacity-50 disabled:cursor-not-allowed h-12 text-base font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              جاري التحقق...
-            </span>
-          ) : (
-            <>
-              تأكيد
-              <ArrowRight className="w-4 h-4 mr-2" />
-            </>
-          )}
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={onBack}
-          disabled={isLoading}
-          className="border-[#053468] text-[#053468] hover:bg-[#053468] hover:text-white disabled:opacity-50 px-4 h-12 transition-all duration-200"
-        >
-          رجوع
-        </Button>
-      </div>
-
-      {/* Footer */}
-      <div className="text-center text-xs text-gray-500 pt-2">
-        <p>لم تستلم الرمز؟ تحقق من رسائل SMS أو جرب الإرسال مرة أخرى</p>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
-// Updated Checkout.tsx with payment flow navigation fixes
-import React, { useState, useEffect } from "react";
+// Optimized Checkout.tsx with performance improvements
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/useCartStore";
@@ -51,18 +51,24 @@ const Checkout: React.FC = () => {
   const orderStore = useOrderStore(user?.id?.toString());
   const paymentStore = usePaymentStore();
 
-  // ⭐ NEW: Detect if coming from failed payment
+  // ⭐ Flag to prevent redirect during order submission
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+
   const fromFailedPayment = location.state?.fromFailedPayment || false;
 
   const [notes, setNotes] = useState<string>("");
-  const [isLoadingRestaurant, setIsLoadingRestaurant] =
-    useState<boolean>(false);
   const [paymentType, setPaymentType] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
 
-  const placeId = items.length > 0 ? items[0].placeId : "";
-  const merchantId = items.length > 0 ? items[0].restaurantId : "";
+  // ⭐ OPTIMIZED: Memoize placeId and merchantId
+  const { placeId, merchantId } = useMemo(
+    () => ({
+      placeId: items.length > 0 ? items[0].placeId : "",
+      merchantId: items.length > 0 ? items[0].restaurantId : "",
+    }),
+    [items]
+  );
 
   const [offersData, setOffersData] = useState<any[]>([]);
   const [offersLoading, setOffersLoading] = useState<boolean>(false);
@@ -73,8 +79,10 @@ const Checkout: React.FC = () => {
   );
   const [totalCashbackToday, setTotalCashbackToday] = useState<number>(0);
 
-  const fetchOffers = async () => {
+  // ⭐ OPTIMIZED: Memoize fetchOffers to prevent recreating on every render
+  const fetchOffers = useCallback(async () => {
     if (!merchantId || !placeId) return;
+
     setOffersLoading(true);
     try {
       const response = await apiService.fetchCartOrderInfo(merchantId, placeId);
@@ -100,7 +108,7 @@ const Checkout: React.FC = () => {
     } finally {
       setOffersLoading(false);
     }
-  };
+  }, [merchantId, placeId]);
 
   const {
     couponCode,
@@ -122,39 +130,50 @@ const Checkout: React.FC = () => {
       couponCode,
     });
 
-  const totalItemDiscounts = calculateTotalItemDiscounts(items);
-  const originalTotalPrice = calculateOriginalTotal(items);
-  const couponDiscountAmount = calculateDiscountAmount(
-    totalPrice,
-    appliedCoupon
+  // ⭐ OPTIMIZED: Memoize calculations
+  const totalItemDiscounts = useMemo(
+    () => calculateTotalItemDiscounts(items),
+    [items]
   );
-  const total = totalPrice - couponDiscountAmount;
+  const originalTotalPrice = useMemo(
+    () => calculateOriginalTotal(items),
+    [items]
+  );
+  const couponDiscountAmount = useMemo(
+    () => calculateDiscountAmount(totalPrice, appliedCoupon),
+    [totalPrice, appliedCoupon]
+  );
+  const total = useMemo(
+    () => totalPrice - couponDiscountAmount,
+    [totalPrice, couponDiscountAmount]
+  );
 
+  // ⭐ OPTIMIZED: Fetch offers only once when placeId/merchantId change
   useEffect(() => {
     if (merchantId && placeId) {
       fetchOffers();
     }
-  }, [merchantId, placeId]);
+  }, [fetchOffers]);
 
+  // ⭐ OPTIMIZED: Fetch restaurant details only once
   useEffect(() => {
     const fetchRestaurantDetails = async () => {
-      if (items.length > 0 && items[0].placeId) {
-        try {
-          const response = await apiService.fetchRestaurantDetails(
-            items[0].placeId
-          );
-          if (response.message === "success" && response.data) {
-            setRestaurant(response.data);
-          } else {
-            toast.error("تعذر تحميل بيانات المطعم حالياً");
-          }
-        } catch (error) {
-          toast.error("حدث خطأ أثناء تحميل بيانات المطعم");
+      if (!items.length || !items[0].placeId) return;
+
+      try {
+        const response = await apiService.fetchRestaurantDetails(
+          items[0].placeId
+        );
+        if (response.message === "success" && response.data) {
+          setRestaurant(response.data);
         }
+      } catch (error) {
+        console.error("Error fetching restaurant:", error);
       }
     };
+
     fetchRestaurantDetails();
-  }, [items]);
+  }, [items.length, items[0]?.placeId]);
 
   useEffect(() => {
     if (isRestoring) {
@@ -167,33 +186,30 @@ const Checkout: React.FC = () => {
     }
   }, [isRestoring, applyRestoredState]);
 
+  // ⭐ Guard with isSubmittingOrder flag
   useEffect(() => {
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول أولاً");
       navigate("/");
       return;
     }
-    if (items.length === 0) {
+    if (items.length === 0 && !isSubmittingOrder) {
       toast.error("السلة فارغة");
       navigate("/cart");
       return;
     }
-  }, [isAuthenticated, items.length, navigate]);
+  }, [isAuthenticated, items.length, navigate, isSubmittingOrder]);
 
-  if (!isAuthenticated || items.length === 0) return null;
-
-  // ⭐ UPDATED: Smart back navigation
-  const handleBack = (): void => {
+  // ⭐ OPTIMIZED: Memoize handlers
+  const handleBack = useCallback((): void => {
     if (fromFailedPayment) {
-      // Coming from failed payment - replace history to avoid MyFatoorah
       navigate("/cart", { replace: true });
     } else {
-      // Normal navigation
       navigate("/cart");
     }
-  };
+  }, [fromFailedPayment, navigate]);
 
-  const validateOrderData = (): OrderValidation => {
+  const validateOrderData = useCallback((): OrderValidation => {
     if (!items.length) {
       toast.error("السلة فارغة");
       return { isValid: false };
@@ -257,9 +273,9 @@ const Checkout: React.FC = () => {
     }
 
     return { isValid: true, placeId, merchantId };
-  };
+  }, [items]);
 
-  const handleSubmitOrder = async (): Promise<void> => {
+  const handleSubmitOrder = useCallback(async (): Promise<void> => {
     if (!validateForm(user, items, total, paymentType)) return;
 
     const validation = validateOrderData();
@@ -268,6 +284,8 @@ const Checkout: React.FC = () => {
     const { placeId, merchantId } = validation;
 
     setIsProcessing(true);
+    setIsSubmittingOrder(true);
+
     try {
       const checkoutData = {
         items: [...items],
@@ -340,9 +358,11 @@ const Checkout: React.FC = () => {
             }
           } catch (paymentError) {
             toast.error("فشل في فتح صفحة الدفع");
+            setIsSubmittingOrder(false);
             return;
           }
         } else {
+          // Cash payment
           clearCart();
           toast.success(response.message || "تم تأكيد طلبك بنجاح!");
 
@@ -361,6 +381,7 @@ const Checkout: React.FC = () => {
                 couponUsed: appliedCoupon?.code || null,
               },
             },
+            replace: true,
           });
         }
 
@@ -369,18 +390,38 @@ const Checkout: React.FC = () => {
         }, 1000);
       } else {
         toast.error(response.message || "فشل في إرسال الطلب");
+        setIsSubmittingOrder(false);
       }
     } catch (error) {
       toast.error("حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى");
+      setIsSubmittingOrder(false);
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [
+    validateForm,
+    user,
+    items,
+    total,
+    paymentType,
+    validateOrderData,
+    totalPrice,
+    appliedCoupon,
+    couponDiscountAmount,
+    notes,
+    couponCode,
+    paymentStore,
+    clearCart,
+    navigate,
+    totalItemDiscounts,
+    orderStore,
+  ]);
+
+  if (!isAuthenticated || items.length === 0) return null;
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       <div className="w-full max-w-full sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto bg-gray-50 relative">
-        {/* ⭐ UPDATED: Pass fromFailedPayment flag */}
         <CheckoutHeader
           onBack={handleBack}
           fromFailedPayment={fromFailedPayment}
@@ -394,7 +435,6 @@ const Checkout: React.FC = () => {
           </div>
         )}
 
-        {/* ⭐ NEW: Failed payment notice */}
         {fromFailedPayment && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg mx-3 sm:mx-4 mt-4 mb-3">
             <p className="text-amber-800 text-sm p-3">
@@ -420,31 +460,16 @@ const Checkout: React.FC = () => {
           </div>
 
           <div>
-            {isLoadingRestaurant ? (
-              <div className="bg-white rounded-lg p-3 sm:p-4">
-                <div className="flex items-center justify-between">
-                  <div className="w-4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="text-right">
-                      <div className="h-4 w-16 sm:w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
-                      <div className="h-3 w-12 sm:w-16 bg-gray-200 rounded animate-pulse"></div>
-                    </div>
-                    <div className="w-8 sm:w-10 h-8 sm:h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <CheckoutRestaurantHeader
-                merchantId={merchantId}
-                restaurantName={items[0]?.restaurantName || "مطعم"}
-                placeId={placeId}
-                items={items}
-                totalPrice={totalPrice}
-                totalItemDiscounts={totalItemDiscounts}
-                defaultExpanded={false}
-                onAddMoreItems={() => navigate("/restaurant/" + placeId)}
-              />
-            )}
+            <CheckoutRestaurantHeader
+              merchantId={merchantId}
+              restaurantName={items[0]?.restaurantName || "مطعم"}
+              placeId={placeId}
+              items={items}
+              totalPrice={totalPrice}
+              totalItemDiscounts={totalItemDiscounts}
+              defaultExpanded={false}
+              onAddMoreItems={() => navigate("/restaurant/" + placeId)}
+            />
           </div>
 
           <div>

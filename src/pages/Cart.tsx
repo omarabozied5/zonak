@@ -1,5 +1,4 @@
-// Enhanced Cart.tsx with multi-restaurant validation
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore, CartItem as StoreCartItem } from "@/stores/useCartStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -7,7 +6,6 @@ import { useCartValidation } from "@/hooks/useCartValidation";
 import { useCartSummary } from "@/hooks/useCartSummary";
 import { toast } from "sonner";
 
-// Import cart components
 import CartCheckoutHeader from "@/components/Cart/CartHeader";
 import CartPriceBreakdown from "@/components/Cart/CartPriceBreakdown";
 import CartCTAButton from "@/components/Cart/CartCTAButton";
@@ -18,8 +16,6 @@ import MultiRestaurantWarning from "@/components/Cart/MultiRestaurantWarning";
 
 import { CartItem, Restaurant, ValidOffersItem } from "../types/types";
 import { apiService } from "@/services/apiService";
-
-// Import utility functions
 import {
   calculateTotalItemDiscounts,
   calculateOriginalTotal,
@@ -29,7 +25,6 @@ const Cart = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
 
-  // Pass user ID to cart store for proper user-specific data
   const cartStore = useCartStore(user?.id || null);
   const {
     items,
@@ -40,71 +35,90 @@ const Cart = () => {
     setEditingItem,
   } = cartStore;
 
-  // Convert store items to component items format
-  const convertedItems: CartItem[] = items.map((item: StoreCartItem) => ({
-    ...item,
-    selectedOptions: item.selectedOptions
-      ? {
-          ...item.selectedOptions,
-          optionalOptions:
-            item.selectedOptions.optionalOptions?.map(String) || [],
-        }
-      : undefined,
-  }));
+  const convertedItems: CartItem[] = useMemo(
+    () =>
+      items.map((item: StoreCartItem) => ({
+        ...item,
+        selectedOptions: item.selectedOptions
+          ? {
+              ...item.selectedOptions,
+              optionalOptions:
+                item.selectedOptions.optionalOptions?.map(String) || [],
+            }
+          : undefined,
+      })),
+    [items]
+  );
 
-  // Get cart summary and validation
   const cartSummary = useCartSummary(convertedItems);
   const cartValidation = useCartValidation(convertedItems);
 
-  // Calculate discount information using utility functions
-  const totalItemDiscounts = calculateTotalItemDiscounts(convertedItems);
-  const originalTotalPrice = calculateOriginalTotal(convertedItems);
+  const totalItemDiscounts = useMemo(
+    () => calculateTotalItemDiscounts(convertedItems),
+    [convertedItems]
+  );
+  const originalTotalPrice = useMemo(
+    () => calculateOriginalTotal(convertedItems),
+    [convertedItems]
+  );
 
-  // Restaurant and offers state
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [offers, setOffers] = useState<ValidOffersItem[]>([]);
   const [loadingOffers, setLoadingOffers] = useState(false);
 
-  // Fetch restaurant details and offers
+  const firstItem = items[0];
+  const shouldFetchData = firstItem?.placeId && firstItem?.restaurantId;
+
   useEffect(() => {
+    if (!shouldFetchData) return;
+
+    let isMounted = true;
+    const controller = new AbortController();
+
     const fetchRestaurantData = async () => {
-      if (items.length > 0 && items[0].placeId && items[0].restaurantId) {
-        try {
-          setLoadingOffers(true);
+      try {
+        setLoadingOffers(true);
 
-          const [restaurantResponse, offersResponse] = await Promise.all([
-            apiService.fetchRestaurantDetails(items[0].placeId),
-            apiService.fetchCartOrderInfo(
-              items[0].restaurantId,
-              items[0].placeId
-            ),
-          ]);
+        const [restaurantResponse, offersResponse] = await Promise.all([
+          apiService.fetchRestaurantDetails(firstItem.placeId),
+          apiService.fetchCartOrderInfo(
+            firstItem.restaurantId,
+            firstItem.placeId
+          ),
+        ]);
 
-          if (
-            restaurantResponse.message === "success" &&
-            restaurantResponse.data
-          ) {
-            setRestaurant(restaurantResponse.data);
-          }
+        if (!isMounted) return;
 
-          if (offersResponse.offers && offersResponse.offers.length > 0) {
-            setOffers(offersResponse.offers);
-          } else {
-            setOffers([]);
-          }
-        } catch (error) {
-          console.error("Error fetching restaurant data:", error);
+        if (
+          restaurantResponse.message === "success" &&
+          restaurantResponse.data
+        ) {
+          setRestaurant(restaurantResponse.data);
+        }
+
+        if (offersResponse.offers && offersResponse.offers.length > 0) {
+          setOffers(offersResponse.offers);
+        } else {
           setOffers([]);
-        } finally {
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        setOffers([]);
+      } finally {
+        if (isMounted) {
           setLoadingOffers(false);
         }
       }
     };
 
     fetchRestaurantData();
-  }, [items]);
 
-  // Redirect unauthenticated users
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [firstItem?.placeId, firstItem?.restaurantId, shouldFetchData]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       toast.error("يجب تسجيل الدخول لعرض السلة");
@@ -112,125 +126,110 @@ const Cart = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Don't render if not authenticated
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-
-  const handleGoBack = (): void => {
+  const handleGoBack = useCallback(() => {
     navigate(-1);
-  };
+  }, [navigate]);
 
-  const handleExploreRestaurants = (): void => {
+  const handleExploreRestaurants = useCallback(() => {
     navigate("/");
-  };
+  }, [navigate]);
 
-  const handleAddMoreItems = (): void => {
+  const handleAddMoreItems = useCallback(() => {
     if (items.length > 0) {
       navigate(`/restaurant/${items[0].placeId}`);
     }
-  };
+  }, [items, navigate]);
 
-  const handleOfferClick = (offer: ValidOffersItem): void => {
+  const handleOfferClick = useCallback((offer: ValidOffersItem) => {
     // Implement offer application logic
-  };
+  }, []);
 
-  const itemHasCustomizations = (item: CartItem): boolean => {
-    if (item.isCustomizable) return true;
+  const itemHasCustomizations = useCallback(
+    (item: CartItem): boolean => {
+      if (item.isCustomizable) return true;
 
-    if (item.selectedOptions) {
-      const hasRequiredOptions =
-        item.selectedOptions.requiredOptions &&
-        Object.keys(item.selectedOptions.requiredOptions).length > 0;
-      const hasOptionalOptions =
-        item.selectedOptions.optionalOptions &&
-        item.selectedOptions.optionalOptions.length > 0;
-      const hasNotes =
-        item.selectedOptions.notes &&
-        item.selectedOptions.notes.trim().length > 0;
-      const hasSize = item.selectedOptions.size;
+      if (item.selectedOptions) {
+        const hasRequiredOptions =
+          item.selectedOptions.requiredOptions &&
+          Object.keys(item.selectedOptions.requiredOptions).length > 0;
+        const hasOptionalOptions =
+          item.selectedOptions.optionalOptions &&
+          item.selectedOptions.optionalOptions.length > 0;
+        const hasNotes =
+          item.selectedOptions.notes &&
+          item.selectedOptions.notes.trim().length > 0;
+        const hasSize = item.selectedOptions.size;
 
-      return !!(
-        hasRequiredOptions ||
-        hasOptionalOptions ||
-        hasNotes ||
-        hasSize
-      );
-    }
-
-    return hasCustomizations(item);
-  };
-
-  const handleEditItem = (item: CartItem): void => {
-    try {
-      if (!itemHasCustomizations(item)) {
-        toast.error("هذا العنصر لا يحتوي على خيارات قابلة للتعديل");
-        return;
+        return !!(
+          hasRequiredOptions ||
+          hasOptionalOptions ||
+          hasNotes ||
+          hasSize
+        );
       }
 
-      const baseItemId = item.productId || item.id.split("-")[0];
-      setEditingItem(item.id);
+      return hasCustomizations(item);
+    },
+    [hasCustomizations]
+  );
 
-      const editUrl = new URL(`/item/${baseItemId}`, window.location.origin);
-      editUrl.searchParams.set("edit", item.id);
-      editUrl.searchParams.set("placeId", item.placeId || "");
-      editUrl.searchParams.set("merchantId", item.restaurantId || "");
-      editUrl.searchParams.set("restaurantName", item.restaurantName || "");
+  const handleEditItem = useCallback(
+    (item: CartItem) => {
+      try {
+        if (!itemHasCustomizations(item)) {
+          toast.error("هذا العنصر لا يحتوي على خيارات قابلة للتعديل");
+          return;
+        }
 
-      navigate(editUrl.pathname + editUrl.search);
-    } catch (error) {
-      toast.error("حدث خطأ أثناء تعديل الصنف");
-    }
-  };
+        const baseItemId = item.productId || item.id.split("-")[0];
+        setEditingItem(item.id);
 
-  const handleQuantityUpdate = (itemId: string, newQuantity: number): void => {
-    try {
-      if (newQuantity < 0) return;
+        const editUrl = new URL(`/item/${baseItemId}`, window.location.origin);
+        editUrl.searchParams.set("edit", item.id);
+        editUrl.searchParams.set("placeId", item.placeId || "");
+        editUrl.searchParams.set("merchantId", item.restaurantId || "");
+        editUrl.searchParams.set("restaurantName", item.restaurantName || "");
 
-      if (newQuantity === 0) {
-        handleRemoveItem(itemId);
-        return;
+        navigate(editUrl.pathname + editUrl.search);
+      } catch (error) {
+        toast.error("حدث خطأ أثناء تعديل الصنف");
       }
+    },
+    [itemHasCustomizations, setEditingItem, navigate]
+  );
 
-      updateQuantity(itemId, newQuantity);
-    } catch (error) {
-      console.error("Error updating quantity:", error);
-      toast.error("حدث خطأ أثناء تحديث الكمية");
-    }
-  };
+  const handleQuantityUpdate = useCallback(
+    (itemId: string, newQuantity: number) => {
+      try {
+        if (newQuantity < 0) return;
 
-  const handleRemoveItem = (itemId: string): void => {
-    try {
-      removeItem(itemId);
-      toast.success("تم حذف الصنف من السلة");
-    } catch (error) {
-      console.error("Error removing item:", error);
-      toast.error("حدث خطأ أثناء حذف الصنف");
-    }
-  };
+        if (newQuantity === 0) {
+          removeItem(itemId);
+          toast.success("تم حذف الصنف من السلة");
+          return;
+        }
 
-  const handleProceedToCheckout = (): void => {
-    try {
-      if (!cartValidation.canProceedToCheckout) {
-        const firstError = cartValidation.validationErrors[0];
-        toast.error(firstError);
-        return;
+        updateQuantity(itemId, newQuantity);
+      } catch (error) {
+        toast.error("حدث خطأ أثناء تحديث الكمية");
       }
+    },
+    [updateQuantity, removeItem]
+  );
 
-      if (hasMultipleRestaurants) {
-        toast.error("يجب الطلب من مطعم واحد فقط");
-        return;
+  const handleRemoveItem = useCallback(
+    (itemId: string) => {
+      try {
+        removeItem(itemId);
+        toast.success("تم حذف الصنف من السلة");
+      } catch (error) {
+        toast.error("حدث خطأ أثناء حذف الصنف");
       }
+    },
+    [removeItem]
+  );
 
-      navigate("/checkout");
-    } catch (error) {
-      console.error("Error proceeding to checkout:", error);
-      toast.error("حدث خطأ أثناء المتابعة للدفع");
-    }
-  };
-
-  // Check for multiple restaurants
-  const getRestaurantGroups = () => {
+  const restaurantGroups = useMemo(() => {
     const groups = new Map<
       string,
       { restaurantId: string; restaurantName: string; itemCount: number }
@@ -256,37 +255,58 @@ const Cart = () => {
     });
 
     return Array.from(groups.values());
-  };
+  }, [items]);
 
-  const restaurantGroups = getRestaurantGroups();
   const hasMultipleRestaurants = restaurantGroups.length > 1;
 
-  // Handle clearing items from other restaurants
-  const handleClearOtherRestaurants = (keepRestaurantId: string) => {
+  const handleClearOtherRestaurants = useCallback(
+    (keepRestaurantId: string) => {
+      try {
+        const itemsToRemove = items.filter(
+          (item) => (item.restaurantId || item.placeId) !== keepRestaurantId
+        );
+
+        itemsToRemove.forEach((item) => removeItem(item.id));
+
+        const keptRestaurant = restaurantGroups.find(
+          (r) => r.restaurantId === keepRestaurantId
+        );
+        toast.success(
+          `تم الاحتفاظ بعناصر ${keptRestaurant?.restaurantName || "المطعم"} فقط`
+        );
+      } catch (error) {
+        toast.error("حدث خطأ أثناء تحديث السلة");
+      }
+    },
+    [items, removeItem, restaurantGroups]
+  );
+
+  const handleProceedToCheckout = useCallback(() => {
     try {
-      const itemsToRemove = items.filter(
-        (item) => (item.restaurantId || item.placeId) !== keepRestaurantId
-      );
+      if (!cartValidation.canProceedToCheckout) {
+        const firstError = cartValidation.validationErrors[0];
+        toast.error(firstError);
+        return;
+      }
 
-      itemsToRemove.forEach((item) => removeItem(item.id));
+      if (hasMultipleRestaurants) {
+        toast.error("يجب الطلب من مطعم واحد فقط");
+        return;
+      }
 
-      const keptRestaurant = restaurantGroups.find(
-        (r) => r.restaurantId === keepRestaurantId
-      );
-      toast.success(
-        `تم الاحتفاظ بعناصر ${keptRestaurant?.restaurantName || "المطعم"} فقط`
-      );
+      navigate("/checkout");
     } catch (error) {
-      console.error("Error clearing other restaurants:", error);
-      toast.error("حدث خطأ أثناء تحديث السلة");
+      toast.error("حدث خطأ أثناء المتابعة للدفع");
     }
-  };
+  }, [cartValidation, hasMultipleRestaurants, navigate]);
 
-  // Check if checkout should be disabled
   const isCheckoutDisabled =
     cartValidation.isCheckoutDisabled || hasMultipleRestaurants;
 
-  // If cart is empty, show empty state
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+
   if (cartSummary.isEmpty) {
     return (
       <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -303,9 +323,7 @@ const Cart = () => {
       <div className="w-full max-w-md mx-auto bg-gray-50 relative">
         <CartCheckoutHeader onBack={handleGoBack} />
 
-        {/* Main Content with proper bottom padding for fixed CTA */}
         <div className="pt-4 pb-28 space-y-4 px-4">
-          {/* Multi-Restaurant Warning - Show at the top if multiple restaurants */}
           {hasMultipleRestaurants && (
             <MultiRestaurantWarning
               restaurants={restaurantGroups}
@@ -313,7 +331,6 @@ const Cart = () => {
             />
           )}
 
-          {/* Offers Section */}
           {offers.length > 0 && !loadingOffers && (
             <div className="-mx-4">
               <CartOfferSection
@@ -324,7 +341,6 @@ const Cart = () => {
             </div>
           )}
 
-          {/* Restaurant Badge with Cart Items Dropdown */}
           {items.length > 0 && (
             <div className="-mx-4 px-4">
               <CartRestaurantDropdown
@@ -340,12 +356,11 @@ const Cart = () => {
                 onEditItem={handleEditItem}
                 hasCustomizations={itemHasCustomizations}
                 onAddMoreItems={handleAddMoreItems}
-                defaultExpanded={false}
+                defaultExpanded={true}
               />
             </div>
           )}
 
-          {/* Loading offers */}
           {loadingOffers && (
             <div className="bg-white rounded-lg p-4 text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FBD252] mx-auto mb-2"></div>
@@ -353,7 +368,6 @@ const Cart = () => {
             </div>
           )}
 
-          {/* Price Breakdown */}
           <CartPriceBreakdown
             totalPrice={totalPrice}
             totalItemDiscounts={totalItemDiscounts}
@@ -361,7 +375,6 @@ const Cart = () => {
           />
         </div>
 
-        {/* Fixed Bottom CTA Button */}
         <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md z-50">
           <CartCTAButton
             total={totalPrice}
@@ -374,4 +387,4 @@ const Cart = () => {
   );
 };
 
-export default Cart;
+export default memo(Cart);

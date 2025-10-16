@@ -203,14 +203,14 @@ const OffersSection: React.FC<OffersSectionProps> = ({
   return (
     <div className="mb-6" dir="rtl">
       {/* Section Title */}
-      <div className="flex items-center justify-between px-2 font-bold text-md mb-2">
+      <div className="flex items-center justify-between px-2 font-bold text-md mb-2 ">
         <span>العروض</span>
       </div>
 
       {/* Offers List - Horizontal Layout */}
       <div className="px-4 gap-1">
         <div
-          className="flex overflow-x-auto pb-2 gap-3"
+          className="flex overflow-x-auto pb-2 gap-3 scrollbar-hide"
           style={{ paddingTop: "8px", paddingBottom: "8px" }}
         >
           {processedOffers.map((offer, index) => (

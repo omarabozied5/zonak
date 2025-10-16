@@ -1,4 +1,4 @@
-// authService.ts - Fixed wrapper with proper JWT handling
+// authService.ts - Updated wrapper for OTP-only authentication
 import { realAuthService, formatPhoneForDisplay } from "./realAuthService";
 import { validation } from "./validation";
 import type { ExistingUser } from "./types";
@@ -6,7 +6,7 @@ import type { ExistingUser } from "./types";
 export const authService = {
   // Validation helpers
   validatePhone: validation.phone,
-  validatePassword: validation.password,
+  validatePassword: validation.password, // Keep for legacy, but won't be used
   validateOTP: validation.otp,
   validateUserName: validation.name,
 
@@ -16,131 +16,17 @@ export const authService = {
   },
 
   /**
-   * Check if user exists by trying login
-   * Returns user type: "new" | "verified" | "unverified"
+   * NEW FLOW: Send OTP to phone number
+   * This is the first step for ALL users (existing and new)
    */
-  async checkUserExists(phone: string) {
+  async sendOTP(phone: string) {
     try {
-      // Try login with empty password to check if user exists
-      const result = await realAuthService.loginWithPassword(phone, "");
-
-      // This shouldn't happen with empty password, but just in case
-      if (result.success) {
-        return {
-          exists: true,
-          user: result.userData
-            ? {
-                id: result.userData.id,
-                first_name: result.userData.first_name,
-                last_name: result.userData.last_name,
-                phone: result.userData.phone,
-                lastLogin: new Date().toISOString(),
-                isNewUser: false,
-              }
-            : null,
-        };
-      }
-
-      return { exists: false, user: null };
-    } catch (error) {
-      // If we get an error about invalid credentials, user exists
-      if (
-        error instanceof Error &&
-        (error.message.includes("Invalid") ||
-          error.message.includes("password") ||
-          error.message.includes("كلمة المرور"))
-      ) {
-        return { exists: true, user: null };
-      }
-
-      // 404 or user not found = new user
-      return { exists: false, user: null };
-    }
-  },
-
-  /**
-   * Login with phone and password
-   */
-  async loginWithPassword(phone: string, password: string) {
-    try {
-      const result = await realAuthService.loginWithPassword(phone, password);
-
-      if (!result.success) {
-        throw new Error(result.message);
-      }
+      const result = await realAuthService.sendOTP(phone);
 
       return {
-        userType: result.userType,
-        user: result.userData
-          ? {
-              id: result.userData.id,
-              first_name: result.userData.first_name,
-              last_name: result.userData.last_name,
-              phone: result.userData.phone,
-              lastLogin: new Date().toISOString(),
-              isNewUser: false,
-            }
-          : undefined,
-        token: result.token!,
-      };
-    } catch (error) {
-      console.error("Login failed:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Register new user
-   */
-  async registerUser(
-    phone: string,
-    firstName: string,
-    lastName: string,
-    password: string
-  ) {
-    try {
-      const result = await realAuthService.registerUser(
-        phone,
-        firstName,
-        lastName,
-        password
-      );
-
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-
-      return {
-        registrationToken: result.token!,
-        user: {
-          id: `temp_registration_${Date.now()}`, // Temporary ID for registration
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone,
-          createdAt: new Date().toISOString(),
-          isNewUser: true,
-        },
-      };
-    } catch (error) {
-      console.error("Registration failed:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Send OTP
-   */
-  async sendOTP(phone: string, token: string) {
-    try {
-      const result = await realAuthService.sendOTP(phone, token);
-
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-
-      return {
-        sessionId: result.sessionId!,
+        sessionId: result.id,
         message: result.message,
+        phone: result.phone,
       };
     } catch (error) {
       console.error("Send OTP failed:", error);
@@ -149,22 +35,42 @@ export const authService = {
   },
 
   /**
-   * Verify OTP
+   * NEW FLOW: Verify OTP and get user info
+   * Returns JWT token + user data + is_new_user flag
    */
-  async verifyOTP(
-    phone: string,
-    otp: string,
-    sessionId: string,
-    token: string
-  ) {
+  async verifyOTP(phone: string, otp: string, sessionId: string) {
     try {
-      const result = await realAuthService.verifyOTP(
-        phone,
-        otp,
-        sessionId,
-        token
-      );
-      return result.isValid;
+      const result = await realAuthService.verifyOTP(phone, otp, sessionId);
+
+      // If existing user, return complete user data
+      if (!result.is_new_user && result.user) {
+        const user: ExistingUser = {
+          id: result.user.id,
+          first_name: result.user.first_name || "مستخدم",
+          last_name: result.user.last_name || "",
+          phone: result.user.phone,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          isNewUser: false,
+        };
+
+        return {
+          isValid: true,
+          isNewUser: false,
+          token: result.data,
+          user,
+          message: result.message,
+        };
+      }
+
+      // If new user, return minimal data (needs name completion)
+      return {
+        isValid: true,
+        isNewUser: true,
+        token: result.data,
+        user: null,
+        message: result.message,
+      };
     } catch (error) {
       console.error("OTP verification failed:", error);
       throw error;
@@ -172,39 +78,82 @@ export const authService = {
   },
 
   /**
-   * Final login after OTP verification - FIXED TO GET REAL USER DATA
+   * NEW: Update names for new users after OTP verification
    */
-  async loginAfterOTPVerification(phone: string, password: string) {
+  async updateUserNames(
+    firstName: string,
+    lastName: string,
+    phone: string,
+    token: string
+  ) {
     try {
-      // console.log("🔑 Performing final login after OTP verification...");
+      const result = await realAuthService.updateNames(
+        firstName,
+        lastName,
+        phone,
+        token
+      );
 
-      // Call the real login API again to get updated token with verified status
-      const result = await realAuthService.loginWithPassword(phone, password);
+      // After successful update, create user object
+      // Decode JWT to get real user ID
+      const jwtPayload = token.split(".")[1];
+      const decoded = JSON.parse(atob(jwtPayload));
+      const userId = decoded?.user_id || decoded?.sub || decoded?.id;
 
-      if (!result.success) {
-        throw new Error("Failed to complete login after verification");
-      }
-
-      // console.log("✅ Final login successful, user data:", result.userData);
-
-      // Return the real user data from the backend
       const user: ExistingUser = {
-        id: result.userData?.id || `fallback_${Date.now()}`,
-        first_name: result.userData?.first_name || "مستخدم",
-        last_name: result.userData?.last_name || "",
-        phone: result.userData?.phone || phone,
+        id: userId?.toString() || `user_${Date.now()}`,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
-        isNewUser: false,
+        isNewUser: true,
       };
 
       return {
         user,
-        token: result.token!, // Real JWT token from backend
+        message: result.message,
       };
     } catch (error) {
-      console.error("❌ Final login after OTP failed:", error);
+      console.error("Update names failed:", error);
       throw error;
     }
+  },
+
+  /**
+   * DEPRECATED: No longer used in OTP-only flow
+   */
+  async checkUserExists(phone: string) {
+    throw new Error("checkUserExists is deprecated. Use sendOTP instead.");
+  },
+
+  /**
+   * DEPRECATED: No longer used in OTP-only flow
+   */
+  async loginWithPassword(phone: string, password: string) {
+    throw new Error("Password login is deprecated. Use OTP authentication.");
+  },
+
+  /**
+   * DEPRECATED: No longer used in OTP-only flow
+   */
+  async registerUser(
+    phone: string,
+    firstName: string,
+    lastName: string,
+    password: string
+  ) {
+    throw new Error(
+      "Password registration is deprecated. Use OTP authentication."
+    );
+  },
+
+  /**
+   * DEPRECATED: No longer used in OTP-only flow
+   */
+  async loginAfterOTPVerification(phone: string, password: string) {
+    throw new Error(
+      "loginAfterOTPVerification is deprecated. Use verifyOTP instead."
+    );
   },
 };

@@ -638,6 +638,47 @@ export interface RestaurantContext {
   clearRestaurant: () => void;
 }
 
+// Add this to your types.ts file, replacing the existing OfferDetails interface
+
+export interface OfferDetails {
+  id: number;
+  title: string;
+  description: string;
+  discount: number | null;
+  offer_terms: string | null;
+  end_date: string;
+  offer_image: string;
+  places: number[];
+  offer_type: number; // 0 = Price Change, 1 = Discount %, 3 = Cashback
+  product_name?: string | null;
+  old_price?: number | null;
+  new_price?: number | null;
+  offer_details?: string | null;
+  user_id?: number;
+  place_id?: number;
+  is_offer_verified?: string;
+  start_date?: string;
+  updatetime?: string;
+  insertdate?: string;
+  main_offer?: boolean;
+  view_count?: number;
+  is_zonak?: boolean;
+  main_offer_order?: number;
+  available_cashback?: number;
+  max_daily_cashback?: number;
+  text_offer?: string;
+  cashback_delivery?: number;
+  cashback_upon_receipt?: number;
+}
+
+// Offer type constants
+export const OFFER_TYPES = {
+  PRICE_CHANGE: 0, // كان وصار
+  DISCOUNT_PERCENTAGE: 1, // نسبة خصم
+  CASHBACK: 3, // كاش باك
+} as const;
+
+export type OfferType = (typeof OFFER_TYPES)[keyof typeof OFFER_TYPES];
 // ===== Constants and Unions =====
 export type OrderType = "pickup" | "delivery";
 export type PaymentMethod = "cash" | "card" | "wallet";

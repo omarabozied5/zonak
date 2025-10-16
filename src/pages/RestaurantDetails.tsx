@@ -130,12 +130,12 @@ const RestaurantDetails: React.FC = () => {
   }, [id]);
 
   // Handler for offer click
-  const handleOfferClick = useCallback((offer: ValidOffer) => {
-    // console.log("تم النقر على العرض:", offer);
-    // Handle offer click - you can navigate to a specific page,
-    // add to cart, or show offer details modal
-    // Example: navigate(`/offer/${offer.id}`);
-  }, []);
+  const handleOfferClick = useCallback(
+    (offer: ValidOffer) => {
+      navigate(`/offer/${offer.id}`);
+    },
+    [navigate]
+  );
 
   // Handler for view all offers
   const handleViewAllOffers = useCallback(() => {

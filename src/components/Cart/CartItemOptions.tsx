@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, memo } from "react";
 import { CartItem } from "../../types/types";
 
 interface CartItemOptionsProps {
@@ -10,62 +10,60 @@ const CartItemOptions: React.FC<CartItemOptionsProps> = ({
   item,
   className = "",
 }) => {
-  const getOptionDisplayText = (item: CartItem): string[] => {
+  const optionDisplays = useMemo(() => {
     if (!item.selectedOptions) return [];
 
-    const displayElements: string[] = [];
+    const displays: string[] = [];
 
-    // Handle size option
     if (item.selectedOptions.size) {
-      const sizeName = typeof item.selectedOptions.size === 'object' 
-        ? item.selectedOptions.size.name 
-        : item.selectedOptions.size;
-      displayElements.push(`الحجم: ${sizeName}`);
+      const sizeName =
+        typeof item.selectedOptions.size === "object"
+          ? item.selectedOptions.size.name
+          : item.selectedOptions.size;
+      displays.push(`الحجم: ${sizeName}`);
     }
 
-    // Handle required options - use names if available, otherwise show count
-    if (item.selectedOptions.requiredOptions && 
-        Object.keys(item.selectedOptions.requiredOptions).length > 0) {
-      
+    if (
+      item.selectedOptions.requiredOptions &&
+      Object.keys(item.selectedOptions.requiredOptions).length > 0
+    ) {
       if (item.selectedOptions.requiredOptionNames) {
-        // Show group name and option name
         Object.entries(item.selectedOptions.requiredOptionNames).forEach(
           ([groupName, optionName]) => {
-            displayElements.push(`${groupName}: ${optionName}`);
+            displays.push(`${groupName}: ${optionName}`);
           }
         );
       } else {
-        // Fallback to showing count of required options
-        const requiredCount = Object.keys(item.selectedOptions.requiredOptions).length;
-        displayElements.push(`الخيارات المطلوبة: ${requiredCount} خيار`);
+        const requiredCount = Object.keys(
+          item.selectedOptions.requiredOptions
+        ).length;
+        displays.push(`الخيارات المطلوبة: ${requiredCount} خيار`);
       }
     }
 
-    // Handle optional additions - use names if available
-    if (item.selectedOptions.optionalOptions && 
-        item.selectedOptions.optionalOptions.length > 0) {
-      
-      if (item.selectedOptions.optionalOptionNames && 
-          item.selectedOptions.optionalOptionNames.length > 0) {
+    if (
+      item.selectedOptions.optionalOptions &&
+      item.selectedOptions.optionalOptions.length > 0
+    ) {
+      if (
+        item.selectedOptions.optionalOptionNames &&
+        item.selectedOptions.optionalOptionNames.length > 0
+      ) {
         const optionsText = item.selectedOptions.optionalOptionNames.join("، ");
-        displayElements.push(`الإضافات: ${optionsText}`);
+        displays.push(`الإضافات: ${optionsText}`);
       } else {
-        // Fallback to showing count
-        displayElements.push(
+        displays.push(
           `الإضافات: ${item.selectedOptions.optionalOptions.length} إضافة`
         );
       }
     }
 
-    // Handle notes
     if (item.selectedOptions.notes?.trim()) {
-      displayElements.push(`ملاحظات: ${item.selectedOptions.notes.trim()}`);
+      displays.push(`ملاحظات: ${item.selectedOptions.notes.trim()}`);
     }
 
-    return displayElements;
-  };
-
-  const optionDisplays = getOptionDisplayText(item);
+    return displays;
+  }, [item.selectedOptions]);
 
   if (optionDisplays.length === 0) {
     return null;
@@ -84,4 +82,4 @@ const CartItemOptions: React.FC<CartItemOptionsProps> = ({
   );
 };
 
-export default CartItemOptions;
+export default memo(CartItemOptions);

@@ -16,6 +16,41 @@ import {
   Zap,
   Search,
 } from "lucide-react";
+const getOfferDescription = (restaurant: any): string | null => {
+  // Determine which offer to show: cashback_offer (public) or main_offer
+  const offer = restaurant.cashback_offer || restaurant.place?.main_offer;
+
+  if (!offer) return null;
+
+  const offerDetails = offer.offer_details || "";
+  const productName = offer.product_name || "";
+  const oldPrice = String(offer.old_price || 0);
+  const newPrice = String(offer.new_price || 0);
+  const discount = String(offer.discount || 0);
+  const offerType = offer.offer_type;
+
+  let offerDescription = "";
+
+  switch (offerType) {
+    case 0: // Price Change - "كان وصار"
+      offerDescription = `خصم على ${productName} كان بـ ${oldPrice} وصار بـ ${newPrice}`;
+      break;
+
+    case 1: // Discount Percentage
+      offerDescription = `خصم ${discount}% على ${productName}`;
+      break;
+
+    case 3: // Cashback
+      offerDescription = offerDetails || productName;
+      break;
+
+    default:
+      offerDescription = offerDetails;
+      break;
+  }
+
+  return offerDescription || null;
+};
 
 // Memoized RestaurantCard component to prevent unnecessary re-renders
 const RestaurantCard = React.memo(
@@ -28,69 +63,29 @@ const RestaurantCard = React.memo(
   }) => {
     const isBusy = restaurant.is_busy === 0;
 
-    // Generate dynamic offer text
-    const getOfferText = React.useMemo(() => {
+    // Get offer description using the helper function
+    const offerText = React.useMemo(() => {
+      const description = getOfferDescription(restaurant);
+
+      if (!description) return null;
+
+      // Count remaining offers
       const offers = restaurant.place?.valid_offers || [];
       const cashbackOffer = restaurant.cashback_offer;
       const mainOffer = restaurant.place?.main_offer;
 
-      if (!cashbackOffer && !mainOffer && offers.length === 0) return null;
-
-      let offerDescription = "";
       let remainingCount = 0;
 
-      // Priority 1: Cashback offer
       if (cashbackOffer) {
-        offerDescription =
-          cashbackOffer.offer_details ||
-          cashbackOffer.description ||
-          `كاش باك ${cashbackOffer.discount}%`;
         remainingCount = offers.length;
-      }
-      // Priority 2: Main offer
-      else if (mainOffer) {
-        if (
-          mainOffer.offer_type === 0 &&
-          mainOffer.old_price &&
-          mainOffer.new_price
-        ) {
-          // Price offer
-          offerDescription = `${mainOffer.product_name || "منتج"} - ${
-            mainOffer.new_price
-          } ريال بدلاً من ${mainOffer.old_price}`;
-        } else if (mainOffer.offer_type === 1 && mainOffer.discount) {
-          // Discount offer
-          offerDescription = `خصم ${mainOffer.discount}%`;
-        } else if (mainOffer.offer_type === 3 && mainOffer.discount) {
-          // Cashback offer
-          offerDescription = `كاش باك ${mainOffer.discount}%`;
-        } else {
-          offerDescription =
-            mainOffer.offer_details || mainOffer.description || "عرض خاص";
-        }
-        remainingCount = offers.length - 1; // Subtract main offer
-      }
-      // Priority 3: First valid offer
-      else if (offers.length > 0) {
-        const firstOffer = offers[0];
-        if (
-          firstOffer.offer_type === 0 &&
-          firstOffer.old_price &&
-          firstOffer.new_price
-        ) {
-          offerDescription = `${firstOffer.product_name || "منتج"} - ${
-            firstOffer.new_price
-          } ريال`;
-        } else if (firstOffer.discount) {
-          offerDescription = `خصم ${firstOffer.discount}%`;
-        } else {
-          offerDescription = "عرض خاص";
-        }
-        remainingCount = offers.length - 1;
+      } else if (mainOffer) {
+        remainingCount = Math.max(0, offers.length - 1);
+      } else if (offers.length > 0) {
+        remainingCount = Math.max(0, offers.length - 1);
       }
 
-      // Build final text
-      let finalText = offerDescription;
+      // Build final text with remaining offers count
+      let finalText = description;
       if (remainingCount > 0) {
         finalText += ` + ${remainingCount} ${
           remainingCount === 1 ? "عرض آخر" : "عروض أخرى"
@@ -98,12 +93,7 @@ const RestaurantCard = React.memo(
       }
 
       return finalText;
-    }, [
-      restaurant.cashback_offer,
-      restaurant.place?.valid_offers,
-      restaurant.place?.main_offer,
-      restaurant.merchant_name,
-    ]);
+    }, [restaurant]);
 
     return (
       <Card
@@ -127,12 +117,16 @@ const RestaurantCard = React.memo(
 
           {/* Discount Badge - Top Right */}
           {(() => {
-            if (restaurant.cashback_offer?.discount) {
+            const cashbackOffer = restaurant.cashback_offer;
+            const mainOffer = restaurant.place?.main_offer;
+
+            // Priority 1: Cashback offer from restaurant.cashback_offer
+            if (cashbackOffer?.discount) {
               return (
                 <div className="absolute top-3 right-3">
                   <div className="backdrop-blur-md bg-white/20 rounded-lg px-2 py-1 font-bold text-sm shadow-md flex flex-col items-center leading-tight">
                     <span className="text-base" style={{ color: "#F7BD01" }}>
-                      {restaurant.cashback_offer.discount}%
+                      {cashbackOffer.discount}%
                     </span>
                     <span className="text-[11px]" style={{ color: "#F7BD01" }}>
                       كاش باك
@@ -142,15 +136,13 @@ const RestaurantCard = React.memo(
               );
             }
 
-            if (
-              restaurant.place?.main_offer?.offer_type === 3 &&
-              restaurant.place.main_offer.discount
-            ) {
+            // Priority 2: Main offer if it's cashback (type 3)
+            if (mainOffer?.offer_type === 3 && mainOffer?.discount) {
               return (
                 <div className="absolute top-1 right-1">
                   <div className="backdrop-blur-md bg-black/20 rounded-md px-4 py-3 font-bold shadow-md flex flex-col items-center leading-tight">
                     <span className="text-[25px]" style={{ color: "#F7BD01" }}>
-                      {restaurant.place.main_offer.discount}%
+                      {mainOffer.discount}%
                     </span>
                     <span className="text-[12px]" style={{ color: "#F7BD01" }}>
                       كاش باك
@@ -228,10 +220,15 @@ const RestaurantCard = React.memo(
             </div>
 
             {/* Dynamic Promotional Text */}
-            {getOfferText && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-3">
-                <p className="text-[11px] text-yellow-800 text-center font-medium">
-                  ⚡ {getOfferText}
+            {offerText && (
+              <div className="flex items-center justify-center bg-[#FFF9E6] border border-yellow-200 rounded-sm p-1 mt-3 gap-2 shadow-sm">
+                <img
+                  src="./offer-mark.png"
+                  alt="offer"
+                  className="w-5 h-5 object-contain"
+                />
+                <p className="text-[12px] text-[#FFD14A] font-medium text-center leading-snug">
+                  {offerText}
                 </p>
               </div>
             )}

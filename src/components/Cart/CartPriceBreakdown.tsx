@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useMemo } from "react";
 
 interface CartPriceBreakdownProps {
   totalPrice: number;
@@ -11,12 +11,16 @@ const CartPriceBreakdown: React.FC<CartPriceBreakdownProps> = ({
   totalItemDiscounts,
   itemCount,
 }) => {
-  const originalTotal = totalPrice + totalItemDiscounts;
-  const hasDiscounts = totalItemDiscounts > 0;
+  const { originalTotal, hasDiscounts } = useMemo(() => {
+    const original = totalPrice + totalItemDiscounts;
+    return {
+      originalTotal: original,
+      hasDiscounts: totalItemDiscounts > 0,
+    };
+  }, [totalPrice, totalItemDiscounts]);
 
   return (
     <div className="bg-white rounded-lg p-3 sm:p-4 space-y-3 shadow-sm border border-gray-100">
-      {/* Cart Value */}
       <div className="flex justify-between items-center text-sm">
         <span className="text-gray-600">قيمة السلة</span>
         <span className="text-gray-900 font-medium">
@@ -24,7 +28,6 @@ const CartPriceBreakdown: React.FC<CartPriceBreakdownProps> = ({
         </span>
       </div>
 
-      {/* Discount - only show if there are discounts */}
       {hasDiscounts && (
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-600">الخصم</span>
@@ -34,7 +37,6 @@ const CartPriceBreakdown: React.FC<CartPriceBreakdownProps> = ({
         </div>
       )}
 
-      {/* Total with border separator */}
       <div className="border-t pt-3 flex justify-between items-center">
         <span className="text-gray-900 font-medium text-base">
           إجمالي السلة{" "}
@@ -46,10 +48,8 @@ const CartPriceBreakdown: React.FC<CartPriceBreakdownProps> = ({
           {totalPrice.toFixed(2)} ر.س
         </span>
       </div>
-
-      {/* VAT Notice - responsive text size */}
     </div>
   );
 };
 
-export default CartPriceBreakdown;
+export default memo(CartPriceBreakdown);

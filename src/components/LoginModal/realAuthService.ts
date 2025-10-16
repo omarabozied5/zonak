@@ -1,4 +1,4 @@
-// realAuthService.ts - Fixed with JWT decoding for real user ID
+// realAuthService.ts - Fixed: Now includes session ID in verify_otp
 import axios, { AxiosInstance } from "axios";
 
 const BASE_URL = "https://dev-backend.zonak.net/api";
@@ -57,6 +57,32 @@ export const formatPhoneForDisplay = (phone: string): string => {
   return phone;
 };
 
+// Response interfaces
+interface SendOtpResponse {
+  message: string;
+  id: string; // Session ID - CRITICAL for verify_otp
+  phone: string;
+}
+
+interface VerifyOtpResponse {
+  message: string;
+  data: string; // JWT token
+  is_otp_verified: string;
+  name?: string;
+  is_new_user: boolean;
+  user?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    phone: string;
+  };
+}
+
+interface UpdateNamesResponse {
+  message: string;
+  data: string; // Full name
+}
+
 export class RealAuthService {
   private axiosInstance: AxiosInstance;
 
@@ -64,7 +90,10 @@ export class RealAuthService {
     this.axiosInstance = axios.create({
       baseURL: BASE_URL,
       timeout: 30000,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-auth-app-token": "b7dcbb3bee57ed51b8bcc5e4ec8dd62a",
+      },
     });
 
     this.axiosInstance.interceptors.request.use((config) => {
@@ -85,74 +114,156 @@ export class RealAuthService {
   }
 
   /**
-   * Try login with password - this is our main auth method
+   * Send OTP to phone number
+   * Returns session ID that MUST be used in verify_otp
    */
-  async loginWithPassword(phone: string, password: string) {
+  async sendOTP(phone: string): Promise<SendOtpResponse> {
     try {
       const formattedPhone = formatPhoneToBackend(phone);
 
-      const payload = {
-        phone: formattedPhone,
-        password: password,
-        ...DEVICE_INFO,
-      };
+      const formData = new FormData();
+      formData.append("phone", formattedPhone);
+      formData.append("lang", "ar");
+      formData.append("uuid", DEVICE_INFO.uuid);
 
-      const response = await this.axiosInstance.post("/login-otp-web", payload);
-
-      if (response.data.code !== "0") {
-        throw new Error(response.data.message || "Login failed");
-      }
-
-      const { data: token, is_otp_verified, name } = response.data;
-
-      // Decode JWT to get real user ID
-      const jwtPayload = decodeJWT(token);
-      const realUserId =
-        jwtPayload?.user_id || jwtPayload?.sub || jwtPayload?.id;
-
-      console.log("Extracted real user ID from JWT:", realUserId);
-
-      // Parse user name if available
-      let userData = null;
-      if (name?.trim()) {
-        const nameParts = name.trim().split(" ");
-        userData = {
-          id: realUserId?.toString() || `fallback_${Date.now()}`, // Use real ID from JWT
-          first_name: nameParts[0] || "مستخدم",
-          last_name: nameParts.slice(1).join(" ") || "",
-          phone: formattedPhone,
-        };
-
-        console.log("Created user data with real ID:", userData);
-      }
+      const response = await this.axiosInstance.post("/send_otp", formData, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
 
       return {
-        success: true,
-        userType: is_otp_verified === 1 ? "verified" : "unverified",
-        token,
-        userData,
-        message: "Login successful",
+        message: response.data.message || "تم الإرسال بنجاح",
+        id: response.data.id, // Session ID - save this!
+        phone: response.data.phone,
       };
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        // 404 = user not found (new user)
-        if (error.response?.status === 404) {
-          return {
-            success: false,
-            userType: "new" as const,
-            message: "User not found",
-          };
-        }
-
-        const errorMessage = error.response?.data?.message || "Login failed";
-        throw new Error(errorMessage);
-      }
-      throw new Error("Network error");
+      const errorMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message || "فشل في إرسال رمز التحقق"
+        : "خطأ في الشبكة";
+      throw new Error(errorMessage);
     }
   }
 
   /**
-   * Register new user
+   * Verify OTP and get JWT token + user info
+   * CRITICAL: Must include the session ID from send_otp response
+   */
+  async verifyOTP(
+    phone: string,
+    otp: string,
+    sessionId: string // ✅ REQUIRED: The 'id' from send_otp response
+  ): Promise<VerifyOtpResponse> {
+    try {
+      const formattedPhone = formatPhoneToBackend(phone);
+
+      const formData = new FormData();
+      formData.append("phone", formattedPhone);
+      formData.append("code", otp);
+      formData.append("id", sessionId); // ✅ Session ID from send_otp
+      formData.append("lang", "ar"); // ✅ Required by backend
+      formData.append("uuid", DEVICE_INFO.uuid);
+      formData.append("device_token", DEVICE_INFO.device_token || "");
+      formData.append("device_type", DEVICE_INFO.device_type);
+      formData.append("os_version", DEVICE_INFO.os_version);
+      formData.append("device_name", DEVICE_INFO.device_name);
+      formData.append("model_name", DEVICE_INFO.model_name);
+      formData.append("build_version_number", DEVICE_INFO.build_version_number);
+
+      const response = await this.axiosInstance.post("/verify_otp", formData, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+
+      const data = response.data;
+
+      // Decode JWT to get user ID
+      const jwtPayload = decodeJWT(data.data);
+      const userId = jwtPayload?.user_id || jwtPayload?.sub || jwtPayload?.id;
+
+      // Parse user data from response
+      let userData = null;
+      if (data.user) {
+        userData = {
+          id:
+            userId?.toString() ||
+            data.user.id?.toString() ||
+            `user_${Date.now()}`,
+          first_name: data.user.first_name || "",
+          last_name: data.user.last_name || "",
+          phone: formattedPhone,
+        };
+      } else if (data.name && !data.is_new_user) {
+        // Parse name if user exists but user object not provided
+        const nameParts = data.name.trim().split(" ");
+        userData = {
+          id: userId?.toString() || `user_${Date.now()}`,
+          first_name: nameParts[0] || "",
+          last_name: nameParts.slice(1).join(" ") || "",
+          phone: formattedPhone,
+        };
+      }
+
+      return {
+        message: data.message || "تم بنجاح",
+        data: data.data, // JWT token
+        is_otp_verified: data.is_otp_verified,
+        name: data.name,
+        is_new_user: data.is_new_user === true || data.is_new_user === "true",
+        user: userData || undefined,
+      };
+    } catch (error) {
+      const errorMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message || "رمز التحقق غير صحيح"
+        : "خطأ في التحقق";
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Update user names (for new users after OTP verification)
+   */
+  async updateNames(
+    firstName: string,
+    lastName: string,
+    phone: string,
+    token: string
+  ): Promise<UpdateNamesResponse> {
+    try {
+      const formattedPhone = formatPhoneToBackend(phone);
+
+      const response = await this.axiosInstance.post("/auth/update-names", {
+        params: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          phone: formattedPhone,
+        },
+        headers: {
+          "x-auth-token": token,
+          "Content-Type": "application/json",
+        },
+      });
+
+      return {
+        message: response.data.message || "success",
+        data: response.data.data, // Full name
+      };
+    } catch (error) {
+      const errorMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message || "فشل في تحديث البيانات"
+        : "خطأ في الشبكة";
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * DEPRECATED: No longer used in OTP-only flow
+   */
+  async loginWithPassword(phone: string, password: string) {
+    throw new Error(
+      "Password login is deprecated. Please use OTP authentication."
+    );
+  }
+
+  /**
+   * DEPRECATED: No longer used in OTP-only flow
    */
   async registerUser(
     phone: string,
@@ -160,114 +271,9 @@ export class RealAuthService {
     lastName: string,
     password: string
   ) {
-    try {
-      const formattedPhone = formatPhoneToBackend(phone);
-
-      const formData = new FormData();
-      formData.append("first_name", firstName.trim());
-      formData.append("last_name", lastName.trim());
-      formData.append("phone", formattedPhone);
-      formData.append("password", password);
-      formData.append("latitude", "24.7136");
-      formData.append("longitude", "46.6753");
-
-      Object.entries(DEVICE_INFO).forEach(([key, value]) => {
-        formData.append(key, value?.toString() || "");
-      });
-
-      const response = await this.axiosInstance.post(
-        "/register-web",
-        formData,
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        }
-      );
-
-      if (response.data.code !== "0") {
-        throw new Error(response.data.message || "Registration failed");
-      }
-
-      return {
-        success: true,
-        token: response.data.data,
-        message: response.data.message,
-      };
-    } catch (error) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Registration failed"
-        : "Network error";
-      throw new Error(errorMessage);
-    }
-  }
-
-  /**
-   * Send OTP
-   */
-  async sendOTP(phone: string, token: string) {
-    try {
-      const formattedPhone = formatPhoneToBackend(phone);
-
-      const formData = new FormData();
-      formData.append("phone", formattedPhone);
-      formData.append("lang", "Ar");
-
-      const response = await this.axiosInstance.post("/send_otp", formData, {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "x-auth-token": token,
-        },
-      });
-
-      return {
-        success: true,
-        sessionId: response.data.id,
-        message: response.data.message,
-      };
-    } catch (error) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to send OTP"
-        : "Network error";
-      throw new Error(errorMessage);
-    }
-  }
-
-  /**
-   * Verify OTP
-   */
-  async verifyOTP(
-    phone: string,
-    otp: string,
-    sessionId: string,
-    token: string
-  ) {
-    try {
-      const formattedPhone = formatPhoneToBackend(phone);
-
-      const params = new URLSearchParams();
-      params.append("id", sessionId);
-      params.append("code", otp);
-      params.append("lang", "Ar");
-      params.append("phone", formattedPhone);
-
-      const response = await this.axiosInstance.post("/verify_otp", params, {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "x-auth-token": token,
-        },
-      });
-
-      const isValid = response.data.message?.includes("تم بنجاح") || false;
-
-      return {
-        isValid,
-        message: response.data.message || "Verification completed",
-      };
-    } catch (error) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || "OTP verification failed"
-        : "Network error";
-      throw new Error(errorMessage);
-    }
+    throw new Error(
+      "Password registration is deprecated. Please use OTP authentication."
+    );
   }
 }
 

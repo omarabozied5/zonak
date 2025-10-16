@@ -14,6 +14,7 @@ import ItemDetails from "./pages/ItemDetails";
 import CurrentOrders from "./pages/CurrentOrders";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
+import OfferDetails from "./pages/OfferDetails";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/current-orders" element={<CurrentOrders />} />
+            <Route path="/offer/:id" element={<OfferDetails />} />
 
             {/* Payment Routes */}
             <Route path="/payment/success" element={<PaymentSuccess />} />

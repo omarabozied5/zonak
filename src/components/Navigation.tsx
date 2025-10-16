@@ -309,43 +309,37 @@ const Navigation = ({
               {/* Desktop User Actions */}
               {isAuthenticated ? (
                 <div className="hidden md:flex items-center space-x-2 lg:space-x-3 space-x-reverse">
-                  <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 rounded-xl px-2 lg:px-3 py-2">
-                    <div className="w-6 h-6 lg:w-8 lg:h-8 bg-[#FFAA01] rounded-full flex items-center justify-center">
-                      <User className="h-3 w-3 lg:h-4 lg:w-4 text-white" />
+                  <div className="flex items-center space-x-2 space-x-reverse bg-white/70 backdrop-blur-md border border-[#FFD14A]/40 rounded-xl px-3 py-2 shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-br from-[#FFAA01] to-yellow-500 rounded-full flex items-center justify-center shadow-sm">
+                      <User className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700 max-w-24 lg:max-w-none truncate">
-                      مرحباً{" "}
-                      {user
-                        ? `${user.first_name} ${user.last_name}`.trim()
-                        : ""}
-                    </span>
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-xs text-gray-500">مرحباً</span>
+                      <span className="text-sm font-semibold text-gray-800 truncate max-w-[100px] lg:max-w-[140px]">
+                        {user
+                          ? `${user.first_name} ${user.last_name}`.trim()
+                          : ""}
+                      </span>
+                    </div>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleLogout}
-                    className="flex items-center space-x-1 space-x-reverse border-gray-200 text-gray-600 hover:bg-red-50 hover:text-yellow-5 hover:border-red-200 text-sm px-2 lg:px-3"
+                    className="flex items-center space-x-1 space-x-reverse bg-white/80 border border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-sm px-3 lg:px-4 py-2 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md"
                   >
-                    <LogOut className="h-3 w-3 lg:h-4 lg:w-4" />
+                    <LogOut className="h-4 w-4" />
                     <span className="hidden lg:inline">خروج</span>
                   </Button>
                 </div>
               ) : (
-                <div className="hidden md:flex items-center space-x-2 space-x-reverse">
+                <div className="hidden md:flex items-center">
                   <Button
-                    variant="outline"
                     size="sm"
                     onClick={() => handleAuthAction()}
-                    className="border-[#FFAA01] text-[#FFAA01] hover:bg-[#FFAA01] hover:text-white text-sm px-3"
+                    className="bg-white/90 backdrop-blur-sm border border-white/50 text-[#FFAA01] hover:bg-white hover:scale-105 text-sm font-semibold px-5 py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
                   >
                     تسجيل الدخول
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-[#FFAA01] to-yellow-500 text-white hover:from-[#FFAA01]/90 hover:to-yellow-500/90 shadow-lg text-sm px-3"
-                    onClick={() => handleAuthAction()}
-                  >
-                    إنشاء حساب
                   </Button>
                 </div>
               )}
@@ -386,17 +380,19 @@ const Navigation = ({
             <div className="px-3 pt-2 pb-3">
               <div className="pt-3">
                 {isAuthenticated ? (
-                  <div className="flex items-center justify-between space-x-3 space-x-reverse px-4 py-3 bg-gray-50 rounded-xl">
-                    <div className="flex items-center space-x-3 space-x-reverse">
-                      <div className="w-8 h-8 bg-[#F7BD01] rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-white" />
+                  <div className="flex items-center justify-between space-x-3 space-x-reverse px-4 py-3 bg-white/70 backdrop-blur-md border border-[#FFD14A]/40 rounded-xl shadow-sm">
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#FFAA01] to-yellow-500 rounded-full flex items-center justify-center shadow-md">
+                        <User className="h-5 w-5 text-white" />
                       </div>
-                      <span className="text-sm font-medium text-gray-700 truncate">
-                        مرحباً{" "}
-                        {user
-                          ? `${user.first_name} ${user.last_name}`.trim()
-                          : ""}
-                      </span>
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-xs text-gray-500">مرحباً</span>
+                        <span className="text-sm font-semibold text-gray-800 truncate max-w-[150px]">
+                          {user
+                            ? `${user.first_name} ${user.last_name}`.trim()
+                            : ""}
+                        </span>
+                      </div>
                     </div>
                     <Button
                       variant="outline"
@@ -405,26 +401,19 @@ const Navigation = ({
                         handleLogout();
                         setIsMobileMenuOpen(false);
                       }}
-                      className="flex items-center space-x-1 space-x-reverse border-gray-200 text-gray-600 hover:bg-red-50 hover:text-yellow-600 hover:border-red-200 px-3 py-1"
+                      className="flex items-center space-x-1 space-x-reverse bg-white border border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-3 py-2 rounded-xl transition-all duration-300 shadow-sm"
                     >
-                      <LogOut className="h-3 w-3" />
-                      <span className="text-xs">خروج</span>
+                      <LogOut className="h-4 w-4" />
+                      <span className="text-sm">خروج</span>
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex space-x-2 space-x-reverse">
+                  <div className="px-4">
                     <Button
-                      variant="outline"
                       onClick={() => handleAuthAction(true)}
-                      className="flex-1 border-[#FFAA01] text-[#FFAA01] hover:bg-[#FFAA01] hover:text-white"
+                      className="w-full bg-white/90 backdrop-blur-sm border border-white/50 text-[#FFAA01] hover:bg-white hover:scale-[1.02] rounded-xl text-sm font-semibold py-3 transition-all duration-300 shadow-md hover:shadow-lg"
                     >
                       تسجيل الدخول
-                    </Button>
-                    <Button
-                      className="flex-1 bg-gradient-to-r from-[#FFAA01] to-yellow-500 text-white hover:from-[#FFAA01]/90 hover:to-yellow-500/90 shadow-lg"
-                      onClick={() => handleAuthAction(true)}
-                    >
-                      إنشاء حساب
                     </Button>
                   </div>
                 )}

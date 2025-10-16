@@ -157,10 +157,10 @@ const Ticket: React.FC<TicketProps> = ({ offer, className = "", onClick }) => {
         className="absolute flex items-center gap-1 font-bold text-xs leading-[22px] z-10"
         style={{
           top: "65px",
-          right: "188px",
-          left: "40px",
+          right: "200px",
+          left: "20px",
           height: "22px",
-          maxWidth: "140px",
+          maxWidth: "150px",
         }}
       >
         <div className="w-[2px] h-[2px] rounded-full bg-gray-700" />
